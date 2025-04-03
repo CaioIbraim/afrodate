@@ -1,4 +1,5 @@
 import { UserProfile } from "../types"
+import { supabase } from '@/lib/supabase'
 
 interface AuthResponse {
   token: string
@@ -8,6 +9,11 @@ interface AuthResponse {
 interface AuthError extends Error {
   code?: string
   status?: number
+}
+
+interface AuthOptions {
+  redirectTo?: string
+  scopes?: string[]
 }
 
 export class AuthService {
@@ -185,5 +191,42 @@ export class AuthService {
       this.clearToken()
       throw error
     }
+  }
+
+  static async loginWithGoogle(options?: AuthOptions) {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: options?.redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+          scope: options?.scopes?.join(' ') || 'email profile',
+        },
+      },
+    })
+
+    if (error) throw error
+    return data
+  }
+
+  static async handleAuthCallback() {
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) throw error
+    if (!session?.user) throw new Error('No user found')
+
+    // Update or create user profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        id: session.user.id,
+        email: session.user.email,
+        updated_at: new Date().toISOString(),
+      })
+
+    if (profileError) throw profileError
+
+    return session
   }
 }
