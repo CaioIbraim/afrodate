@@ -6,6 +6,8 @@ export function calculateCompatibility(
   userLocations: string[],
   otherInterests: string[],
   otherLocations: string[],
+  userDistance: number,
+  maxAcceptableDistance: number
 ): MatchResult {
   // Calcular interesses em comum com pesos
   const interestWeights = {
@@ -51,8 +53,11 @@ export function calculateCompatibility(
   const interestScore = maxInterestScore > 0 ? (weightedInterestScore / maxInterestScore) * 60 : 0
   const locationScore = maxLocationScore > 0 ? (weightedLocationScore / maxLocationScore) * 40 : 0
 
+  // Cálculo de compatibilidade por distância (0-40 pontos)
+  const distanceScore = Math.max(0, 40 - (userDistance / maxAcceptableDistance) * 40)
+
   // Pontuação total (0-100)
-  const totalScore = Math.min(Math.round(interestScore + locationScore), 100)
+  const totalScore = Math.min(Math.round(interestScore + locationScore + distanceScore), 100)
 
   // Encontrar interesses e locais que se cruzam com relevância cultural
   const crossMatches = commonInterests

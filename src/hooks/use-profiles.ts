@@ -1,30 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ProfileService } from "@/lib/services/profile-service"
 import type { ProfileData, GenderPreference } from "@/lib/types"
+import { supabase } from "@/lib/supabase"
 
 const profileService = ProfileService.getInstance()
 
-export function useProfiles(filters?: {
-  searchTerm?: string
-  maxDistance?: number
-  minCompatibility?: number
-  location?: string
-  genderPreference?: GenderPreference
-}) {
-  return useQuery([
-    "profiles",
-    filters?.searchTerm,
-    filters?.maxDistance,
-    filters?.minCompatibility,
-    filters?.location,
-    filters?.genderPreference,
-  ], () => profileService.getProfiles(filters), {
-    keepPreviousData: true,
-  })
-}
+// export function useProfiles(user, profileId) {
+//   // Ensure profileId is passed as an argument to this function
+//   return supabase.from('profiles').select().match({
+//     user_id: user.id,
+//     profile_id: profileId,
+//   });
+// }
 
 export function useProfile(id: number) {
-  return useQuery(["profile", id], () => profileService.getProfileById(id), {
+  return useQuery({
+    queryKey: ["profile", id],
+    queryFn: () => profileService.getProfileById(id),
     enabled: !!id,
   })
 }
@@ -32,14 +24,31 @@ export function useProfile(id: number) {
 export function useLikeProfile() {
   const queryClient = useQueryClient()
 
-  return useMutation(
-    ({ userId, profileId }: { userId: number; profileId: number }) =>
-      profileService.likeProfile(userId, profileId),
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries(["profiles"])
-        queryClient.invalidateQueries(["matches"])
-      },
-    }
-  )
+  return useMutation({
+    mutationFn: async ({ userId, profileId }: { userId: number; profileId: number }) => {
+      const { data, error } = await supabase
+        .from('likes')
+        .insert([
+          { 
+            user_id: userId, 
+            liked_user_id: profileId,
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select()
+
+      if (error) {
+        console.error("Error inserting like:", error.message) // Log do erro
+        throw new Error(error.message)
+      }
+      return data
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries(['profiles'])
+      queryClient.invalidateQueries(['matches', userId]) // Garantir que os matches sejam invalidados para o usuário específico
+    },
+    onError: (error) => {
+      console.error("Mutation error:", error) // Tratamento de erro adicional
+    },
+  })
 }

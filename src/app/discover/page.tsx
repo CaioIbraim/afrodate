@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeft, Search, Filter, Heart, MessageCircle, MapPin, Sparkles, Settings } from "lucide-react"
+import { ChevronLeft, Search, Filter, Heart, MessageCircle, MapPin, Sparkles, Settings, User2Icon } from "lucide-react"
 import Image from "next/image"
 import { Logo } from "@/components/ui/logo"
 import { motion, AnimatePresence } from "framer-motion"
@@ -115,6 +115,12 @@ export default function DiscoverPage() {
               <Button variant="ghost" size="icon" className="text-oraculo-muted" onClick={toggleGenderFilter}>
                 <Settings className="h-6 w-6" />
               </Button>
+
+              <Link href="/profile">
+                <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
+                  <User2Icon className="h-6 w-6" />
+                </Button>
+              </Link>
             </div>
           </div>
 
