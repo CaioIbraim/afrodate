@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,34 +13,55 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { popularLocations } from "@/components/ui/location-selector"
 import { PremiumBadge } from "@/components/ui/premium-badge"
-import type { GenderPreference, ProfileData } from "@/lib/types"
+import { supabase } from "@/lib/supabase"
+import { useToast } from "@/components/ui/use-toast"
+
 export default function DiscoverPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("todos")
   const [showLocationFilter, setShowLocationFilter] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
-  const [genderPreference, setGenderPreference] = useState<GenderPreference>("TODOS")
+  const [genderPreference, setGenderPreference] = useState("TODOS")
   const [showGenderFilter, setShowGenderFilter] = useState(false)
+  const [profiles, setProfiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleProfileClick = async (profileId: number) => {
+  const searchProfiles = async () => {
     try {
       setIsLoading(true)
-      await router.push(`/profile/${profileId}`)
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, profile_photos(*)')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setProfiles(data || [])
     } catch (error) {
-      console.error("Error navigating to profile:", error)
+      console.error('Error fetching profiles:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load profiles. Please try again later.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
+  useEffect(() => {
+    searchProfiles()
+  }, [])
+
+  const handleProfileClick = async (profileId: string) => {
+    router.push(`/profile/${profileId}`)
+  }
+
   const toggleLocationFilter = () => {
     setShowLocationFilter(!showLocationFilter)
     setShowGenderFilter(false)
-    if (showLocationFilter) {
-      setSelectedLocation(null)
-    }
   }
 
   const toggleGenderFilter = () => {
@@ -49,20 +69,7 @@ export default function DiscoverPage() {
     setShowLocationFilter(false)
   }
 
-  const handleLocationSelect = (location: string) => {
-    setSelectedLocation(location === selectedLocation ? null : location)
-  }
-
-  const handleGenderPreferenceChange = (preference: GenderPreference) => {
-    setGenderPreference(preference)
-  }
-
-  const handleUpgrade = () => {
-    router.push("/subscription")
-  }
-
   return (
-    <>
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 bg-gradient-to-b from-white to-transparent backdrop-blur-sm pb-4">
         <div className="max-w-md mx-auto px-4 pt-4">
@@ -88,7 +95,7 @@ export default function DiscoverPage() {
               </Button>
 
               <Link href="/profile">
-                <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
+                <Button variant="ghost" size="icon" className="text-oraculo-muted">
                   <User2Icon className="h-6 w-6" />
                 </Button>
               </Link>
@@ -140,46 +147,12 @@ export default function DiscoverPage() {
                       key={location.value}
                       variant={selectedLocation === location.value ? "default" : "outline"}
                       className="cursor-pointer"
-                      onClick={() => handleLocationSelect(location.value)}
+                      onClick={() => setSelectedLocation(location.value === selectedLocation ? null : location.value)}
                     >
                       <MapPin className="h-3 w-3 mr-1" />
                       {location.label}
                     </Badge>
                   ))}
-                </div>
-              </motion.div>
-            )}
-
-            {showGenderFilter && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mt-4"
-              >
-                <h3 className="text-lg font-semibold gradient-text mb-2">Preferência de gênero</h3>
-                <div className="flex gap-2">
-                  <Button
-                    variant={genderPreference === "TODOS" ? "default" : "outline"}
-                    className="flex-1"
-                    onClick={() => handleGenderPreferenceChange("TODOS")}
-                  >
-                    Todos
-                  </Button>
-                  <Button
-                    variant={genderPreference === "HOMEM" ? "default" : "outline"}
-                    className="flex-1"
-                    onClick={() => handleGenderPreferenceChange("HOMEM")}
-                  >
-                    Homens
-                  </Button>
-                  <Button
-                    variant={genderPreference === "MULHER" ? "default" : "outline"}
-                    className="flex-1"
-                    onClick={() => handleGenderPreferenceChange("MULHER")}
-                  >
-                    Mulheres
-                  </Button>
                 </div>
               </motion.div>
             )}
@@ -189,270 +162,58 @@ export default function DiscoverPage() {
 
       <div className="max-w-md mx-auto px-4 pb-4">
         <div className="grid gap-4">
-          {isLoadingProfiles ? (
+          {isLoading ? (
             <div className="text-center py-8">
               <p className="text-oraculo-muted">Carregando perfis...</p>
             </div>
-          ) : filteredProfiles.length === 0 ? (
+          ) : profiles.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-oraculo-muted">Nenhum perfil encontrado com os filtros selecionados.</p>
+              <p className="text-oraculo-muted">Nenhum perfil encontrado</p>
             </div>
           ) : (
-            filteredProfiles.map((profile: ProfileData) => (
-              <ProfileCard
+            profiles.map((profile) => (
+              <motion.div
                 key={profile.id}
-                profile={profile}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="profile-card p-4 cursor-pointer"
                 onClick={() => handleProfileClick(profile.id)}
-              />
+              >
+                <div className="flex gap-4">
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                    <Image
+                      src={profile.profile_photos?.[0]?.storage_path || "/placeholder.svg"}
+                      alt={`Foto de ${profile.name}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold gradient-text">
+                        {profile.name}
+                      </h3>
+                    </div>
+
+                    {profile.city && (
+                      <div className="flex items-center text-oraculo-muted text-sm mb-2">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span>{profile.city}</span>
+                      </div>
+                    )}
+
+                    {profile.bio && (
+                      <p className="text-sm text-oraculo-muted line-clamp-2">{profile.bio}</p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
             ))
           )}
         </div>
       </div>
     </div>
-    </>
   )
 }
-
-interface ProfileCardProps {
-  profile: {
-    id: number
-    name: string
-    age: number
-    gender: string
-    city: string
-    distance: string
-    compatibility: number
-    photos: string[]
-    crossMatches?: string[]
-    isPremium?: boolean
-  }
-  onClick: () => void
-}
-
-// Remove duplicate ProfileCard function declaration since it's defined later in the file
-  return (
-    <div className="relative rounded-xl overflow-hidden cursor-pointer group card-shadow" onClick={onClick}>
-      <div className="aspect-[3/4] relative">
-        <Image
-          src={profile.photos[0] || "/placeholder.svg"}
-          alt={`Foto de ${profile.name}`}
-          fill
-          className="object-cover"
-        />
-
-        <div className="absolute inset-0 bg-gradient-to-t from-white/80 to-transparent" />
-
-        {profile.isPremium && (
-          <div className="absolute top-2 right-2">
-            <PremiumBadge size="sm" />
-          </div>
-        )}
-
-        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-oraculo-dark">
-                {profile.name}, {profile.age}
-              </h3>
-              <p className="text-sm text-oraculo-muted">
-                {profile.city} • {profile.distance}
-              </p>
-            </div>
-            <div className="flex items-center gap-1 bg-gradient-to-r from-oraculo-purple/20 to-oraculo-cyan/20 px-2 py-1 rounded-full">
-              <Heart className="h-3 w-3 text-oraculo-purple" />
-              <span className="text-xs gradient-text font-semibold">{profile.compatibility}%</span>
-            </div>
-          </div>
-
-          {profile.crossMatches && profile.crossMatches.length > 0 && (
-            <div className="mt-2 flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-oraculo-purple" />
-              <span className="text-xs text-oraculo-purple">{profile.crossMatches.length} compatibilidades</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-
-  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
-    queryKey: ['profiles', searchTerm, activeTab, selectedLocation, genderPreference],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        search: searchTerm,
-        tab: activeTab,
-        location: selectedLocation || '',
-        gender: genderPreference,
-      })
-      
-      const response = await fetch(`/api/profiles?${params}`)
-      if (!response.ok) throw new Error('Failed to fetch profiles')
-      return response.json()
-    }
-  })
-
-  // Filter profiles based on search, active tab, location, and gender preference
-  const filteredProfiles = (profiles || []).filter((profile: ProfileData) => {
-    const matchesSearch =
-      profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (profile.city?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-
-    const matchesTab =
-      activeTab === "todos"
-        ? true
-        : activeTab === "proximos"
-        ? Number.parseInt(profile.distance) <= 10
-        : activeTab === "compatibilidade"
-        ? (profile.compatibility ?? 0) >= 90
-        : true
-
-    const matchesLocation = !selectedLocation || profile.locations?.includes(selectedLocation)
-
-    const matchesGender =
-      genderPreference === "TODOS"
-        ? true
-        : genderPreference === "HOMEM"
-        ? profile.gender === "HOMEM"
-        : genderPreference === "MULHER"
-        ? profile.gender === "MULHER"
-        : true
-
-    return matchesSearch && matchesTab && matchesLocation && matchesGender
-  })
-
-  {filteredProfiles.map((profile) => (
-    <motion.div
-      key={profile.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="profile-card p-4 cursor-pointer"
-      onClick={() => handleProfileClick(profile.id)}
-    >
-      <div className="flex gap-4">
-        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-          <Image
-            src={profile.photos[0] || "/placeholder.svg"}
-            alt={`Foto de ${profile.name}`}
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold gradient-text">
-              {profile.name}, {profile.age}
-            </h3>
-            {profile.isPremium && <PremiumBadge type={profile.contactInfo?.whatsapp ? "vip" : "premium"} />}
-          </div>
-
-          <div className="flex items-center text-oraculo-muted text-sm mb-2">
-            <MapPin className="h-4 w-4 mr-1" />
-            <span>
-              {profile.city} • {profile.distance}
-            </span>
-          </div>
-
-          {profile.crossMatches && profile.crossMatches.length > 0 && (
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-oraculo-purple" />
-              <div className="flex flex-wrap gap-1">
-                {profile.crossMatches.map((match, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {match}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1">
-            <Heart className="h-4 w-4 text-oraculo-purple" />
-            <span className="text-sm gradient-text font-semibold">{profile.compatibility}% compatível</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  ))}
-
-  {filteredProfiles.length === 0 && (
-    <div className="text-center py-8">
-      <p className="text-oraculo-muted">Nenhum perfil encontrado com os filtros selecionados.</p>
-    </div>
-  )}
-}
-
-interface ProfileCardProps {
-  profile: {
-    id: number
-    name: string
-    age: number
-    gender: string
-    city: string
-    distance: string
-    compatibility: number
-    photos: string[]
-    crossMatches?: string[]
-    isPremium?: boolean
-  }
-  onClick: () => void
-}
-
-function ProfileCard({ profile, onClick }: ProfileCardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      className="profile-card p-4 cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="flex gap-4">
-        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-          <Image
-            src={profile.photos[0] || "/placeholder.svg"}
-            alt={`Foto de ${profile.name}`}
-            fill
-            className="object-cover"
-          />
-        </div>
-
-        <div className="flex-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold gradient-text">
-              {profile.name}, {profile.age}
-            </h3>
-            {profile.isPremium && <PremiumBadge type={profile.contactInfo?.whatsapp ? "vip" : "premium"} />}
-          </div>
-
-          <div className="flex items-center text-oraculo-muted text-sm mb-2">
-            <MapPin className="h-4 w-4 mr-1" />
-            <span>
-              {profile.city} • {profile.distance}
-            </span>
-          </div>
-
-          {profile.crossMatches && profile.crossMatches.length > 0 && (
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4 text-oraculo-purple" />
-              <div className="flex flex-wrap gap-1">
-                {profile.crossMatches.map((match, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
-                    {match}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-1">
-            <Heart className="h-4 w-4 text-oraculo-purple" />
-            <span className="text-sm gradient-text font-semibold">{profile.compatibility}% compatível</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
