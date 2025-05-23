@@ -1,4 +1,4 @@
-// File: C:\Users\caiof\Desktop\oraculo\src\app\profile\page.tsx
+// File: C:\Users\caio\Desktop\Projetos\afrodate\src\app\profile\page.tsx
 import * as entry from '../../../../src/app/profile/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

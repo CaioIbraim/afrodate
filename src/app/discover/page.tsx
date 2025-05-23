@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,8 +15,6 @@ import { Badge } from "@/components/ui/badge"
 import { popularLocations } from "@/components/ui/location-selector"
 import { PremiumBadge } from "@/components/ui/premium-badge"
 import type { GenderPreference, ProfileData } from "@/lib/types"
-import { profilesData } from "@/lib/profile-data"
-
 export default function DiscoverPage() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
@@ -25,35 +24,6 @@ export default function DiscoverPage() {
   const [genderPreference, setGenderPreference] = useState<GenderPreference>("TODOS")
   const [showGenderFilter, setShowGenderFilter] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-
-  // Filter profiles based on search, active tab, location, and gender preference
-  const filteredProfiles = profilesData.filter((profile) => {
-    const matchesSearch =
-      profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile.city.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesTab =
-      activeTab === "todos"
-        ? true
-        : activeTab === "proximos"
-        ? Number.parseInt(profile.distance) <= 10
-        : activeTab === "compatibilidade"
-        ? profile.compatibility >= 90
-        : true
-
-    const matchesLocation = !selectedLocation || profile.locations.includes(selectedLocation)
-
-    const matchesGender =
-      genderPreference === "TODOS"
-        ? true
-        : genderPreference === "HOMEM"
-        ? profile.gender === "HOMEM"
-        : genderPreference === "MULHER"
-        ? profile.gender === "MULHER"
-        : true
-
-    return matchesSearch && matchesTab && matchesLocation && matchesGender
-  })
 
   const handleProfileClick = async (profileId: number) => {
     try {
@@ -92,6 +62,7 @@ export default function DiscoverPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen">
       <div className="sticky top-0 z-10 bg-gradient-to-b from-white to-transparent backdrop-blur-sm pb-4">
         <div className="max-w-md mx-auto px-4 pt-4">
@@ -218,70 +189,27 @@ export default function DiscoverPage() {
 
       <div className="max-w-md mx-auto px-4 pb-4">
         <div className="grid gap-4">
-          {filteredProfiles.map((profile) => (
-            <motion.div
-              key={profile.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="profile-card p-4 cursor-pointer"
-              onClick={() => handleProfileClick(profile.id)}
-            >
-              <div className="flex gap-4">
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                  <Image
-                    src={profile.photos[0] || "/placeholder.svg"}
-                    alt={`Foto de ${profile.name}`}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold gradient-text">
-                      {profile.name}, {profile.age}
-                    </h3>
-                    {profile.isPremium && <PremiumBadge type={profile.contactInfo?.whatsapp ? "vip" : "premium"} />}
-                  </div>
-
-                  <div className="flex items-center text-oraculo-muted text-sm mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>
-                      {profile.city} • {profile.distance}
-                    </span>
-                  </div>
-
-                  {profile.crossMatches && profile.crossMatches.length > 0 && (
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4 text-oraculo-purple" />
-                      <div className="flex flex-wrap gap-1">
-                        {profile.crossMatches.map((match, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {match}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-1">
-                    <Heart className="h-4 w-4 text-oraculo-purple" />
-                    <span className="text-sm gradient-text font-semibold">{profile.compatibility}% compatível</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-
-          {filteredProfiles.length === 0 && (
+          {isLoadingProfiles ? (
+            <div className="text-center py-8">
+              <p className="text-oraculo-muted">Carregando perfis...</p>
+            </div>
+          ) : filteredProfiles.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-oraculo-muted">Nenhum perfil encontrado com os filtros selecionados.</p>
             </div>
+          ) : (
+            filteredProfiles.map((profile: ProfileData) => (
+              <ProfileCard
+                key={profile.id}
+                profile={profile}
+                onClick={() => handleProfileClick(profile.id)}
+              />
+            ))
           )}
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -301,7 +229,7 @@ interface ProfileCardProps {
   onClick: () => void
 }
 
-function ProfileCard({ profile, onClick }: ProfileCardProps) {
+// Remove duplicate ProfileCard function declaration since it's defined later in the file
   return (
     <div className="relative rounded-xl overflow-hidden cursor-pointer group card-shadow" onClick={onClick}>
       <div className="aspect-[3/4] relative">
@@ -345,6 +273,186 @@ function ProfileCard({ profile, onClick }: ProfileCardProps) {
         </div>
       </div>
     </div>
+  )
+
+  const { data: profiles, isLoading: isLoadingProfiles } = useQuery({
+    queryKey: ['profiles', searchTerm, activeTab, selectedLocation, genderPreference],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        search: searchTerm,
+        tab: activeTab,
+        location: selectedLocation || '',
+        gender: genderPreference,
+      })
+      
+      const response = await fetch(`/api/profiles?${params}`)
+      if (!response.ok) throw new Error('Failed to fetch profiles')
+      return response.json()
+    }
+  })
+
+  // Filter profiles based on search, active tab, location, and gender preference
+  const filteredProfiles = (profiles || []).filter((profile: ProfileData) => {
+    const matchesSearch =
+      profile.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (profile.city?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+
+    const matchesTab =
+      activeTab === "todos"
+        ? true
+        : activeTab === "proximos"
+        ? Number.parseInt(profile.distance) <= 10
+        : activeTab === "compatibilidade"
+        ? (profile.compatibility ?? 0) >= 90
+        : true
+
+    const matchesLocation = !selectedLocation || profile.locations?.includes(selectedLocation)
+
+    const matchesGender =
+      genderPreference === "TODOS"
+        ? true
+        : genderPreference === "HOMEM"
+        ? profile.gender === "HOMEM"
+        : genderPreference === "MULHER"
+        ? profile.gender === "MULHER"
+        : true
+
+    return matchesSearch && matchesTab && matchesLocation && matchesGender
+  })
+
+  {filteredProfiles.map((profile) => (
+    <motion.div
+      key={profile.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="profile-card p-4 cursor-pointer"
+      onClick={() => handleProfileClick(profile.id)}
+    >
+      <div className="flex gap-4">
+        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+          <Image
+            src={profile.photos[0] || "/placeholder.svg"}
+            alt={`Foto de ${profile.name}`}
+            fill
+            className="object-cover"
+          />
+        </div>
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold gradient-text">
+              {profile.name}, {profile.age}
+            </h3>
+            {profile.isPremium && <PremiumBadge type={profile.contactInfo?.whatsapp ? "vip" : "premium"} />}
+          </div>
+
+          <div className="flex items-center text-oraculo-muted text-sm mb-2">
+            <MapPin className="h-4 w-4 mr-1" />
+            <span>
+              {profile.city} • {profile.distance}
+            </span>
+          </div>
+
+          {profile.crossMatches && profile.crossMatches.length > 0 && (
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-oraculo-purple" />
+              <div className="flex flex-wrap gap-1">
+                {profile.crossMatches.map((match, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {match}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1">
+            <Heart className="h-4 w-4 text-oraculo-purple" />
+            <span className="text-sm gradient-text font-semibold">{profile.compatibility}% compatível</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  ))}
+
+  {filteredProfiles.length === 0 && (
+    <div className="text-center py-8">
+      <p className="text-oraculo-muted">Nenhum perfil encontrado com os filtros selecionados.</p>
+    </div>
+  )}
+}
+
+interface ProfileCardProps {
+  profile: {
+    id: number
+    name: string
+    age: number
+    gender: string
+    city: string
+    distance: string
+    compatibility: number
+    photos: string[]
+    crossMatches?: string[]
+    isPremium?: boolean
+  }
+  onClick: () => void
+}
+
+function ProfileCard({ profile, onClick }: ProfileCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="profile-card p-4 cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="flex gap-4">
+        <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+          <Image
+            src={profile.photos[0] || "/placeholder.svg"}
+            alt={`Foto de ${profile.name}`}
+            fill
+            className="object-cover"
+          />
+        </div>
+
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold gradient-text">
+              {profile.name}, {profile.age}
+            </h3>
+            {profile.isPremium && <PremiumBadge type={profile.contactInfo?.whatsapp ? "vip" : "premium"} />}
+          </div>
+
+          <div className="flex items-center text-oraculo-muted text-sm mb-2">
+            <MapPin className="h-4 w-4 mr-1" />
+            <span>
+              {profile.city} • {profile.distance}
+            </span>
+          </div>
+
+          {profile.crossMatches && profile.crossMatches.length > 0 && (
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="h-4 w-4 text-oraculo-purple" />
+              <div className="flex flex-wrap gap-1">
+                {profile.crossMatches.map((match, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {match}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-1">
+            <Heart className="h-4 w-4 text-oraculo-purple" />
+            <span className="text-sm gradient-text font-semibold">{profile.compatibility}% compatível</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }
 

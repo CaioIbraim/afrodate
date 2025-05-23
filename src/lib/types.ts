@@ -1,3 +1,5 @@
+import { UUID } from "crypto"
+
 export type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
 
 export type GenderPreference = "HOMEM" | "MULHER" | "TODOS"
@@ -30,6 +32,16 @@ export interface MatchResult {
   crossMatches: string[]
 }
 
+
+export interface ProfilePhotos {
+id: UUID
+profile_id : UUID
+storage_path : string
+url?:string
+is_primary: boolean
+
+}
+
 export interface ProfileData {
   id: number
   name: string
@@ -42,6 +54,7 @@ export interface ProfileData {
   interests: string[]
   locations: string[]
   photos: string[]
+  profile_photos: ProfilePhotos
   crossMatches?: string[]
   isPremium?: boolean
   contactInfo?: {

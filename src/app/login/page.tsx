@@ -71,7 +71,7 @@ export default function LoginPage() {
         description: "Redirecionando para sua conta...",
       })
 
-      router.push("/matches/swipe")
+      router.push("/profile")
     } catch (error: any) {
       console.error("Login error:", error)
       toast({

@@ -46,7 +46,7 @@ export default function MatchesPage() {
     setIsLoading(true)
     try {
       // Verificar se o usuário tem preferências definidas
-      if (!profile?.gender_preference || !profile?.interests || profile?.interests.length === 0) {
+      if (!profile?.gender_preference as string || !profile?.interests || profile?.interests?.length === 0) {
         toast({
           title: "Preferências não definidas",
           description: "Complete suas preferências para ver matches",
@@ -147,7 +147,7 @@ export default function MatchesPage() {
   }
 
   // Função para calcular idade a partir da data de nascimento
-  const calculateAge = (birthDate) => {
+  const calculateAge = (birthDate : any) => {
     if (!birthDate) return 0
     const today = new Date()
     const birth = new Date(birthDate)
