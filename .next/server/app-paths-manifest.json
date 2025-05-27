@@ -1,5 +1,8 @@
 {
-  "/discover/page": "app/discover/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/profile/[id]/page": "app/profile/[id]/page.js",
   "/matches/page": "app/matches/page.js",
-  "/messages/page": "app/messages/page.js"
+  "/profile/page": "app/profile/page.js",
+  "/discover/page": "app/discover/page.js",
+  "/discover/swipe/page": "app/discover/swipe/page.js"
 }

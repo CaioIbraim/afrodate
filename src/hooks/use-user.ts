@@ -31,7 +31,7 @@ export function useUser() {
         // Obter perfil do usuário
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('*, profile_photos(*), profile_interests(*)')
           .eq('user_id', session.user.id)
           .single()
         
