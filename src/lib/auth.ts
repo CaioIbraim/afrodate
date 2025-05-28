@@ -18,7 +18,7 @@ export const logout = async (): Promise<void> => {
     // Limpar qualquer estado local se necessário
     localStorage.removeItem("supabase.auth.token");
   } catch (error) {
-    console.error("Erro ao fazer logout:", error);
+    console.log("Erro ao fazer logout:", error);
     throw error;
   }
 };
@@ -34,7 +34,7 @@ export const useLogout = () => {
       await logout(); // Call the plain logout function
       router.push("/login"); // Navigate to the login page
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      console.log("Erro ao fazer logout:", error);
     }
   };
 

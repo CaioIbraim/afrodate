@@ -37,7 +37,7 @@ export default function ResetPasswordPage() {
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
       })
     } catch (error: any) {
-      console.error("Password reset error:", error)
+      console.log("Password reset error:", error)
       toast({
         title: "Erro ao enviar email",
         description: error.message || "Ocorreu um erro ao tentar enviar o email de recuperação. Tente novamente.",

@@ -105,7 +105,7 @@ export default function SignupPage() {
 
       router.push("/login")
     } catch (error: any) {
-      console.error("Signup error:", error)
+      console.log("Signup error:", error)
       toast({
         title: "Erro ao criar conta",
         description: error.message || "Ocorreu um erro ao tentar criar sua conta. Tente novamente.",

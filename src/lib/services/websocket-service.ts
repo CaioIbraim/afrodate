@@ -38,7 +38,7 @@ export class WebSocketService {
         }
 
         this.socket.onerror = (error) => {
-          console.error('WebSocket error:', error)
+          console.log('WebSocket error:', error)
           reject(error)
         }
 
@@ -46,7 +46,7 @@ export class WebSocketService {
           this.handleMessage(event.data)
         }
       } catch (error) {
-        console.error('Failed to connect:', error)
+        console.log('Failed to connect:', error)
         reject(error)
       }
     })
@@ -59,7 +59,7 @@ export class WebSocketService {
         this.connect(this.socket?.url || '')
       }, this.RECONNECT_DELAY * this.reconnectAttempts)
     } else {
-      console.error('Max reconnection attempts reached')
+      console.log('Max reconnection attempts reached')
     }
   }
 
@@ -80,7 +80,7 @@ export class WebSocketService {
           console.warn('Unknown message type:', message.type)
       }
     } catch (error) {
-      console.error('Error handling message:', error)
+      console.log('Error handling message:', error)
     }
   }
 

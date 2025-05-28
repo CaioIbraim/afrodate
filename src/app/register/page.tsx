@@ -54,7 +54,7 @@ export default function RegisterPage() {
         throw new Error(error)
       }
     } catch (err) {
-      console.error("Provider sign-in error:", err)
+      console.log("Provider sign-in error:", err)
       toast({
         title: "Erro ao entrar com provedor",
         description: err instanceof Error ? err.message : "Ocorreu um erro inesperado.",

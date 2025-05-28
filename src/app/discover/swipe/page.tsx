@@ -117,7 +117,7 @@ useEffect(() => {
         setProfilesData(data as ProfileData[])
       }
     } catch (error) {
-      console.error('Error fetching profiles:', error)
+      console.log('Error fetching profiles:', error)
       toast({
         title: "Error",
         description: "Failed to load profiles. Please try again later.",

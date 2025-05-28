@@ -6,35 +6,30 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/profile/[id]/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/[id]/page.js"
+      "static/chunks/app/page.js"
     ],
-    "/matches/page": [
+    "/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/matches/page.js"
+      "static/chunks/app/profile/page.js"
     ],
-    "/messages/to/[id]/page": [
+    "/search/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/messages/to/[id]/page.js"
+      "static/chunks/app/search/page.js"
     ],
-    "/messages/page": [
+    "/quiz/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/messages/page.js"
+      "static/chunks/app/quiz/page.js"
     ],
-    "/subscription/page": [
+    "/quiz/africanidades/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/subscription/page.js"
-    ],
-    "/messages/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/messages/[id]/page.js"
+      "static/chunks/app/quiz/africanidades/page.js"
     ],
     "/discover/loading": [
       "static/chunks/webpack.js",
@@ -46,15 +41,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/discover/page.js"
     ],
-    "/profile/page": [
+    "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
-    ],
-    "/discover/swipe/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/discover/swipe/page.js"
+      "static/chunks/app/_not-found/page.js"
     ]
   }
 }

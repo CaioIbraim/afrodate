@@ -39,7 +39,7 @@ export class AuthService {
     try {
       localStorage.setItem('auth_token', token)
     } catch (error) {
-      console.error("Failed to store token in localStorage:", error)
+      console.log("Failed to store token in localStorage:", error)
     }
   }
 
@@ -48,7 +48,7 @@ export class AuthService {
     try {
       localStorage.removeItem('auth_token')
     } catch (error) {
-      console.error("Failed to remove token from localStorage:", error)
+      console.log("Failed to remove token from localStorage:", error)
     }
   }
 
@@ -72,7 +72,7 @@ export class AuthService {
       this.setToken(data.token)
       return data
     } catch (error) {
-      console.error("Login error:", error)
+      console.log("Login error:", error)
       throw new Error(
         `Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -99,7 +99,7 @@ export class AuthService {
       AuthService.getInstance().setToken(data.token)
       return data
     } catch (error) {
-      console.error("Error in loginWithProvider:", error)
+      console.log("Error in loginWithProvider:", error)
       throw new Error(
         `OAuth login failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -132,7 +132,7 @@ export class AuthService {
       this.setToken(data.token)
       return data
     } catch (error) {
-      console.error("Registration error:", error)
+      console.log("Registration error:", error)
       throw new Error(
         `Registration failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -150,7 +150,7 @@ export class AuthService {
         })
       }
     } catch (error) {
-      console.error("Logout error:", error)
+      console.log("Logout error:", error)
     } finally {
       this.clearToken()
     }
@@ -168,7 +168,7 @@ export class AuthService {
 
       return response.ok
     } catch (error) {
-      console.error("Token verification error:", error)
+      console.log("Token verification error:", error)
       return false
     }
   }
@@ -187,7 +187,7 @@ export class AuthService {
       const { token } = await response.json()
       this.setToken(token)
     } catch (error) {
-      console.error("Token refresh error:", error)
+      console.log("Token refresh error:", error)
       this.clearToken()
       throw error
     }

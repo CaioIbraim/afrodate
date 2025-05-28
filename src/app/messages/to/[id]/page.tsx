@@ -53,7 +53,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         .single()
 
       if (recipientError) {
-        console.error("Erro ao carregar perfil do destinatário:", recipientError)
+        console.log("Erro ao carregar perfil do destinatário:", recipientError)
         setRecipient(null)
         setLoading(false)
         return
@@ -152,7 +152,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       .maybeSingle()
 
     if (error) {
-      console.error("Erro ao buscar match:", error)
+      console.log("Erro ao buscar match:", error)
       return null
     }
 
@@ -170,7 +170,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       .single()
 
     if (error) {
-      console.error("Erro ao criar match:", error)
+      console.log("Erro ao criar match:", error)
       return null
     }
 
@@ -185,7 +185,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       .maybeSingle()
 
     if (error) {
-      console.error("Erro ao buscar conversa:", error)
+      console.log("Erro ao buscar conversa:", error)
       return null
     }
 
@@ -200,7 +200,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
       .single()
 
     if (error) {
-      console.error("Erro ao criar conversa:", error)
+      console.log("Erro ao criar conversa:", error)
       return null
     }
 

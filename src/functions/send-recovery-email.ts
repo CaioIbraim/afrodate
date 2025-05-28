@@ -10,6 +10,6 @@ export async function sendRecoveryEmail(email: string) {
   })
 
   if (error) {
-    console.error('Failed to send recovery email:', error.message)
+    console.log('Failed to send recovery email:', error.message)
   }
 }

@@ -10,6 +10,6 @@ export async function sendWelcomeEmail(email: string, name: string) {
   })
 
   if (error) {
-    console.error('Failed to send welcome email:', error.message)
+    console.log('Failed to send welcome email:', error.message)
   }
 }

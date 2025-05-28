@@ -38,7 +38,7 @@ export function useLikeProfile() {
         .select()
 
       if (error) {
-        console.error("Error inserting like:", error.message) // Log do erro
+        console.log("Error inserting like:", error.message) // Log do erro
         throw new Error(error.message)
       }
       return data
@@ -48,7 +48,7 @@ export function useLikeProfile() {
       queryClient.invalidateQueries(['matches', userId]) // Garantir que os matches sejam invalidados para o usuário específico
     },
     onError: (error) => {
-      console.error("Mutation error:", error) // Tratamento de erro adicional
+      console.log("Mutation error:", error) // Tratamento de erro adicional
     },
   })
 }

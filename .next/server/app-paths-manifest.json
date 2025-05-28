@@ -1,8 +1,7 @@
 {
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/profile/[id]/page": "app/profile/[id]/page.js",
-  "/matches/page": "app/matches/page.js",
-  "/profile/page": "app/profile/page.js",
+  "/search/page": "app/search/page.js",
+  "/quiz/page": "app/quiz/page.js",
+  "/quiz/africanidades/page": "app/quiz/africanidades/page.js",
   "/discover/page": "app/discover/page.js",
-  "/discover/swipe/page": "app/discover/swipe/page.js"
+  "/profile/page": "app/profile/page.js"
 }

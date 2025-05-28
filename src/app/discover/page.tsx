@@ -57,9 +57,8 @@ export default function DiscoverPage() {
     const fetchProfileId = async () => {
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("id")
+        .select("*")
         .neq("user_id", user.id)
-        .single()
 
       if (profileData) {
         setCurrentUserId(profileData.id)

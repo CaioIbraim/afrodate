@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     try {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
       if (error) {
-        console.error("Error exchanging code for session:", error)
+        console.log("Error exchanging code for session:", error)
         return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error.message)}`, requestUrl.origin))
       }
     } catch (err) {
-      console.error("Unexpected error during code exchange:", err)
+      console.log("Unexpected error during code exchange:", err)
       return NextResponse.redirect(new URL(`/login?error=Unexpected error`, requestUrl.origin))
     }
   }

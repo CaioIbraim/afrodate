@@ -100,7 +100,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
 
         setLoading(false)
       } catch (err: any) {
-        console.error("Erro ao carregar perfil:", err.message)
+        console.log("Erro ao carregar perfil:", err.message)
         router.push("/matches")
       }
     }
@@ -151,7 +151,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ id: st
         }
       }
     } catch (err: any) {
-      console.error("Erro ao curtir:", err.message)
+      console.log("Erro ao curtir:", err.message)
       toast({
         title: "Erro",
         description: "Não foi possível curtir este perfil.",

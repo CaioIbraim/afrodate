@@ -1,47 +1,48 @@
-"use client"
-
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/components/ui/use-toast"
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"
+} from "@/components/ui/tabs";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Slider } from "@/components/ui/slider"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { supabase } from "@/lib/supabase"
-import { useUser } from "@/hooks/use-user"
-import { PhotoUpload } from "@/components/photo-upload"
-import { Loader2, ChevronLeft, Star, Trash2 } from "lucide-react"
-import { Logo } from "@/components/ui/logo"
-import { motion } from "framer-motion"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import { PhotoUpload } from "@/components/photo-upload";
+import { Loader2, ChevronLeft, Star, Trash2 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
+import { motion } from "framer-motion";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // Tipos
-type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
-type GenderPreference = "HOMEM" | "MULHER" | "TODOS"
+type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
+type GenderPreference = "HOMEM" | "MULHER" | "TODOS";
 
 export default function ProfilePage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("informacoes")
-  const [photos, setPhotos] = useState<any[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const router = useRouter();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("informacoes");
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isNewProfile, setIsNewProfile] = useState(false);
+
   const [profileData, setProfileData] = useState({
     name: "",
     birth_date: "",
@@ -50,7 +51,8 @@ export default function ProfilePage() {
     city: "",
     profession: "",
     interests: [] as string[],
-  })
+  });
+
   const [preferences, setPreferences] = useState({
     genderPreference: "TODOS" as GenderPreference,
     minAge: 18,
@@ -59,18 +61,18 @@ export default function ProfilePage() {
     showProfile: true,
     matchNotifications: true,
     messageNotifications: true,
-  })
+  });
 
-  const { user, profile, isLoading } = useUser()
+  const { user, profile, isLoading } = useUser();
 
   // Carrega dados do usuário ao montar o componente
   useEffect(() => {
+    console.log("useEffect - User:", user, "Profile:", profile, "IsLoading:", isLoading);
     if (!isLoading && !user) {
-      router.push("/login")
+      router.push("/login");
     }
 
     if (profile) {
-      // Preencher dados do perfil
       setProfileData({
         name: profile.name || "",
         birth_date: profile.birth_date || "",
@@ -79,9 +81,8 @@ export default function ProfilePage() {
         city: profile.city || "",
         profession: profile.profession || "",
         interests: profile.interests || [],
-      })
+      });
 
-      // Preencher preferências
       setPreferences({
         genderPreference: profile.gender_preference || "TODOS",
         minAge: profile.min_age || 18,
@@ -90,90 +91,159 @@ export default function ProfilePage() {
         showProfile: profile.show_profile !== false,
         matchNotifications: profile.match_notifications !== false,
         messageNotifications: profile.message_notifications !== false,
-      })
+      });
 
-      loadPhotos()
+      setIsNewProfile(false);
+      loadPhotos();
+    } else {
+      setIsNewProfile(true);
     }
-  }, [isLoading, user, profile])
+  }, [isLoading, user, profile, router]);
+
+  // Validação de dados do perfil
+  const validateProfileData = () => {
+    console.log("Validating Profile Data:", profileData);
+    if (!profileData.name.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira seu nome completo.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!profileData.birth_date) {
+      toast({
+        title: "Erro",
+        description: "Por favor, selecione sua data de nascimento.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const birthDate = new Date(profileData.birth_date);
+    console.log("Birth Date:", birthDate);
+    if (isNaN(birthDate.getTime())) {
+      toast({
+        title: "Erro",
+        description: "Data de nascimento inválida.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const today = new Date();
+    const age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+
+    if (age < 18 || (age === 18 && m < 0)) {
+      toast({
+        title: "Erro",
+        description: "Você deve ter pelo menos 18 anos para criar um perfil.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
 
   // Carregar fotos do usuário logado
   const loadPhotos = async () => {
-    if (!user) return
+    if (!user) {
+      console.log("No user logged in, skipping photo load");
+      return;
+    }
 
     try {
-      const { data, error } = await supabase
-        .storage
-        .from("imagens")
-        .list(user.id, {
-          sortBy: { column: "created_at", order: "asc" },
-        })
+      console.log("Loading photos for user:", user.id);
 
-      if (error) throw error
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (profileError || !profileData) {
+        console.error("Profile fetch error:", profileError);
+        throw new Error("Perfil não encontrado");
+      }
+
+      const { data: photosData, error: photosError } = await supabase
+        .from("profile_photos")
+        .select("storage_path, is_primary")
+        .eq("profile_id", profileData.id)
+        .order("created_at", { ascending: true });
+
+      if (photosError) {
+        console.error("Photos fetch error:", photosError);
+        throw photosError;
+      }
 
       const photoUrls = await Promise.all(
-        data.map(async (photo) => {
+        photosData.map(async (photo) => {
           const { data: urlData } = supabase
             .storage
             .from("imagens")
-            .getPublicUrl(`${user.id}/${photo.name}`)
+            .getPublicUrl(photo.storage_path);
 
           return {
-            name: photo.name,
-            storage_path: `${user.id}/${photo.name}`,
+            name: photo.storage_path.split("/").pop(),
+            storage_path: photo.storage_path,
             publicUrl: urlData.publicUrl,
-            is_primary: false,
-          }
+            is_primary: photo.is_primary,
+          };
         })
-      )
+      );
 
-      // Marcar foto principal
-      const { data: primaryPhoto } = await supabase
-        .from("profile_photos")
-        .select("storage_path")
-        .eq("profile_id", profile?.id)
-        .eq("is_primary", true)
-        .single()
-
-      const updatedPhotos = photoUrls.map((p) => ({
-        ...p,
-        is_primary: p.storage_path === primaryPhoto?.storage_path,
-      }))
-
-      setPhotos(updatedPhotos)
+      setPhotos(photoUrls);
+      console.log("Photos loaded:", photoUrls);
     } catch (error: any) {
-      console.error("Erro ao carregar fotos:", error.message)
+      console.error("Erro ao carregar fotos:", error.message, error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar suas fotos.",
+        description: `Não foi possível carregar suas fotos: ${error.message}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Enviar nova foto
   const handlePhotoUpload = async (file: File) => {
-    if (!user || !file) return
+    if (!user || !file) {
+      toast({ title: "Erro", description: "Usuário ou arquivo ausente.", variant: "destructive" });
+      return;
+    }
 
-    setUploading(true)
+    setUploading(true);
+
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`
-      const filePath = `${user.id}/${fileName}`
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      console.log("Uploading file:", { fileName, filePath, fileSize: file.size });
 
       const { error: uploadError } = await supabase
         .storage
         .from("imagens")
-        .upload(filePath, file)
+        .upload(filePath, file, { contentType: file.type, upsert: false });
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
 
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single()
+        .single();
 
-      if (!profileData) throw new Error("Perfil não encontrado")
+      if (profileError || !profileData) {
+        console.error("Profile fetch error:", profileError);
+        throw new Error("Perfil não encontrado");
+      }
 
       const { error: insertError } = await supabase
         .from("profile_photos")
@@ -181,156 +251,272 @@ export default function ProfilePage() {
           profile_id: profileData.id,
           storage_path: filePath,
           is_primary: photos.length === 0,
-        })
+        });
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        throw insertError;
+      }
 
-      toast({ title: "Sucesso", description: "Foto enviada!" })
-      await loadPhotos()
+      toast({ title: "Sucesso", description: "Foto enviada com sucesso!" });
+      await loadPhotos();
     } catch (error: any) {
-      console.error("Erro ao enviar foto:", error.message)
+      console.error("Erro ao enviar foto:", error.message, error);
       toast({
         title: "Erro",
-        description: "Não foi possível enviar sua foto.",
+        description: `Não foi possível enviar sua foto: ${error.message}`,
         variant: "destructive",
-      })
+      });
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   // Excluir foto
   const handleDeletePhoto = async (photoName: string) => {
-    if (!user) return
+    if (!user) {
+      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+      return;
+    }
 
     try {
+      const filePath = `${user.id}/${photoName}`;
+      console.log("Deleting photo:", filePath);
+
       const { error: deleteError } = await supabase
         .storage
         .from("imagens")
-        .remove([`${user.id}/${photoName}`])
+        .remove([filePath]);
 
-      if (deleteError) throw deleteError
+      if (deleteError) {
+        console.error("Delete error:", deleteError);
+        throw deleteError;
+      }
 
-      // Remover do banco
-      await supabase
+      const { error: dbError } = await supabase
         .from("profile_photos")
         .delete()
-        .eq("storage_path", `${user.id}/${photoName}`)
+        .eq("storage_path", filePath);
 
-      toast({ title: "Sucesso", description: "Foto excluída." })
-      await loadPhotos()
+      if (dbError) {
+        console.error("DB delete error:", dbError);
+        throw dbError;
+      }
+
+      toast({ title: "Sucesso", description: "Foto excluída com sucesso." });
+      await loadPhotos();
     } catch (error: any) {
-      console.error("Erro ao excluir foto:", error.message)
+      console.error("Erro ao excluir foto:", error.message, error);
       toast({
         title: "Erro",
-        description: "Não foi possível remover sua foto.",
+        description: `Não foi possível remover sua foto: ${error.message}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Definir foto como principal
   const handleSetPrimaryPhoto = async (storagePath: string) => {
-    if (!user) return
+    if (!user) {
+      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+      return;
+    }
 
     try {
-      const { data: profileData } = await supabase
+      console.log("Setting primary photo:", storagePath);
+
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
-        .single()
+        .single();
 
-      if (!profileData) throw new Error("Perfil não encontrado")
+      if (profileError || !profileData) {
+        console.error("Profile fetch error:", profileError);
+        throw new Error("Perfil não encontrado");
+      }
 
-      // Desativar outras fotos principais
       await supabase
         .from("profile_photos")
         .update({ is_primary: false })
-        .eq("profile_id", profileData.id)
+        .eq("profile_id", profileData.id);
 
-      // Ativar a nova foto como principal
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("profile_photos")
         .update({ is_primary: true })
         .eq("storage_path", storagePath)
+        .eq("profile_id", profileData.id);
 
-      if (error) throw error
+      if (updateError) {
+        console.error("Update error:", updateError);
+        throw updateError;
+      }
 
-      // Gerar URL pública
       const { data: publicUrl } = supabase.storage
         .from("imagens")
-        .getPublicUrl(storagePath)
+        .getPublicUrl(storagePath);
 
-      // Atualizar avatar_url no perfil
-      await supabase
+      const { error: avatarError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl.publicUrl })
-        .eq("id", profileData.id)
+        .eq("id", profileData.id);
 
-      toast({ title: "Sucesso", description: "Foto principal atualizada!" })
-      await loadPhotos()
+      if (avatarError) {
+        console.error("Avatar update error:", avatarError);
+        throw avatarError;
+      }
+
+      toast({ title: "Sucesso", description: "Foto principal atualizada!" });
+      await loadPhotos();
     } catch (error: any) {
-      console.error("Erro ao definir foto principal:", error.message)
+      console.error("Erro ao definir foto principal:", error.message, error);
       toast({
         title: "Erro",
-        description: "Não foi possível definir esta foto como principal.",
+        description: `Não foi possível definir esta foto como principal: ${error.message}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
-  // Salvar informações do perfil
-  const handleUpdateProfile = async () => {
-    if (!user) return
-    setSaving(true)
-    try {
-      const { error } = await supabase
+  // Gerar username único
+  const generateUsername = async (name: string) => {
+    let baseUsername = '@' + name.toLowerCase().replace(/\s+/g, '');
+    let username = baseUsername;
+    let counter = 1;
+
+    while (true) {
+      const { data, error } = await supabase
         .from("profiles")
-        .update({
-          name: profileData.name,
-          birth_date: profileData.birth_date,
-          gender: profileData.gender,
-          bio: profileData.bio,
-          city: profileData.city,
-          profession: profileData.profession,
-          interests: profileData.interests,
-          gender_preference: preferences.genderPreference,
-          min_age: preferences.minAge,
-          max_age: preferences.maxAge,
-          max_distance: preferences.maxDistance,
-          show_profile: preferences.showProfile,
-          match_notifications: preferences.matchNotifications,
-          message_notifications: preferences.messageNotifications,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", user.id)
+        .select("username")
+        .eq("username", username)
+        .single();
 
-      if (error) throw error
+      if (error || !data) break;
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
 
-      toast({ title: "Sucesso", description: "Seu perfil foi atualizado!" })
-    } catch (error: any) {
-      console.error("Erro ao salvar perfil:", error.message)
+    return username;
+  };
+
+  // Save profile information
+  const handleUpdateProfile = async () => {
+    if (!user) {
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar seu perfil.",
+        description: "Usuário não autenticado. Faça login novamente.",
         variant: "destructive",
-      })
-    } finally {
-      setSaving(false)
+      });
+      router.push("/login");
+      return;
     }
-  }
+
+    if (!validateProfileData()) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      console.log("Profile Data:", profileData, "Preferences:", preferences);
+      const profilePayload = {
+        name: profileData.name,
+        birth_date: profileData.birth_date,
+        gender: profileData.gender,
+        bio: profileData.bio,
+        city: profileData.city,
+        profession: profileData.profession,
+        interests: profileData.interests, // Adjust to JSON.stringify if interests is text
+        gender_preference: preferences.genderPreference,
+        min_age: preferences.minAge,
+        max_age: preferences.maxAge,
+        max_distance: preferences.maxDistance,
+        show_profile: preferences.showProfile,
+        match_notifications: preferences.matchNotifications,
+        message_notifications: preferences.messageNotifications,
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log("Profile Payload:", profilePayload);
+
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== "PGRST116") {
+        console.error("Fetch error:", fetchError);
+        throw fetchError;
+      }
+
+      let error;
+
+      if (existingProfile) {
+        console.log("Updating existing profile for user:", user.id);
+        const { error: updateError } = await supabase
+          .from("profiles")
+          .update({ ...profilePayload, username: await generateUsername(profileData.name) })
+          .eq("user_id", user.id);
+
+        error = updateError;
+      } else {
+        console.log("Inserting new profile for user:", user.id);
+        const username = await generateUsername(profileData.name);
+        const { error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            ...profilePayload,
+            user_id: user.id,
+            username,
+            created_at: new Date().toISOString(),
+          });
+
+        error = insertError;
+      }
+
+      if (error) {
+        console.error("Save error:", error);
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: existingProfile
+          ? "Seu perfil foi atualizado com sucesso!"
+          : "Seu perfil foi criado com sucesso!",
+      });
+
+      if (!existingProfile) {
+        router.push("/discover");
+      }
+    } catch (error: any) {
+      console.error("Error saving profile:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
+      toast({
+        title: "Erro",
+        description: `Não foi possível atualizar seu perfil: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
-      {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ChevronLeft className="h-6 w-6 text-gray-700" />
@@ -348,7 +534,6 @@ export default function ProfilePage() {
         <h2 className="text-2xl font-bold gradient-text text-center mb-6">Meu Perfil</h2>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          {/* Abas */}
           <TabsList className="grid grid-cols-3 w-full rounded-xl bg-white shadow-sm border border-gray-200">
             <TabsTrigger value="informacoes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
               Informações
@@ -361,11 +546,10 @@ export default function ProfilePage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Aba: Informações */}
           <TabsContent value="informacoes">
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Editar Informações</CardTitle>
+                <CardTitle>{isNewProfile ? "Criar Perfil" : "Editar Informações"}</CardTitle>
                 <CardDescription>Preencha seus dados pessoais</CardDescription>
               </CardHeader>
               <CardContent>
@@ -475,14 +659,13 @@ export default function ProfilePage() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Salvando...
                       </>
-                    ) : "Salvar Informações"}
+                    ) : isNewProfile ? "Criar Perfil" : "Salvar Informações"}
                   </Button>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Aba: Fotos */}
           <TabsContent value="fotos">
             <Card className="mb-6">
               <CardHeader>
@@ -534,6 +717,7 @@ export default function ProfilePage() {
                       )}
                     </div>
                   ))}
+
                   {photos.length === 0 && (
                     <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
                       <p>Você ainda não tem fotos. Adicione sua primeira foto!</p>
@@ -544,7 +728,6 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
 
-          {/* Aba: Preferências */}
           <TabsContent value="preferencias">
             <Card className="mb-6">
               <CardHeader>
@@ -635,7 +818,6 @@ export default function ProfilePage() {
                         }
                       />
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="matchNotifications" className="text-base">
@@ -653,7 +835,6 @@ export default function ProfilePage() {
                         }
                       />
                     </div>
-
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="messageNotifications" className="text-base">
@@ -692,5 +873,5 @@ export default function ProfilePage() {
         </Tabs>
       </motion.div>
     </div>
-  )
+  );
 }

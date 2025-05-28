@@ -73,7 +73,7 @@ export default function LoginPage() {
 
       router.push("/profile")
     } catch (error: any) {
-      console.error("Login error:", error)
+      console.log("Login error:", error)
       toast({
         title: "Erro ao fazer login",
         description: error.message || "Verifique suas credenciais e tente novamente.",
@@ -105,7 +105,7 @@ export default function LoginPage() {
       })
       router.push("/matches/swipe")
     } catch (error: any) {
-      console.error("Social login error:", {
+      console.log("Social login error:", {
         provider,
         errorMessage: error?.message,
         errorStack: error?.stack,

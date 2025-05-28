@@ -109,7 +109,7 @@ export class ProfileService {
       this.setCache(cacheKey, filteredProfiles)
       return filteredProfiles
     } catch (error) {
-      console.error("Error filtering profiles:", error)
+      console.log("Error filtering profiles:", error)
       throw new Error(`Failed to filter profiles: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -128,7 +128,7 @@ export class ProfileService {
       this.setCache(cacheKey, profile)
       return profile
     } catch (error) {
-      console.error("Error fetching profile:", error)
+      console.log("Error fetching profile:", error)
       throw new Error(`Failed to fetch profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -152,7 +152,7 @@ export class ProfileService {
       this.setCache(cacheKey, result)
       return result
     } catch (error) {
-      console.error("Error calculating match result:", error)
+      console.log("Error calculating match result:", error)
       throw new Error(`Failed to calculate match result: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
@@ -171,7 +171,7 @@ export class ProfileService {
       // TODO: Implement actual like storage in database
       this.setCache(cacheKey, now)
     } catch (error) {
-      console.error("Error liking profile:", error)
+      console.log("Error liking profile:", error)
       throw new Error(`Failed to like profile: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }

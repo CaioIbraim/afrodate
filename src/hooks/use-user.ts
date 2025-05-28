@@ -41,7 +41,7 @@ export function useUser() {
         
         setProfile(profileData || null)
       } catch (err) {
-        console.error("Erro ao buscar usuário:", err)
+        console.log("Erro ao buscar usuário:", err)
         setError(err)
       } finally {
         setIsLoading(false)

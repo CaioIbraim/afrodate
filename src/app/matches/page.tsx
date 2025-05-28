@@ -128,7 +128,7 @@ export default function MatchesPage() {
 
       setMatchedProfiles(sortedProfiles)
     } catch (error: any) {
-      console.error("Erro ao buscar matches:", error.message)
+      console.log("Erro ao buscar matches:", error.message)
       toast({
         title: "Erro ao carregar perfis",
         description: "Não foi possível carregar seus matches",

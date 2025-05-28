@@ -20,7 +20,7 @@ export const queryClient = new QueryClient({
 queryClient.setDefaultOptions({
   mutations: {
     onError: (error) => {
-      console.error('Mutation error:', error)
+      console.log('Mutation error:', error)
       // Implement global error handling (e.g., show toast notification)
     },
   },
@@ -29,7 +29,7 @@ queryClient.setDefaultOptions({
 // Add global cache listeners
 queryClient.getQueryCache().subscribe({
   onError: (error) => {
-    console.error('Cache error:', error)
+    console.log('Cache error:', error)
     // Implement global cache error handling
   },
 })

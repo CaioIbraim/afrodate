@@ -61,7 +61,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       .or(`and(sender_id.eq.${userId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${userId})`)
       .order("created_at", { ascending: true })
 
-    if (error) return console.error(error)
+    if (error) return console.log(error)
 
     setMessages(data)
 

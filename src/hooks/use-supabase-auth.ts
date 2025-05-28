@@ -26,7 +26,7 @@ export function useSupabaseAuth() {
         router.push('/discover')
       }
     } catch (err) {
-      console.error("Sign-in error:", err)
+      console.log("Sign-in error:", err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
@@ -82,7 +82,7 @@ export function useSupabaseAuth() {
       // Redirect the user to the provider's authentication URL
       window.location.href = data.url
     } catch (err) {
-      console.error("Provider sign-in error:", err)
+      console.log("Provider sign-in error:", err)
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)

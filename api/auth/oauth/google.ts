@@ -20,13 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (error) {
-      console.error('Error in loginWithProvider:', error.message);
+      console.log('Error in loginWithProvider:', error.message);
       return res.status(400).json({ error: 'OAuth login failed' });
     }
 
     res.status(200).json({ url: data.url });
   } catch (err) {
-    console.error('Unexpected error:', err);
+    console.log('Unexpected error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 }
