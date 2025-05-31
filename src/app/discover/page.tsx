@@ -55,13 +55,17 @@ export default function DiscoverPage() {
     if (!user) return
 
     const fetchProfileId = async () => {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .neq("user_id", user.id)
+      try {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("*")
+          .neq("user_id", user?.id || '')
 
-      if (profileData) {
-        setCurrentUserId(profileData.id)
+        if (profileData && profileData.length > 0) {
+          setCurrentUserId(profileData[0].id)
+        }
+      } catch (error) {
+        console.error("Erro ao buscar perfil:", error)
       }
     }
 
@@ -107,14 +111,16 @@ export default function DiscoverPage() {
       const processedProfiles = await Promise.all(
         data.map(async (p) => {
           const primaryPhoto =
-            p.profile_photos.find((ph) => ph.is_primary) || p.profile_photos[0]
-          const { publicUrl } = supabase.storage
+            p.profile_photos.find((ph: any) => ph.is_primary) || p.profile_photos[
+              0
+            ]
+          const { data } = supabase.storage
             .from("imagens")
-            .getPublicUrl(primaryPhoto?.storage_path || "")
-  
+            .getPublicUrl(primaryPhoto.storage_path)
+
           return {
             ...p,
-            avatar_url: publicUrl || "/placeholder.svg",
+            avatar_url: data.publicUrl || "/placeholder.svg",
             age: calculateAge(p.birth_date),
             compatibility: Math.floor(Math.random() * 100),
           }
@@ -196,7 +202,7 @@ export default function DiscoverPage() {
         .eq("profile_id", profileId)
         .eq("liked_profile_id", currentUserId)
 
-      if (count > 0) {
+      if (count !== null && count > 0) {
         toast({
           title: "Match encontrado!",
           description: "Vocês se curtiram mutuamente!",

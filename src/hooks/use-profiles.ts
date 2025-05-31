@@ -44,8 +44,8 @@ export function useLikeProfile() {
       return data
     },
     onSuccess: (_, { userId }) => {
-      queryClient.invalidateQueries(['profiles'])
-      queryClient.invalidateQueries(['matches', userId]) // Garantir que os matches sejam invalidados para o usuário específico
+      queryClient.invalidateQueries({ queryKey: ['profiles'] })
+      queryClient.invalidateQueries({ queryKey: ['matches', userId] }) // Garantir que os matches sejam invalidados para o usuário específico
     },
     onError: (error) => {
       console.log("Mutation error:", error) // Tratamento de erro adicional

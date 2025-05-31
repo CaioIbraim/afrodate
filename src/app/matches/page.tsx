@@ -87,10 +87,10 @@ export default function MatchesPage() {
           if (!avatarUrl) {
             const primaryPhoto = p.profile_photos.find((ph) => ph.is_primary)
             if (primaryPhoto) {
-              const { publicUrl } = supabase.storage
+              const { data } = supabase.storage
                 .from("imagens")
                 .getPublicUrl(primaryPhoto.storage_path)
-              avatarUrl = publicUrl
+              avatarUrl = data.publicUrl
             }
           }
 

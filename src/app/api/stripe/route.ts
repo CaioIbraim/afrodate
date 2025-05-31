@@ -9,7 +9,7 @@ const supabase = createClient(
 )
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-08-16',
+  apiVersion: '2023-10-16',
   typescript: true
 })
 
@@ -45,8 +45,9 @@ export async function POST(req: Request) {
 }
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const { data: { user }, error } = await getSession()
-  if (!user || error) throw new Error('Usuário não autenticado')
+  const { data: { session: authSession } } = await getSession()
+  const user = authSession?.user
+  if (!user) throw new Error('Usuário não autenticado')
 
   const subscription = await stripe.subscriptions.retrieve(
     session.subscription as string

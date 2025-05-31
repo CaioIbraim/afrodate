@@ -97,6 +97,13 @@ export default function QuizPage() {
             description: "Você já respondeu esta pergunta.",
             variant: "default",
           });
+          // Avançar para a próxima pergunta mesmo se já respondeu
+          if (currentIndex + 1 < questions.length) {
+            setCurrentIndex(currentIndex + 1);
+            setSelectedOption(null);
+          } else {
+            setCompleted(true);
+          }
           return;
         }
         console.log("Insert response error:", insertError);
@@ -146,6 +153,14 @@ export default function QuizPage() {
         description: `Não foi possível enviar a resposta: ${error.message}`,
         variant: "destructive",
       });
+      // Tentar avançar mesmo com erro
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex(currentIndex + 1);
+        setSelectedOption(null);
+      } else {
+        // Se for a última pergunta, marcar como concluído mesmo com erro
+        setCompleted(true);
+      }
     } finally {
       setSubmitting(false);
     }

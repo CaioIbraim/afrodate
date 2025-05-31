@@ -33,7 +33,7 @@ export default function MessagesPage() {
   const [emojiCategory, setEmojiCategory] = useState("recent")
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [matches, setMatches] = useState<any[]>([])
-  const [conversations, setConversations] = useState<any[]>([])
+  const [conversations, setConversations] = useState<Map<string, any>>(new Map())
   const [messages, setMessages] = useState<any[]>([])
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -75,7 +75,7 @@ export default function MessagesPage() {
         .select("*")
         .in("match_id", matchIds)
 
-      const convMap = new Map(convsData.map((c: any) => [c.match_id, c]))
+      const convMap = new Map(convsData?.map((c: any) => [c.match_id, c]) || [])
       setConversations(convMap)
 
       // Se houver matches sem conversa, criar automaticamente
@@ -135,22 +135,19 @@ export default function MessagesPage() {
         },
         (payload) => {
           const msg = payload.new as any
-          setConversations((prev) =>
-            Array.from(prev.entries()).map(([k, v]) => {
-              if (v.id === msg.conversation_id) {
-                return [
-                  k,
-                  {
-                    ...v,
-                    last_message_at: new Date(),
-                  },
-                ]
-              }
-              return [k, v]
-            })
-          )
+          setConversations((prev) => {
+            const newMap = new Map(prev)
+            const conv = newMap.get(msg.conversation_id)
+            if (conv) {
+              newMap.set(msg.conversation_id, {
+                ...conv,
+                last_message_at: new Date(),
+              })
+            }
+            return newMap
+          })
 
-          if (conversations.get(activeConversation)?.id === msg.conversation_id) {
+          if (activeConversation !== null && conversations.get(activeConversation)?.id === msg.conversation_id) {
             setMessages((prev) => [...prev, msg])
           }
         }

@@ -391,7 +391,11 @@ export default function DiscoverPage() {
                     <Label className="text-sm text-gray-600">Cidade</Label>
                     <p className="mb-2">{profiles[currentIndex].city}</p>
                     <Label className="text-sm text-gray-600">Biografia</Label>
-                    <p className="text-gray-700">{profiles[currentIndex].bio}</p>
+                    <p className="text-gray-700">
+                      {profiles[currentIndex].bio.length > 150 
+                        ? `${profiles[currentIndex].bio.slice(0, 150)}...`
+                        : profiles[currentIndex].bio}
+                    </p>
                   </div>
                 </CardContent>
                 <CardContent className="flex justify-center gap-4 pt-0">

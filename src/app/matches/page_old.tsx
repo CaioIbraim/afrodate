@@ -18,7 +18,7 @@ export default function MatchesPage() {
   const router = useRouter()
   const { user, profile, isLoading: userLoading } = useUser()
   const { toast } = useToast()
-  const [profiles, setProfiles] = useState([])
+  const [profiles, setProfiles] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function MatchesPage() {
       // }
       
       // Não mostrar o próprio perfil do usuário
-      query = query.neq('user_id', user.id)
+      query = query.neq('user_id', user?.id || '')
       
       // Limitar a 10 perfis
       query = query.limit(10)
@@ -108,6 +108,10 @@ export default function MatchesPage() {
           //   }
           // }
           
+          // Definindo valores padrão para as variáveis comentadas
+          const interestCompatibility = 0;
+          const crossMatches: string[] = [];
+          
           return {
             id: profileData.id,
             name: profileData.name,
@@ -118,7 +122,7 @@ export default function MatchesPage() {
             compatibility: interestCompatibility || 0,
             interests: profileData.interests || [],
             locations: profileData.locations || [],
-            crossMatches: crossMatches.slice(0, 3) || 0 // Limitar a 3 crossMatches
+            crossMatches: crossMatches.slice(0, 3) || [] // Limitar a 3 crossMatches
           }
         })
         

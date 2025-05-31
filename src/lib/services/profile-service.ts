@@ -1,6 +1,7 @@
 import { ProfileData, GenderPreference, MatchResult } from "../types"
 import { profilesData } from "../profile-data"
 import { calculateCompatibility } from "../match-utils"
+import crypto from "crypto"
 
 export class ProfileService {
   private static instance: ProfileService
@@ -9,7 +10,16 @@ export class ProfileService {
   private readonly CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
   private constructor() {
-    this.profiles = profilesData
+    // Adiciona a propriedade profile_photos aos perfis
+    this.profiles = profilesData.map(profile => ({
+      ...profile,
+      profile_photos: {
+        id: crypto.randomUUID(),
+        profile_id: crypto.randomUUID(),
+        storage_path: profile.photos[0] || '',
+        is_primary: true
+      }
+    })) as ProfileData[]
     this.cache = new Map()
   }
 
@@ -146,7 +156,9 @@ export class ProfileService {
         userProfile.interests,
         userProfile.locations,
         otherProfile.interests,
-        otherProfile.locations
+        otherProfile.locations,
+        0, // userDistance - valor padrão
+        100 // maxAcceptableDistance - valor padrão
       )
 
       this.setCache(cacheKey, result)
