@@ -87,3 +87,24 @@ export function useUser() {
   
   return { user, profile, isLoading, error }
 }
+
+export const refreshProfile = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*, profile_photos(*), profile_interests(*)')
+      .eq('user_id', userId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') {
+      throw error
+    }
+
+    setProfile(data || null)
+    return data
+  } catch (err) {
+    console.error("Error refreshing profile:", err)
+    setError(err as Error)
+    return null
+  }
+}
