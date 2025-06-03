@@ -1,7 +1,0 @@
-{
-  "/search/page": "app/search/page.js",
-  "/quiz/page": "app/quiz/page.js",
-  "/quiz/africanidades/page": "app/quiz/africanidades/page.js",
-  "/discover/page": "app/discover/page.js",
-  "/profile/page": "app/profile/page.js"
-}
