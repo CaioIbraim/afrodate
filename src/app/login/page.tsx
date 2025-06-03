@@ -141,7 +141,7 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-oraculo-purple/90 via-oraculo-purple/80 to-oraculo-cyan/90" />
 
           <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
-            <Image alt="Logo" src="/login.png" height={50} width={50} className="w-48 h-48 mb-8" />
+            <Image alt="Logo" src="/logo.png" height={150} width={150} className="mb-8" />
 
             <h1 className="text-4xl font-bold mb-4 text-center">Bem-vindo de volta!</h1>
 
@@ -155,7 +155,7 @@ export default function LoginPage() {
         <div className="w-full md:w-1/2 flex items-center justify-center p-6">
           <div className="auth-card">
             <div className="flex justify-center mb-6 md:hidden">
-            <Image alt="Logo" src="/login.png" height={50} width={50} className="w-48 h-48 mb-8" />
+            <Image alt="Logo" src="/logo.png" height={150} width={150} className="mb-8" />
 
             </div>
 

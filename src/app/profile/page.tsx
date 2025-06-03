@@ -105,7 +105,7 @@ const ProfileInfo = ({
                 src={photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || ""}
                 alt={profileData.name || "Foto de perfil"}
                 className="object-cover"
-                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+                onError={(e: { currentTarget: { src: string; }; }) => { e.currentTarget.src = "/placeholder-image.png"; }}
               />
               <AvatarFallback className="text-2xl">
                 {profileData.name.charAt(0) || "?"}
@@ -450,7 +450,7 @@ const ProfilePreferences = ({
               max={preferences.maxAge}
               step={1}
               value={[preferences.minAge]}
-              onValueChange={(value) => setPreferences({ ...preferences, minAge: value[0] })}
+              onValueChange={(value: any[]) => setPreferences({ ...preferences, minAge: value[0] })}
               disabled={saving || uploading}
               aria-label="Idade mínima"
             />
@@ -459,7 +459,7 @@ const ProfilePreferences = ({
               max={99}
               step={1}
               value={[preferences.maxAge]}
-              onValueChange={(value) => setPreferences({ ...preferences, maxAge: value[0] })}
+              onValueChange={(value: any[]) => setPreferences({ ...preferences, maxAge: value[0] })}
               disabled={saving || uploading}
               aria-label="Idade máxima"
             />
@@ -477,7 +477,7 @@ const ProfilePreferences = ({
             max={150}
             step={1}
             value={[preferences.maxDistance]}
-            onValueChange={(value) => setPreferences({ ...preferences, maxDistance: value[0] })}
+            onValueChange={(value: any[]) => setPreferences({ ...preferences, maxDistance: value[0] })}
             disabled={saving || uploading}
             aria-label="Distância máxima"
           />
@@ -500,7 +500,7 @@ const ProfilePreferences = ({
             <Switch
               id="showProfile"
               checked={preferences.showProfile}
-              onCheckedChange={(checked) => setPreferences({ ...preferences, showProfile: checked })}
+              onCheckedChange={(checked: any) => setPreferences({ ...preferences, showProfile: checked })}
               disabled={saving || uploading}
               aria-label="Mostrar perfil"
             />
@@ -517,7 +517,7 @@ const ProfilePreferences = ({
             <Switch
               id="matchNotifications"
               checked={preferences.matchNotifications}
-              onCheckedChange={(checked) => setPreferences({ ...preferences, matchNotifications: checked })}
+              onCheckedChange={(checked: any) => setPreferences({ ...preferences, matchNotifications: checked })}
               disabled={saving || uploading}
               aria-label="Notificações de match"
             />
@@ -534,7 +534,7 @@ const ProfilePreferences = ({
             <Switch
               id="messageNotifications"
               checked={preferences.messageNotifications}
-              onCheckedChange={(checked) => setPreferences({ ...preferences, messageNotifications: checked })}
+              onCheckedChange={(checked: any) => setPreferences({ ...preferences, messageNotifications: checked })}
               disabled={saving || uploading}
               aria-label="Notificações de mensagens"
             />
@@ -669,6 +669,11 @@ export default function ProfilePage() {
     let mounted = true;
     const fetchProfileId = async () => {
       try {
+        if (!user) {
+ console.log("[fetchProfileId] User is null. Cannot fetch profile.");
+ setProfileId(null); // Ensure profileId is null if user is null
+ return; // Exit function if user is null
+ }
         console.log("[fetchProfileId] Fetching profile for user_id:", user!.id);
         const { data, error } = await supabase
           .from("profiles")
@@ -743,7 +748,7 @@ export default function ProfilePage() {
       newErrors.photos = "Por favor, adicione pelo menos uma foto ao seu perfil.";
     }
     if (!isNewProfile || (photos.length > 0 && profileData.birth_date && !newErrors.birth_date)) {
-      if (!profileData.name.trim()) newErrors.name = "O nome é obrigatório.";
+      if (!profileData!.name.trim()) newErrors.name = "O nome é obrigatório.";
       if (!profileData.city.trim()) newErrors.city = "A cidade é obrigatória.";
       if (!profileData.profession.trim()) newErrors.profession = "A profissão é obrigatória.";
       if (profileData.bio.length > 500) newErrors.bio = "A biografia deve ter no máximo 500 caracteres.";
@@ -779,7 +784,7 @@ export default function ProfilePage() {
         throw photosError;
       }
       const photoUrls = await Promise.all(
-        photosData.map(async (photo) => {
+        photosData.map(async (photo: { storage_path: string; is_primary: any; }) => {
           const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
           let url = publicUrlData.publicUrl;
           try {
@@ -915,7 +920,8 @@ export default function ProfilePage() {
             throw profileError;
           }
           if (!profileData) {
-            const username = await generateUsername(profileData.name || "user");
+            // If no profile exists, generate a username based on a default or user ID part
+            const username = await generateUsername("user"); // Use a default name for generating username
             const { data: newProfile, error: insertError } = await supabase
               .from("profiles")
               .insert({
@@ -1267,7 +1273,7 @@ export default function ProfilePage() {
 
         <Tabs
           value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+          onValueChange={(value: string) => setActiveTab(value as typeof activeTab)}
           className={isNewProfile && !initialRequirementsMet ? "pointer-events-none opacity-50" : ""}
         >
           <TabsList className="grid grid-cols-3 w-full rounded-xl bg-white shadow-sm border border-gray-200">

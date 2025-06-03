@@ -1,4 +1,5 @@
 import styles from '@/styles/Home.module.css';
+import Image from 'next/image';
 
 export default function Home() {
   return (
@@ -19,6 +20,9 @@ export default function Home() {
             ></video>
           </div>
           <div className={styles.videoContent}>
+
+             <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mx-auto mb-8" />
+            
             <h1 className="text-4xl font-black tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan animate-gradient mb-4">Em Breve!!!</h1>
             <h1 className="text-4xl font-black tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan animate-gradient">Conheça o Oráculo</h1>
             <h3 className="font-light text-3xl mt-6">

@@ -28,8 +28,8 @@ export default function SignupPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-oraculo-purple/90 via-oraculo-purple/80 to-oraculo-cyan/90" />
 
           <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
-            <Image alt="Logo" src="/login.png" height={50} width={50} className="w-48 h-48 mb-8" />
-            <h1 className="text-4xl font-bold mb-4 text-center">Junte-se à Viva Afro</h1>
+            <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mb-8" />
+            <h1 className="text-4xl font-bold mb-4 text-center">Junte-se a nós</h1>
             <p className="text-xl text-center max-w-md">
               Crie sua conta e comece a celebrar a cultura afro enquanto encontra conexões autênticas.
             </p>
@@ -40,7 +40,7 @@ export default function SignupPage() {
         <div className="w-full md:w-1/2 flex items-center justify-center p-6">
           <div className="auth-card w-full max-w-md">
             <div className="flex justify-center mb-6 md:hidden">
-              <Image alt="Logo" src="/login.png" height={50} width={50} className="w-48 h-48 mb-8" />
+              <Image alt="Logo" src="/logo.png" height={150} width={150} className="mb-8" />
             </div>
 
             <h2 className="text-oraculo-purple hover:text-oraculo-cyan text-2xl font-bold mb-6 text-center">

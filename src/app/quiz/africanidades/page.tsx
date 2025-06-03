@@ -81,89 +81,83 @@ export default function QuizPage() {
       console.log("Submitting answer for question:", questions[currentIndex].id);
       const selectedIndex = parseInt(selectedOption);
 
-      // Inserir resposta
-      const { error: insertError } = await supabase
-        .from("quiz_responses")
-        .insert({
-          user_id: user.id,
-          quiz_id: questions[currentIndex].id,
-          selected_option: selectedIndex,
-        });
+      // Get user session to obtain auth token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
 
-      if (insertError) {
-        if (insertError.code === "23505") {
-          toast({
-            title: "Info",
-            description: "Você já respondeu esta pergunta.",
-            variant: "default",
-          });
-          // Avançar para a próxima pergunta mesmo se já respondeu
-          if (currentIndex + 1 < questions.length) {
-            setCurrentIndex(currentIndex + 1);
-            setSelectedOption(null);
-          } else {
-            setCompleted(true);
-          }
-          return;
-        }
-        console.log("Insert response error:", insertError);
-        throw insertError;
+      if (!token) {
+        throw new Error("Usuário não autenticado.");
       }
-
-      // Verificar se a resposta está correta
-      const isCorrect = selectedIndex === questions[currentIndex].correct_option;
-
-      // Atualizar interesses se correto
-      if (isCorrect && questions[currentIndex].category) {
-        const newInterest = mapCategoryToInterest(questions[currentIndex].category);
-        const currentInterests = Array.isArray(profile.interests) ? profile.interests : [];
-        if (!currentInterests.includes(newInterest)) {
-          const updatedInterests = [...currentInterests, newInterest];
-          const { error: updateError } = await supabase
-            .from("profiles")
-            .update({ interests: updatedInterests })
-            .eq("id", profile.id);
-
-          if (updateError) {
-            console.log("Update interests error:", updateError);
-            throw updateError;
-          }
-        }
-      }
-
-      toast({
-        title: isCorrect ? "Correto!" : "Errado",
-        description: isCorrect
-          ? "Boa! Você acertou a pergunta."
-          : `A resposta correta era: ${questions[currentIndex].options[questions[currentIndex].correct_option]}`,
-        variant: isCorrect ? "default" : "destructive",
+      // Call the backend Edge Function
+      const backendResponse = await fetch('/api/process-quiz-answer', { // Use the API route or direct Edge Function URL
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          question_id: questions[currentIndex].id,
+ selected_option: selectedIndex,
+        }),
       });
 
-      // Avançar ou completar
-      if (currentIndex + 1 < questions.length) {
-        setCurrentIndex(currentIndex + 1);
-        setSelectedOption(null);
-      } else {
-        setCompleted(true);
+      if (!backendResponse.ok) {
+          // Handle HTTP errors
+          const errorBody = await backendResponse.text(); // or .json() if backend sends JSON error
+          console.error("Backend error:", backendResponse.status, errorBody);
+          throw new Error(`Backend error: ${backendResponse.statusText}`);
       }
-    } catch (error: any) {
+
+      // Process response and advance question *after* a successful backend call
+      const result = await backendResponse.json();
+
+      // Use the 'isCorrect' property from the backend response for the toast message
+      toast({
+        title: result.isCorrect ? "Correto!" : (result.message || "Errado"), // Use backend message if available, otherwise default
+        description: result.message || (result.isCorrect ? "Boa! Você acertou a pergunta." : "Resposta incorreta."), // Use backend message if available
+        variant: result.isCorrect ? "default" : "destructive",
+      });
+
+    } catch (error: any) { // This catch block now handles fetch errors or errors thrown above
       console.log("Error submitting answer:", error.message, error);
       toast({
         title: "Erro",
         description: `Não foi possível enviar a resposta: ${error.message}`,
         variant: "destructive",
       });
-      // Tentar avançar mesmo com erro
+      // We still want to advance the question even on submit error to prevent being stuck
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex(currentIndex + 1);
         setSelectedOption(null);
       } else {
-        // Se for a última pergunta, marcar como concluído mesmo com erro
+        // If it's the last question, mark as completed even on error
         setCompleted(true);
       }
-    } finally {
+    } finally { // This finally block runs after try or catch, and after async operations within them
+         // Always advance or complete the quiz after an attempt to submit, regardless of error (within fetch)
+        if (currentIndex + 1 < questions.length) {
+            setCurrentIndex(currentIndex + 1);
+            setSelectedOption(null);
+        } else {
+            setCompleted(true);
+        }
+      }
+  /*   finally {
+
       setSubmitting(false);
-    }
+    }*/
+  };
+
+  // Handle the actual API call and state updates after backend response
+  // This function is called after handleSubmit makes the fetch request
+  // Removed the original handleSubmit logic and moved the core part here
+  // Note: This separation is one way to handle it. You could also put
+  // the `fetch` call and response handling directly in handleSubmit.
+  // The previous diff attempt had issues, rewriting the core logic here.
+  const handlePostSubmit = async () => {
+      // This function is no longer directly called.
+      // The logic is now integrated into the `try...finally` of `handleSubmit`.
+      // Leaving this here as a placeholder or a note about the previous refactoring idea.
   };
 
   // Mapear categoria para interesse
