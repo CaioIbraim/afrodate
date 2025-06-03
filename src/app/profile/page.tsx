@@ -30,6 +30,7 @@ import { motion } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { v4 as uuidv4 } from "uuid";
+import { setTimeout } from "timers/promises";
 
 // Types
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
@@ -667,12 +668,6 @@ export default function ProfilePage() {
   useEffect(() => {
     let mounted = true;
     const fetchProfileId = async () => {
-
-      if (!user) {
-        if (mounted) router.push("/login");
-        return;
-      }
-      
       try {
         console.log("[fetchProfileId] Fetching profile for user_id:", user.id);
         const { data, error } = await supabase
@@ -681,13 +676,13 @@ export default function ProfilePage() {
           .eq("user_id", user.id)
           .single();
         if (error && error.code !== "PGRST116") {
-          console.error("[fetchProfileId] Error:", error.message);
+          console.log("[fetchProfileId] Error:", error.message);
           throw error;
         }
         if (mounted) setProfileId(data?.id || null);
         if (!data) setIsNewProfile(true);
       } catch (error: any) {
-        console.error("[fetchProfileId] Error:", error.message);
+        console.log("[fetchProfileId] Error:", error.message);
         if (mounted) {
           toast({
             title: "Erro",
@@ -780,7 +775,7 @@ export default function ProfilePage() {
         .eq("profile_id", profileId)
         .order("created_at", { ascending: true });
       if (photosError) {
-        console.error("[loadPhotos] Photos error:", photosError.message);
+        console.log("[loadPhotos] Photos error:", photosError.message);
         throw photosError;
       }
       const photoUrls = await Promise.all(
@@ -810,7 +805,7 @@ export default function ProfilePage() {
       );
       setPhotos(photoUrls);
     } catch (error: any) {
-      console.error("[loadPhotos] Error:", error.message);
+      console.log("[loadPhotos] Error:", error.message);
       setPhotos([]);
       toast({
         title: "Erro",
@@ -857,7 +852,7 @@ export default function ProfilePage() {
         );
       });
     } catch (error: any) {
-      console.error("[compressImage] Error:", error.message);
+      console.log("[compressImage] Error:", error.message);
       throw error;
     }
   };
@@ -904,43 +899,86 @@ export default function ProfilePage() {
           .from("imagens")
           .upload(filePath, compressedFile, { contentType: file.type, upsert: false });
         if (uploadError) {
-          console.error("[handlePhotoUpload] Upload error:", uploadError.message);
+          console.log("[handlePhotoUpload] Upload error:", uploadError.message);
           throw uploadError;
         }
 
-        const profileIdToUse = profileId || (await supabase.from("profiles").select("id").eq("user_id", user.id).single()).data?.id;
+        let profileIdToUse = profileId;
         if (!profileIdToUse) {
-          throw new Error("Perfil não encontrado");
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+          if (profileError && profileError.code !== "PGRST116") {
+            console.log("[handlePhotoUpload] Profile fetch error:", profileError.message);
+            throw profileError;
+          }
+          if (!profileData) {
+            const username = await generateUsername(profileData.name || "user");
+            const { data: newProfile, error: insertError } = await supabase
+              .from("profiles")
+              .insert({
+                user_id: user.id,
+                username,
+                created_at: new Date().toISOString(),
+              })
+              .select("id")
+              .single();
+            if (insertError) {
+              console.log("[handlePhotoUpload] Profile insert error:", insertError.message);
+              throw insertError;
+            }
+            profileIdToUse = newProfile.id;
+            setProfileId(newProfile.id);
+            setIsNewProfile(false);
+          } else {
+            profileIdToUse = profileData.id;
+            setProfileId(profileData.id);
+          }
         }
 
-        console.log("[handlePhotoUpload] Inserting photo for profile_id:", profileIdToUse);
+        const isFirstPhoto = photos.length === 0;
+        console.log("[handlePhotoUpload] Inserting photo for profile_id:", profileIdToUse, "is_primary:", isFirstPhoto);
+        if (!isFirstPhoto) {
+          await supabase
+            .from("profile_photos")
+            .update({ is_primary: false })
+            .eq("profile_id", profileIdToUse)
+            .eq("is_primary", true);
+        }
+
         const { error: insertError } = await supabase.from("profile_photos").insert({
           profile_id: profileIdToUse,
           storage_path: filePath,
-          is_primary: photos.length === 0,
+          is_primary: isFirstPhoto,
         });
         if (insertError) {
-          console.error("[handlePhotoUpload] Insert error:", insertError.message);
+          console.log("[handlePhotoUpload] Insert error:", insertError.message);
+          await supabase.storage.from("imagens").remove([filePath]);
           throw insertError;
         }
 
-        if (photos.length === 0) {
-          const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(filePath);
+        if (isFirstPhoto) {
           console.log("[handlePhotoUpload] Setting avatar_url:", urlData.publicUrl);
-          await supabase
+          const { error: avatarError } = await supabase
             .from("profiles")
             .update({ avatar_url: urlData.publicUrl })
             .eq("id", profileIdToUse);
+          if (avatarError) {
+            console.log("[handlePhotoUpload] Avatar update error:", avatarError.message);
+            throw avatarError;
+          }
         }
 
         toast({
           title: "Sucesso",
-          description: `Foto ${photos.length === 0 ? "principal" : ""} enviada com sucesso!`,
+          description: `Foto ${isFirstPhoto ? "principal" : ""} enviada com sucesso!`,
         });
         await loadPhotos();
-       
       } catch (error: any) {
-        console.error("[handlePhotoUpload] Error:", error.message);
+        console.log("[handlePhotoUpload] Error:", error.message);
         toast({
           title: "Erro",
           description: "Não foi possível enviar sua foto. Tente novamente.",
@@ -978,24 +1016,71 @@ export default function ProfilePage() {
     try {
       const filePath = `${user.id}/${photoName}`;
       console.log("[handleDeletePhoto] Deleting:", filePath);
+      const { data: photoData, error: photoError } = await supabase
+        .from("profile_photos")
+        .select("is_primary")
+        .eq("storage_path", filePath)
+        .eq("profile_id", profileId)
+        .single();
+      if (photoError) {
+        console.log("[handleDeletePhoto] Photo fetch error:", photoError.message);
+        throw photoError;
+      }
       const { error: deleteError } = await supabase.storage.from("imagens").remove([filePath]);
       if (deleteError) {
-        console.error("[handleDeletePhoto] Delete error:", deleteError.message);
+        console.log("[handleDeletePhoto] Delete error:", deleteError.message);
         throw deleteError;
       }
       const { error: dbError } = await supabase
         .from("profile_photos")
         .delete()
-        .eq("storage_path", filePath);
+        .eq("storage_path", filePath)
+        .eq("profile_id", profileId);
       if (dbError) {
-        console.error("[handleDeletePhoto] DB error:", dbError.message);
+        console.log("[handleDeletePhoto] DB error:", dbError.message);
         throw dbError;
+      }
+      if (photoData.is_primary) {
+        const { data: remainingPhotos } = await supabase
+          .from("profile_photos")
+          .select("storage_path")
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: true })
+          .limit(1);
+        if (remainingPhotos && remainingPhotos.length > 0) {
+          const { error: updatePrimaryError } = await supabase
+            .from("profile_photos")
+            .update({ is_primary: true })
+            .eq("storage_path", remainingPhotos[0].storage_path)
+            .eq("profile_id", profileId);
+          if (updatePrimaryError) {
+            console.log("[handleDeletePhoto] Update primary error:", updatePrimaryError.message);
+            throw updatePrimaryError;
+          }
+          const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(remainingPhotos[0].storage_path);
+          const { error: avatarError } = await supabase
+            .from("profiles")
+            .update({ avatar_url: urlData.publicUrl })
+            .eq("id", profileId);
+          if (avatarError) {
+            console.log("[handleDeletePhoto] Avatar update error:", avatarError.message);
+            throw avatarError;
+          }
+        } else {
+          const { error: avatarError } = await supabase
+            .from("profiles")
+            .update({ avatar_url: null })
+            .eq("id", profileId);
+          if (avatarError) {
+            console.log("[handleDeletePhoto] Avatar reset error:", avatarError.message);
+            throw avatarError;
+          }
+        }
       }
       toast({ title: "Sucesso", description: "Foto excluída com sucesso." });
       await loadPhotos();
-      
     } catch (error: any) {
-      console.error("[handleDeletePhoto] Error:", error.message);
+      console.log("[handleDeletePhoto] Error:", error.message);
       toast({
         title: "Erro",
         description: "Não foi possível remover sua foto.",
@@ -1019,7 +1104,7 @@ export default function ProfilePage() {
         .eq("storage_path", storagePath)
         .eq("profile_id", profileId);
       if (updateError) {
-        console.error("[handleSetPrimaryPhoto] Update error:", updateError.message);
+        console.log("[handleSetPrimaryPhoto] Update error:", updateError.message);
         throw updateError;
       }
       const { data: publicUrl } = supabase.storage.from("imagens").getPublicUrl(storagePath);
@@ -1029,14 +1114,13 @@ export default function ProfilePage() {
         .update({ avatar_url: publicUrl.publicUrl })
         .eq("id", profileId);
       if (avatarError) {
-        console.error("[handleSetPrimaryPhoto] Avatar error:", avatarError.message);
+        console.log("[handleSetPrimaryPhoto] Avatar error:", avatarError.message);
         throw avatarError;
       }
       toast({ title: "Sucesso", description: "Foto principal atualizada!" });
       await loadPhotos();
-     
     } catch (error: any) {
-      console.error("[handleSetPrimaryPhoto] Error:", error.message);
+      console.log("[handleSetPrimaryPhoto] Error:", error.message);
       toast({
         title: "Erro",
         description: "Não foi possível definir esta foto como principal.",
@@ -1114,20 +1198,19 @@ export default function ProfilePage() {
         setIsNewProfile(false);
       }
       if (error) {
-        console.error("[handleUpdateProfile] Save error:", error.message);
+        console.log("[handleUpdateProfile] Save error:", error.message);
         throw error;
       }
       toast({
         title: "Sucesso",
         description: profileId ? "Perfil atualizado com sucesso!" : "Perfil criado com sucesso!",
       });
-      
       if (!profileId) {
         await loadPhotos();
         router.push("/dashboard");
       }
     } catch (error: any) {
-      console.error("[handleUpdateProfile] Error:", error.message);
+      console.log("[handleUpdateProfile] Error:", error.message);
       toast({
         title: "Erro",
         description: "Não foi possível atualizar seu perfil: " + error.message,
@@ -1228,19 +1311,19 @@ export default function ProfilePage() {
               handleDeletePhoto={handleDeletePhoto}
               handleSetPrimaryPhoto={handleSetPrimaryPhoto}
             />
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="preferencias">
-            <ProfilePreferences
-              preferences={preferences}
-              setPreferences={setPreferences}
-              saving={saving}
-              uploading={uploading}
-              handleUpdateProfile={handleUpdateProfile}
-            />
-          </TabsContent>
-        </Tabs>
-      </motion.main>
-    </div>
-  );
-}
+            <TabsContent value="preferencias">
+              <ProfilePreferences
+                preferences={preferences}
+                setPreferences={setPreferences}
+                saving={saving}
+                uploading={uploading}
+                handleUpdateProfile={handleUpdateProfile}
+              />
+            </TabsContent>
+          </Tabs>
+        </motion.main>
+      </div>
+    );
+  }
