@@ -669,7 +669,7 @@ export default function ProfilePage() {
     let mounted = true;
     const fetchProfileId = async () => {
       try {
-        console.log("[fetchProfileId] Fetching profile for user_id:", user.id);
+        console.log("[fetchProfileId] Fetching profile for user_id:", user!.id);
         const { data, error } = await supabase
           .from("profiles")
           .select("id")
