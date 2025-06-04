@@ -3,11 +3,40 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { AuthService } from '@/lib/services/auth-service'
 
+// Exportando o hook useAuth como alias para useSupabaseAuth para compatibilidade
+export function useAuth() {
+  return useSupabaseAuth()
+}
+
 export function useSupabaseAuth() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const authService = AuthService.getInstance()
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser()
+        if (error) throw error
+        setUser(data.user)
+      } catch (err) {
+        console.error("Error fetching user:", err)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
@@ -110,10 +139,10 @@ export function useSupabaseAuth() {
   const signOut = async () => {
     try {
       setLoading(true)
+      setError(null)
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      await authService.logout()
-      router.push('/')
+      router.push('/login')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -122,6 +151,7 @@ export function useSupabaseAuth() {
   }
 
   return {
+    user,
     loading,
     error,
     signInWithEmail,

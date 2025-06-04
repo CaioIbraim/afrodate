@@ -32,4 +32,36 @@ export class StorageService {
 
     if (error) throw error
   }
+
+  static async uploadGalleryImage(file: File, userId: string): Promise<string> {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${userId}-gallery-${Date.now()}.${fileExt}`
+    const filePath = `gallery-images/${fileName}`
+
+    const { data, error } = await supabase.storage
+      .from('imagens')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+    if (error) throw error
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('imagens')
+      .getPublicUrl(filePath)
+
+    return publicUrl
+  }
+
+  static async deleteGalleryImage(imageUrl: string): Promise<void> {
+    const path = imageUrl.split('/').pop()
+    if (!path) return
+
+    const { error } = await supabase.storage
+      .from('imagens')
+      .remove([`gallery-images/${path}`])
+
+    if (error) throw error
+  }
 }

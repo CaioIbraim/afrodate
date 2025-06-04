@@ -1,12 +1,45 @@
 'use client';
 import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+import { User } from "@supabase/supabase-js"
+
+type Profile = {
+  id: string;
+  user_id: string;
+  name: string;
+  bio?: string;
+  avatar_url?: string;
+  [key: string]: any;
+}
 
 export function useUser() {
-  const [user, setUser] = useState(null)
-  const [profile, setProfile] = useState(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+
+  const refreshProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*, profile_photos(*), profile_interests(*)')
+        .eq('user_id', userId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        throw error
+      }
+
+      setProfile(data || null)
+      return data
+    } catch (err) {
+      console.error("Error refreshing profile:", err)
+      setError(err as Error)
+      return null
+    }
+  }
+
+
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -42,7 +75,7 @@ export function useUser() {
         setProfile(profileData || null)
       } catch (err) {
         console.log("Erro ao buscar usuário:", err)
-        setError(err)
+        setError(err as Error)
       } finally {
         setIsLoading(false)
       }
@@ -52,7 +85,7 @@ export function useUser() {
     
     // Configurar listener para mudanças de autenticação
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         setUser(session.user)
         
         const { data } = await supabase
@@ -75,5 +108,5 @@ export function useUser() {
     }
   }, [])
   
-  return { user, profile, isLoading, error }
+  return { user, profile, isLoading, error, refreshProfile }
 }

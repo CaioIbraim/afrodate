@@ -1,519 +1,426 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Card } from "@/components/ui/card"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import { Loader2, ChevronLeft, Heart, X, User, AlertCircle } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
+import { motion, AnimatePresence } from "framer-motion";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Link from "next/link";
 
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs"
-import {
-  ChevronLeft,
-  Search,
-  MapPin,
-  Sparkles,
-  Filter,
-  Heart,
-  MessageCircle,
-  User2Icon,
-} from "lucide-react"
-import Image from "next/image"
-import { Logo } from "@/components/ui/logo"
-import { motion, AnimatePresence } from "framer-motion"
-import Link from "next/link"
-import { supabase } from "@/lib/supabase"
-import { useToast } from "@/components/ui/use-toast"
-import { useUser } from "@/hooks/use-user"
-import { popularLocations } from "@/components/ui/location-selector"
+// Tipos
+type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
+interface Profile {
+  id: string;
+  username: string;
+  name: string;
+  birth_date: string;
+  gender: Gender;
+  bio: string;
+  city: string;
+  avatar_url: string | null;
+  photo: { storage_path: string; publicUrl: string } | null;
+}
+
+// Componente Dinâmico para Mensagem de Nenhum Perfil
+const NoProfilesMessage = ({ profile }: { profile: any }) => {
+  const router = useRouter();
+  const today = new Date();
+  const birthDate = new Date(profile?.birth_date);
+  const age = today.getFullYear() - birthDate.getFullYear();
+
+  const minAge = parseInt(profile.min_age) || 18;
+  const maxAge = parseInt(profile.max_age) || 99;
+
+  const isAgeFilterTooRestrictive = maxAge - minAge < 5;
+  const needsQuiz = !profile.quizCompleted; // Supondo que isso venha do backend ou estado
+
+  return (
+    <Card className="mb-6 shadow-md">
+      <CardContent className="flex flex-col items-center justify-center py-10 px-6 text-center">
+        <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
+        <h3 className="text-xl font-semibold mb-3">Nenhum perfil disponível</h3>
+        <p className="text-gray-600 mb-4">
+          Não encontramos perfis compatíveis com suas preferências atuais. Isso pode acontecer por:
+        </p>
+
+        <ul className="text-left text-sm text-gray-500 list-disc pl-5 space-y-1 mb-6">
+          {isAgeFilterTooRestrictive && (
+            <li>Seus filtros de idade estão muito restritos (menos de 5 anos de diferença).</li>
+          )}
+          {!needsQuiz && (
+            <li>Você ainda não respondeu ao Quiz de Africanidades (11 perguntas).</li>
+          )}
+          <li>Não há perfis ativos dentro do seu raio de busca.</li>
+        </ul>
+
+        <div className="space-y-3 w-full max-w-xs">
+          {isAgeFilterTooRestrictive && (
+            <Button
+              onClick={() => router.push("/profile")}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Ajustar Faixa Etária
+            </Button>
+          )}
+
+          {needsQuiz && (
+            <Button
+              onClick={() => router.push("/quiz/africanidades")}
+              className="w-full bg-green-600 hover:bg-green-700 text-white"
+            >
+              Responder Quiz de Africanidades
+            </Button>
+          )}
+
+          <Button
+            onClick={() => router.push("/profile")}
+            variant="outline"
+            className="w-full border-gray-300 text-gray-700"
+          >
+            Verificar Preferências Gerais
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 export default function DiscoverPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [activeTab, setActiveTab] = useState("todos")
-  const [showLocationFilter, setShowLocationFilter] = useState(false)
-  const [showGenderFilter, setShowGenderFilter] = useState(false)
-  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
-  const [genderPreference, setGenderPreference] = useState("TODOS")
-  const [profiles, setProfiles] = useState<any[]>([])
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(0)
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user, profile, isLoading } = useUser();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [fetching, setFetching] = useState(false);
 
-  const { user, profile } = useUser()
-
-  // Busca perfil do usuário logado
   useEffect(() => {
-    if (!user) return
+    if (!user || !profile || isLoading) return;
+    const fetchProfiles = async () => {
+      setFetching(true);
+      try {
+        console.log("Fetching profiles for user:", user.id);
 
-    const fetchProfileId = async () => {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .neq("user_id", user.id)
+        const today = new Date();
+        const minAge = parseInt(profile.min_age) || 18;
+        const maxAge = parseInt(profile.max_age) || 99;
+        const minBirthDate = new Date(today.getFullYear() - maxAge, today.getMonth(), today.getDate())
+          .toISOString()
+          .split("T")[0];
+        const maxBirthDate = new Date(today.getFullYear() - minAge, today.getMonth(), today.getDate())
+          .toISOString()
+          .split("T")[0];
 
-      if (profileData) {
-        setCurrentUserId(profileData.id)
-      }
-    }
+        const { data: viewedData } = await supabase
+          .from("profile_views")
+          .select("viewed_id")
+          .eq("viewer_id", profile.id);
 
-    fetchProfileId()
-  }, [user])
+        const { data: likedData } = await supabase
+          .from("matches")
+          .select("liked_id")
+          .eq("liker_id", profile.id);
 
-  // Carrega novos perfis
-  const loadProfiles = async (reset = false) => {
-    if (!currentUserId) return
-  
-    try {
-      // Primeiro, carrega todos os IDs que o usuário logado já curtiu
-      const { data: likesData } = await supabase
-        .from("likes")
-        .select("liked_profile_id")
-        .neq("profile_id", currentUserId)
-  
-      const likedIds = likesData?.map((like) => like.liked_profile_id) || []
-  
-      // Monta a query principal
-      let query = supabase
-        .from("profiles")
-        .select(`
-          *,
-          profile_photos(*)
-        `)
-        .neq("id", currentUserId)
-        .eq("show_profile", true)
-      
-      // Adiciona filtro de localização e gênero
-      if (selectedLocation) {
-        query = query.eq("city", selectedLocation)
-      }
-  
-     
-      // Paginação
-      query = query.range(page * 2, page * 2 + 1)
-  
-      const { data, error } = await query.order("created_at", { ascending: false })
-  
-      if (error) throw error
-  
-      const processedProfiles = await Promise.all(
-        data.map(async (p) => {
-          const primaryPhoto =
-            p.profile_photos.find((ph) => ph.is_primary) || p.profile_photos[0]
-          const { publicUrl } = supabase.storage
-            .from("imagens")
-            .getPublicUrl(primaryPhoto?.storage_path || "")
-  
+        const excludedIds = [
+          ...(viewedData?.map((v) => v.viewed_id) || []),
+          ...(likedData?.map((l) => l.liked_id) || []),
+        ];
+
+        let query = supabase
+          .from("profiles")
+          .select(`
+            id,
+            username,
+            name,
+            birth_date,
+            gender,
+            bio,
+            city,
+            avatar_url,
+            profile_photos!left (storage_path)
+          `)
+          .eq("show_profile", true)
+          .neq("user_id", user.id)
+          .gte("birth_date", minBirthDate)
+          .lte("birth_date", maxBirthDate);
+
+        if (excludedIds.length > 0) {
+          query = query.not("id", "in", `(${excludedIds.join(",")})`);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const processedProfiles = data.map((p) => {
+          const firstPhoto = p.profile_photos?.[0];
           return {
-            ...p,
-            avatar_url: publicUrl || "/placeholder.svg",
-            age: calculateAge(p.birth_date),
-            compatibility: Math.floor(Math.random() * 100),
-          }
-        })
-      )
-  
-      if (reset) {
-        setProfiles(processedProfiles)
-      } else {
-        setProfiles((prev) => [...prev, ...processedProfiles])
-      }
-  
-      if (processedProfiles.length < 2) {
-        setHasMore(false)
-      }
-  
-      setPage((prev) => prev + 1)
-    } catch (err: any) {
-      console.log("Erro ao carregar perfis:", err.message)
-      toast({
-        title: "Erro ao carregar perfis",
-        description: "Não foi possível buscar novos perfis.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+            id: p.id,
+            username: p.username,
+            name: p.name,
+            birth_date: p.birth_date,
+            gender: p.gender,
+            bio: p.bio || "Sem biografia",
+            city: p.city || "Cidade não informada",
+            avatar_url: p.avatar_url,
+            photo: firstPhoto
+              ? {
+                  storage_path: firstPhoto.storage_path,
+                  publicUrl: supabase.storage
+                    .from("imagens")
+                    .getPublicUrl(firstPhoto.storage_path).data.publicUrl,
+                }
+              : null,
+          };
+        });
 
-  // Carrega perfis na primeira vez
-  useEffect(() => {
-    if (!currentUserId) return
+        setProfiles(processedProfiles);
+        console.log("Profiles loaded:", processedProfiles);
 
-    loadProfiles(true)
-  }, [currentUserId, selectedLocation, genderPreference])
-
-  // Calcula idade
-  const calculateAge = (birthDate: string): number => {
-    if (!birthDate) return 0
-    const today = new Date()
-    const birth = new Date(birthDate)
-    let age = today.getFullYear() - birth.getFullYear()
-    const monthDiff = today.getMonth() - birth.getMonth()
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birth.getDate())
-    ) {
-      age--
-    }
-    return age
-  }
-
-  // Dar like em um perfil
-  const handleLike = async (profileId: string) => {
-    if (!currentUserId || !profileId) return
-
-    try {
-      const { error } = await supabase
-        .from("likes")
-        .insert({
-          profile_id: currentUserId,
-          liked_profile_id: profileId,
-        })
-        .eq("profile_id", currentUserId)
-        .eq("liked_profile_id", profileId)
-        .select()
-        .single()
-
-      if (error && error.code !== "23505") {
-        throw error
-      }
-
-      toast({ title: "Curtido!", description: "Você curtiu este perfil." })
-
-      // Verifica se houve match
-      const { count } = await supabase
-        .from("likes")
-        .select("*", { count: "exact" })
-        .eq("profile_id", profileId)
-        .eq("liked_profile_id", currentUserId)
-
-      if (count > 0) {
+        if (processedProfiles.length > 0) {
+          await supabase.from("profile_views").insert({
+            viewer_id: profile.id,
+            viewed_id: processedProfiles[0].id,
+          });
+        }
+      } catch (error: any) {
+        console.error("Error fetching profiles:", error.message);
         toast({
-          title: "Match encontrado!",
-          description: "Vocês se curtiram mutuamente!",
-        })
-        router.push(`/messages/to/${profileId}`)
+          title: "Erro",
+          description: "Não foi possível carregar os perfis.",
+          variant: "destructive",
+        });
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchProfiles();
+  }, [user, profile, isLoading, toast]);
+
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleLike = async (profileId: string) => {
+    if (!user || !profile) {
+      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error: insertError } = await supabase
+        .from("matches")
+        .insert({ liker_id: profile.id, liked_id: profileId, status: "pending" });
+
+      if (insertError?.code === "23505") {
+        toast({ title: "Info", description: "Você já curtiu este perfil." });
+        return;
       }
 
-      // Remove da lista após curtir
-      setProfiles((prev) => prev.filter((p) => p.id !== profileId))
+      await supabase.from("profile_views").insert({
+        viewer_id: profile.id,
+        viewed_id: profileId,
+      });
+
+      const { data: mutualLike } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("liker_id", profileId)
+        .eq("liked_id", profile.id)
+        .single();
+
+      if (mutualLike) {
+        await supabase
+          .from("matches")
+          .update({ status: "matched" })
+          .eq("liker_id", profile.id)
+          .eq("liked_id", profileId);
+        await supabase
+          .from("matches")
+          .update({ status: "matched" })
+          .eq("liker_id", profileId)
+          .eq("liked_id", profile.id);
+
+        toast({ title: "Match!", description: `Você deu match com ${profiles[currentIndex].name}!` });
+      } else {
+        toast({ title: "Sucesso", description: "Perfil curtido!" });
+      }
+
+      setCurrentIndex((prev) => {
+        const nextIndex = Math.min(prev + 1, profiles.length - 1);
+        if (nextIndex < profiles.length) {
+          supabase.from("profile_views").insert({
+            viewer_id: profile.id,
+            viewed_id: profiles[nextIndex].id,
+          });
+        }
+        return nextIndex;
+      });
     } catch (error: any) {
-      console.log("Erro ao curtir perfil:", error.message)
+      console.error("Error liking profile:", error.message);
       toast({
         title: "Erro",
-        description: "Não foi possível curtir esse perfil.",
+        description: `Não foi possível curtir o perfil: ${error.message}`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
-  // Carregar mais perfis ao rolar
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const bottom =
-      e.currentTarget.scrollHeight - e.currentTarget.scrollTop <=
-      e.currentTarget.clientHeight + 100
+  const handleSkip = async () => {
+    if (!user || !profile) return;
 
-    if (bottom && hasMore && !loading) {
-      loadProfiles()
-    }
-  }
+    await supabase.from("profile_views").insert({
+      viewer_id: profile.id,
+      viewed_id: profiles[currentIndex].id,
+    });
 
-  // Filtra os perfis com base nos critérios atuais
-  const filteredProfiles = profiles.filter((p) => {
-    const matchesSearch =
-      searchTerm === "" || p.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesLocation = !selectedLocation || p.city === selectedLocation
-    const matchesGender =
-      genderPreference === "TODOS" || p.gender === genderPreference
+    setCurrentIndex((prev) => {
+      const nextIndex = Math.min(prev + 1, profiles.length - 1);
+      if (nextIndex < profiles.length) {
+        supabase.from("profile_views").insert({
+          viewer_id: profile.id,
+          viewed_id: profiles[nextIndex].id,
+        });
+      }
+      return nextIndex;
+    });
+  };
 
-    return matchesSearch && matchesLocation && matchesGender
-  })
-
-  if (loading && profiles.length === 0) {
+  if (isLoading || fetching) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin h-8 w-8 border-4 border-t-transparent border-white rounded-full"></div>
-          <p className="mt-4 text-gray-600">Carregando perfis...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    )
+    );
+  }
+
+  if (!user || !profile) {
+    router.push("/login");
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white shadow-sm px-4 py-4">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <ChevronLeft className="h-6 w-6 text-gray-700" />
-          </Button>
-          <Logo size="sm" />
-          <div className="flex gap-2">
-            <Link href="/matches">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-gray-700 relative"
-              >
-                <Heart className="h-5 w-5 fill-current" />
-                <span className="absolute top-0 right-0 w-2 h-2 bg-purple-500 rounded-full"></span>
-              </Button>
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-700"
-           
-            >
-              <Sparkles className="h-5 w-5" />
-            </Button>
-            <Link href="/profile">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} alt={profile?.name} />
-                <AvatarFallback>{profile?.name?.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="icon" onClick={() => router.push("/profile")}>
+          <ChevronLeft className="h-6 w-6 text-gray-700" />
+        </Button>
+        <Logo size="sm" />
+        <div className="w-10"></div>
+      </div>
 
-      {/* Filtros */}
-      <section className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="max-w-md mx-auto">
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Buscar perfis..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-
-          {/* Abas de filtro */}
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3 w-full">
-              <TabsTrigger value="todos">Todos</TabsTrigger>
-              <TabsTrigger value="proximos">Próximos</TabsTrigger>
-              <TabsTrigger value="compatibilidade">Compatibilidade</TabsTrigger>
-            </TabsList>
-            <TabsContent value="todos">
-              <div className="flex items-center gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  className="flex-1 text-xs"
-                  
-                >
-                  <MapPin className="h-3 w-3 mr-1" />
-                  Localização
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 text-xs"
-                >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Gênero
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </section>
-
-      {/* Resultados */}
-      <main
-        className="max-w-md mx-auto px-4 pb-20 overflow-y-auto"
-        onScroll={handleScroll}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-md mx-auto w-full"
       >
-        <AnimatePresence>
-          {/* Filtro de localização */}
-          {showLocationFilter && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="mb-4"
-            >
-              <h3 className="text-lg font-semibold gradient-text mb-2">
-                Localizações populares
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {popularLocations.map((location) => (
-                  <Badge
-                    key={location.value}
-                    variant={
-                      selectedLocation === location.value ? "default" : "outline"
-                    }
-                    className="cursor-pointer"
-                    onClick={() =>
-                      setSelectedLocation(
-                        location.value === selectedLocation ? null : location.value
-                      )
-                    }
-                  >
-                    <MapPin className="h-3 w-3 mr-1" />
-                    {location.label}
-                  </Badge>
-                ))}
-              </div>
-            </motion.div>
-          )}
+        <h2 className="text-2xl font-bold gradient-text text-center mb-6">Descobrir Perfis</h2>
 
-          {/* Filtro de gênero */}
-          {showGenderFilter && (
+        {profiles.length === 0 || currentIndex >= profiles.length ? (
+          <NoProfilesMessage profile={profile} />
+        ) : (
+          <AnimatePresence mode="wait">
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="mb-4"
+              key={currentIndex}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              transition={{ duration: 0.3 }}
             >
-              <h3 className="text-lg font-semibold gradient-text mb-2">
-                Gênero
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <Badge
-                  variant={genderPreference === "HOMEM" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setGenderPreference(
-                      genderPreference === "HOMEM" ? "TODOS" : "HOMEM"
-                    )
-                  }
-                >
-                  Masculino
-                </Badge>
-                <Badge
-                  variant={genderPreference === "MULHER" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setGenderPreference(
-                      genderPreference === "MULHER" ? "TODOS" : "MULHER"
-                    )
-                  }
-                >
-                  Feminino
-                </Badge>
-                <Badge
-                  variant={
-                    genderPreference === "NAO_BINARIO" ? "default" : "outline"
-                  }
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setGenderPreference(
-                      genderPreference === "NAO_BINARIO" ? "TODOS" : "NAO_BINARIO"
-                    )
-                  }
-                >
-                  Não Binário
-                </Badge>
-                <Badge
-                  variant={genderPreference === "OUTRO" ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setGenderPreference(
-                      genderPreference === "OUTRO" ? "TODOS" : "OUTRO"
-                    )
-                  }
-                >
-                  Outro
-                </Badge>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Lista de perfis */}
-        <div className="space-y-4">
-          {filteredProfiles.length === 0 && !loading ? (
-            <div className="profile-card p-6 text-center">
-              <h3 className="text-lg font-medium text-gray-700">
-                Nenhum perfil encontrado
-              </h3>
-              <p className="text-sm text-gray-500 mt-2">
-                Tente ajustar seus filtros ou volte mais tarde.
-              </p>
-            </div>
-          ) : (
-            <>
-              {filteredProfiles.map((p) => (
-                <Card
-                  key={p.id}
-                  className="bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-24 h-24 rounded-lg overflow-hidden">
-                      <Image
-                        src={p.avatar_url}
-                        alt={`Foto de ${p.name}`}
-                        fill
-                        className="object-cover"
+              <Card className="mb-6">
+                <CardContent className="p-0">
+                  <div className="relative">
+                    {profiles[currentIndex].photo?.publicUrl ||
+                    profiles[currentIndex].avatar_url ? (
+                      <img
+                        src={
+                          profiles[currentIndex].photo?.publicUrl ||
+                          profiles[currentIndex].avatar_url!
+                        }
+                        alt={profiles[currentIndex].name}
+                        className="w-full h-64 object-cover rounded-t-lg"
                       />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold gradient-text">{p.name}</h3>
-                        <span className="text-xs bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-2 py-1 rounded-full">
-                          {p.compatibility || 50}%
-                        </span>
+                    ) : (
+                      <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-t-lg">
+                        <Avatar className="w-32 h-32">
+                          <AvatarFallback>
+                            {profiles[currentIndex].name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600 mb-2">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        <span>{p.city || "Localização não informada"}</span>
-                      </div>
-                      {p.bio && (
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          {p.bio}
-                        </p>
-                      )}
-                      <div className="flex justify-between mt-4">
-                        <Button
-                          variant="outline"
-                          className="flex-1 text-xs border-oraculo-muted text-oraculo-muted"
-                          onClick={() => router.push(`/profile/${p.id}`)}
-                        >
-                          Ver Perfil
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="icon"
-                          className="ml-2"
-                          onClick={() => handleLike(p.id)}
-                        >
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </Card>
-              ))}
-
-              {loading && (
-                <div className="text-center text-gray-500 py-4">
-                  Carregando mais perfis...
-                </div>
-              )}
-
-              {!hasMore && filteredProfiles.length > 0 && (
-                <div className="text-center text-gray-500 py-4">
-                  Você viu todos os perfis disponíveis!
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </main>
+                  <div className="p-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div>
+                        <Link href={`/profile/${profiles[currentIndex].id}`}>
+                          <h3 className="text-xl font-semibold hover:underline">
+                            {profiles[currentIndex].name},{" "}
+                            {calculateAge(profiles[currentIndex].birth_date)}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-gray-500">{profiles[currentIndex].username}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/profile/${profiles[currentIndex].id}`}>
+                          <User className="h-5 w-5" />
+                          Ver Perfil
+                        </Link>
+                      </Button>
+                    </div>
+                    <Label className="text-sm text-gray-600">Cidade</Label>
+                    <p className="mb-2">{profiles[currentIndex].city}</p>
+                    <Label className="text-sm text-gray-600">Biografia</Label>
+                    <p className="text-gray-700">
+                      {profiles[currentIndex].bio.length > 150 
+                        ? `${profiles[currentIndex].bio.slice(0, 150)}...`
+                        : profiles[currentIndex].bio}
+                    </p>
+                  </div>
+                </CardContent>
+                <CardContent className="flex justify-center gap-4 pt-0">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleSkip}
+                    className="rounded-full w-12 h-12"
+                  >
+                    <X className="h-6 w-6 text-red-500" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleLike(profiles[currentIndex].id)}
+                    className="rounded-full w-12 h-12"
+                  >
+                    <Heart className="h-6 w-6 text-green-500" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </motion.div>
     </div>
-  )
+  );
 }

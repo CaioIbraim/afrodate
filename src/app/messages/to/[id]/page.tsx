@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, use } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,340 +13,408 @@ import { supabase } from "@/lib/supabase"
 import { useUser } from "@/hooks/use-user"
 
 // Emojis relacionados à cultura afro e diversidade
-const emojiSets = {
-  recent: ["❤️", "👍", "😊", "✨", "🙏🏾", "🔥", "💯", "🎵"],
-  culture: ["🥁", "🎭", "🎨", "🎵", "🎶", "🎺", " saxofone", "🎹", "🎤", "🎬", "📚", "🍲"],
-  people: ["👋🏾", "👋🏽", "👋🏿", "✊🏾", "✊🏽", "✊🏿", "👏🏾", "👏🏽", "👏🏿", "🙌🏾", "🙌🏽", "🙌🏿"],
-  nature: ["🌍", "🌱", "🌿", "🍃", "🌺", "🌻", "🌼", "🌸", "🌴", "🌵", "🌊", "☀️"],
-  symbols: ["♥️", "✨", "⭐", "🔥", "💫", "💥", "💢", "💯", "💕", "💞", "💓", "💗"],
+const emojiCategories = {
+  recent: ["❤️", "😊", "👍", "✨", "🙏", "🔥", "💯", "🎉"],
+  people: ["😊", "😍", "😂", "👋", "🤗", "👏", "🙌", "👑"],
+  nature: ["🌍", "🌱", "🌺", "🌴", "🌞", "⭐", "🌈", "🦋"],
+  symbols: ["❤️", "✨", "🔥", "💯", "💪", "✊", "☮️", "🕊️"],
+  food: ["🍉", "🥭", "🍌", "🍗", "🍲", "🥘", "🍚", "🍹"],
 }
 
-export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
+// Definindo a interface para os parâmetros da página
+interface PageParams {
+  params: Promise<{ id: string }>
+}
+
+export default async function ChatPage({ params }: PageParams) {
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Resolver os parâmetros da página
+  const resolvedParams = await params
+  const recipientId = resolvedParams.id
 
   // IDs
   const userIdFromQuery = searchParams.get("userId") || searchParams.get("id")
   const [recipient, setRecipient] = useState<any>(null)
-  const [conversation, setConversation] = useState<any>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [newMessage, setNewMessage] = useState("")
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [emojiCategory, setEmojiCategory] = useState("recent")
-  const [loading, setLoading] = useState(true)
+  const [currentEmojiCategory, setCurrentEmojiCategory] = useState("recent")
+  const [isLoading, setIsLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { user, profile } = useUser()
 
-  const { profile } = useUser()
-  const currentUserId = profile?.id || null
-
-  // Carrega ou cria conversa
+  // Carregar perfil do destinatário
   useEffect(() => {
-    const loadOrCreateMatchAndConversation = async () => {
-      if (!userIdFromQuery || !currentUserId) return
+    const fetchRecipientProfile = async () => {
+      if (!recipientId) return
 
-      // Busca destinatário pelo ID direto
-      const { data: recipientData, error: recipientError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userIdFromQuery)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", recipientId)
+          .single()
 
-      if (recipientError) {
-        console.log("Erro ao carregar perfil do destinatário:", recipientError)
-        setRecipient(null)
-        setLoading(false)
-        return
+        if (error) throw error
+        setRecipient(data)
+      } catch (error) {
+        console.error("Erro ao carregar perfil do destinatário:", error)
       }
-
-      setRecipient(recipientData)
-
-      // Verifica se já existe um match entre os perfis
-      let existingMatch = await getExistingMatch(currentUserId, recipientData.id)
-      if (!existingMatch) {
-        existingMatch = await createMatch(currentUserId, recipientData.id)
-      }
-
-      // Verifica ou cria conversa
-      let conversationData = await getConversation(existingMatch.id)
-      if (!conversationData) {
-        conversationData = await createConversation(existingMatch.id)
-      }
-
-      setConversation(conversationData)
-      await loadMessages(conversationData.id)
-
-      // Marcar mensagens não lidas como lidas
-      await markMessagesAsRead(recipientData.id, currentUserId)
-      setLoading(false)
     }
 
-    loadOrCreateMatchAndConversation()
-  }, [userIdFromQuery, currentUserId])
+    fetchRecipientProfile()
+  }, [recipientId])
 
   // Carregar mensagens
-  const loadMessages = async (convId: string) => {
-    const { data, error } = await supabase
-      .from("messages")
-      .select("*")
-      .eq("conversation_id", convId)
-      .order("created_at", { ascending: true })
-
-    if (!error && data) {
-      setMessages(data)
-    }
-  }
-
-  // Marcar mensagens como lidas
-  const markMessagesAsRead = async (senderId: string, receiverId: string) => {
-    if (!senderId || !receiverId) return
-
-    await supabase
-      .from("messages")
-      .update({ is_read: true })
-      .eq("receiver_id", receiverId)
-      .eq("sender_id", senderId)
-      .eq("is_read", false)
-  }
-
-  // Assinatura em tempo real
   useEffect(() => {
-    if (!conversation?.id || !currentUserId) return
+    const fetchMessages = async () => {
+      if (!profile?.id || !recipientId) return
 
-    const channel = supabase
-      .channel(`realtime-messages-${conversation.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `conversation_id=eq.${conversation.id}`,
-        },
-        (payload) => {
-          const newMessage = payload.new as any
-          setMessages((prev) => [...prev, newMessage])
+      try {
+        setIsLoading(true)
+        
+        // Buscar conversa existente
+        const { data: conversation, error: conversationError } = await supabase
+          .from("conversations")
+          .select("*")
+          .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
+          .or(`user1_id.eq.${recipientId},user2_id.eq.${recipientId}`)
+          .single()
+
+        if (conversationError && conversationError.code !== "PGRST116") {
+          throw conversationError
         }
-      )
-      .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
+        let conversationId = conversation?.id
+
+        // Se não existir conversa, criar uma nova
+        if (!conversationId) {
+          const { data: newConversation, error: newConversationError } = await supabase
+            .from("conversations")
+            .insert({
+              user1_id: profile.id,
+              user2_id: recipientId,
+            })
+            .select()
+            .single()
+
+          if (newConversationError) throw newConversationError
+          conversationId = newConversation.id
+        }
+
+        // Buscar mensagens da conversa
+        const { data: messagesData, error: messagesError } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true })
+
+        if (messagesError) throw messagesError
+        setMessages(messagesData || [])
+
+        // Marcar mensagens como lidas
+        if (messagesData && messagesData.length > 0) {
+          const unreadMessages = messagesData.filter(
+            (msg) => !msg.is_read && msg.sender_id !== profile.id
+          )
+
+          if (unreadMessages.length > 0) {
+            const unreadIds = unreadMessages.map((msg) => msg.id)
+            await supabase
+              .from("messages")
+              .update({ is_read: true })
+              .in("id", unreadIds)
+          }
+        }
+
+        // Inscrever-se para atualizações em tempo real
+        const messagesSubscription = supabase
+          .channel(`messages:${conversationId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "messages",
+              filter: `conversation_id=eq.${conversationId}`,
+            },
+            (payload) => {
+              const newMessage = payload.new
+              setMessages((current) => [...current, newMessage])
+
+              // Marcar como lida se não for do usuário atual
+              if (newMessage.sender_id !== profile.id) {
+                supabase
+                  .from("messages")
+                  .update({ is_read: true })
+                  .eq("id", newMessage.id)
+              }
+            }
+          )
+          .subscribe()
+
+        return () => {
+          supabase.removeChannel(messagesSubscription)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar mensagens:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [conversation?.id, currentUserId])
 
-  // Rolagem automática
+    fetchMessages()
+  }, [profile?.id, recipientId])
+
+  // Rolar para o final das mensagens quando novas mensagens são adicionadas
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  // Funções auxiliares
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !profile?.id || !recipientId) return
 
-  const getExistingMatch = async (profile1: string, profile2: string) => {
-    const { data, error } = await supabase
-      .from("matches")
-      .select("*")
-      .or(`and(profile1_id.eq.${profile1},profile2_id.eq.${profile2}),and(profile1_id.eq.${profile2},profile2_id.eq.${profile1})`)
-      .maybeSingle()
+    try {
+      // Buscar conversa existente
+      const { data: conversation, error: conversationError } = await supabase
+        .from("conversations")
+        .select("*")
+        .or(`user1_id.eq.${profile.id},user2_id.eq.${profile.id}`)
+        .or(`user1_id.eq.${recipientId},user2_id.eq.${recipientId}`)
+        .single()
 
-    if (error) {
-      console.log("Erro ao buscar match:", error)
-      return null
-    }
+      if (conversationError && conversationError.code !== "PGRST116") {
+        throw conversationError
+      }
 
-    return data
-  }
+      let conversationId = conversation?.id
 
-  const createMatch = async (profile1: string, profile2: string) => {
-    const { data, error } = await supabase
-      .from("matches")
-      .insert({
-        profile1_id: profile1,
-        profile2_id: profile2,
-      })
-      .select("*")
-      .single()
+      // Se não existir conversa, criar uma nova
+      if (!conversationId) {
+        const { data: newConversation, error: newConversationError } = await supabase
+          .from("conversations")
+          .insert({
+            user1_id: profile.id,
+            user2_id: recipientId,
+          })
+          .select()
+          .single()
 
-    if (error) {
-      console.log("Erro ao criar match:", error)
-      return null
-    }
+        if (newConversationError) throw newConversationError
+        conversationId = newConversation.id
+      }
 
-    return data
-  }
-
-  const getConversation = async (matchId: string) => {
-    const { data, error } = await supabase
-      .from("conversations")
-      .select("*")
-      .eq("match_id", matchId)
-      .maybeSingle()
-
-    if (error) {
-      console.log("Erro ao buscar conversa:", error)
-      return null
-    }
-
-    return data
-  }
-
-  const createConversation = async (matchId: string) => {
-    const { data, error } = await supabase
-      .from("conversations")
-      .insert({ match_id: matchId })
-      .select("*")
-      .single()
-
-    if (error) {
-      console.log("Erro ao criar conversa:", error)
-      return null
-    }
-
-    return data
-  }
-
-  // Enviar mensagem
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !conversation?.id || !recipient || !currentUserId) return
-
-    await supabase
-      .from("messages")
-      .insert({
-        conversation_id: conversation.id,
-        sender_id: currentUserId,
-        receiver_id: recipient.id,
-        content: newMessage.trim(),
-        status: "sent",
+      // Enviar mensagem
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        sender_id: profile.id,
+        receiver_id: recipientId,
+        content: newMessage,
       })
 
-    setNewMessage("")
-    setShowEmojiPicker(false)
+      setNewMessage("")
+    } catch (error) {
+      console.error("Erro ao enviar mensagem:", error)
+    }
   }
 
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <p>Carregando...</p>
-      </div>
-    )
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
   }
 
-  if (!recipient) {
+  const addEmoji = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji)
+  }
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      ? name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .substring(0, 2)
+      : "??"
+  }
+
+  if (!profile) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p>Destinatário não encontrado</p>
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen bg-white max-w-md mx-auto">
-      {/* Cabeçalho */}
-      <header className="bg-white border-b border-gray-200 p-4 flex items-center">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
+    <div className="flex flex-col h-screen bg-background">
+      {/* Header */}
+      <div className="flex items-center p-4 border-b">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => router.push("/messages")}
+          className="mr-2"
+        >
+          <ChevronLeft className="h-5 w-5" />
         </Button>
-        <Avatar className="h-10 w-10 ml-2">
-          <AvatarImage src={recipient.avatar_url} alt={recipient.name} />
-          <AvatarFallback>{recipient.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <span className="ml-3 font-medium">{recipient.name}</span>
-      </header>
 
-      {/* Área de mensagens */}
-      <ScrollArea className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.sender_id === currentUserId ? "justify-end" : "justify-start"}`}>
-              {msg.sender_id !== currentUserId && (
-                <Avatar className="h-8 w-8 mr-2 mt-1">
-                  <AvatarImage src={recipient.avatar_url} alt={recipient.name} />
-                  <AvatarFallback>{recipient.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-              )}
-
-              <div
-                className={`max-w-[70%] p-3 rounded-2xl ${
-                  msg.sender_id === currentUserId
-                    ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                <p>{msg.content}</p>
-                <small
-                  className={`text-xs block mt-1 ${
-                    msg.sender_id === currentUserId ? "text-indigo-100 text-right" : "text-gray-500"
-                  }`}
-                >
-                  {new Date(msg.created_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                  {msg.sender_id === currentUserId && (
-                    <span className="ml-1">{msg.is_read ? "✓✓" : "✓"}</span>
-                  )}
-                </small>
-              </div>
+        {recipient ? (
+          <div className="flex items-center">
+            <Avatar className="h-10 w-10 mr-3">
+              <AvatarImage src={recipient.avatar_url} alt={recipient.name} />
+              <AvatarFallback>{getInitials(recipient.name)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="font-semibold">{recipient.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                {recipient.online ? "Online" : "Offline"}
+              </p>
             </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
+          </div>
+        ) : (
+          <div className="flex items-center">
+            <div className="h-10 w-10 rounded-full bg-muted animate-pulse mr-3"></div>
+            <div>
+              <div className="h-4 w-24 bg-muted animate-pulse rounded mb-1"></div>
+              <div className="h-3 w-16 bg-muted animate-pulse rounded"></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Messages */}
+      <ScrollArea className="flex-1 p-4">
+        {isLoading ? (
+          <div className="flex flex-col space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`rounded-lg p-3 max-w-[80%] ${i % 2 === 0 ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                >
+                  <div className="h-4 w-32 bg-muted-foreground/20 animate-pulse rounded mb-1"></div>
+                  <div className="h-3 w-16 bg-muted-foreground/20 animate-pulse rounded self-end"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+            <p>Nenhuma mensagem ainda.</p>
+            <p className="text-sm">Seja o primeiro a dizer olá!</p>
+          </div>
+        ) : (
+          <div className="flex flex-col space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender_id === profile.id ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`rounded-lg p-3 max-w-[80%] ${message.sender_id === profile.id ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                  <p
+                    className={`text-xs mt-1 ${message.sender_id === profile.id ? "text-primary-foreground/70" : "text-muted-foreground"}`}
+                  >
+                    {formatTime(message.created_at)}
+                    {message.is_read && message.sender_id === profile.id && (
+                      <span className="ml-1">✓</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ScrollArea>
 
-      {/* Campo de envio */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center">
-          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+      {/* Input */}
+      <div className="p-4 border-t">
+        <div className="flex items-center space-x-2">
+          <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-oraculo-muted">
+              <Button variant="ghost" size="icon" className="shrink-0">
                 <Smile className="h-5 w-5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-0 z-50">
-              <div className="p-2">
-                <Tabs defaultValue="recent" onValueChange={setEmojiCategory}>
-                  <TabsList className="grid grid-cols-5 h-9">
-                    <TabsTrigger value="recent">🕒</TabsTrigger>
-                    <TabsTrigger value="culture">🎭</TabsTrigger>
-                    <TabsTrigger value="people">👋🏾</TabsTrigger>
-                    <TabsTrigger value="nature">🌍</TabsTrigger>
-                    <TabsTrigger value="symbols">♥️</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <div className="grid grid-cols-8 gap-1 mt-2">
-                  {emojiSets[emojiCategory as keyof typeof emojiSets].map((emoji, index) => (
-                    <button
-                      key={index}
-                      className="text-xl p-1 hover:bg-gray-100 rounded"
-                      onClick={() => handleEmojiSelect(emoji)}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
+            <PopoverContent
+              className="w-full max-w-[340px] p-0"
+              side="top"
+              align="start"
+            >
+              <Tabs
+                defaultValue="recent"
+                onValueChange={setCurrentEmojiCategory}
+                className="w-full"
+              >
+                <TabsList className="w-full justify-start border-b rounded-none">
+                  <TabsTrigger value="recent" className="flex-1">
+                    Recentes
+                  </TabsTrigger>
+                  <TabsTrigger value="people" className="flex-1">
+                    Pessoas
+                  </TabsTrigger>
+                  <TabsTrigger value="nature" className="flex-1">
+                    Natureza
+                  </TabsTrigger>
+                  <TabsTrigger value="symbols" className="flex-1">
+                    Símbolos
+                  </TabsTrigger>
+                  <TabsTrigger value="food" className="flex-1">
+                    Comida
+                  </TabsTrigger>
+                </TabsList>
+                <div className="p-4 grid grid-cols-8 gap-2">
+                  {emojiCategories[currentEmojiCategory as keyof typeof emojiCategories].map(
+                    (emoji) => (
+                      <button
+                        key={emoji}
+                        className="text-2xl hover:bg-muted rounded p-1 cursor-pointer"
+                        onClick={() => addEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    )
+                  )}
                 </div>
-              </div>
+              </Tabs>
             </PopoverContent>
           </Popover>
 
           <Input
-            placeholder="Digite sua mensagem..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-            className="flex-1 mx-2 bg-gray-100 border-0"
+            onKeyDown={handleKeyPress}
+            placeholder="Digite sua mensagem..."
+            className="flex-1"
           />
 
-          <Button variant="ghost" size="icon" onClick={sendMessage}>
-            <Send className="h-5 w-5 text-oraculo-purple" />
+          <Button
+            onClick={handleSendMessage}
+            size="icon"
+            disabled={!newMessage.trim()}
+            className="shrink-0"
+          >
+            <Send className="h-5 w-5" />
           </Button>
         </div>
       </div>
     </div>
   )
-
-  function handleEmojiSelect(emoji: string) {
-    setNewMessage((prev) => prev + emoji)
-  }
 }

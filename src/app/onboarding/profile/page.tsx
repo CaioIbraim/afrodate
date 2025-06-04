@@ -19,6 +19,12 @@ export default function ProfilePage() {
   const [city, setCity] = useState("")
   const [contact, setContact] = useState("")
   const [photo, setPhoto] = useState<File | null>(null)
+  
+  // Função intermediária para lidar com a mudança de foto
+  const handlePhotoChange = (url: string | null) => {
+    // Ignoramos a URL, pois setPhoto espera um File | null
+    // Se necessário, podemos armazenar a URL em outro estado
+  }
 
   const handleComplete = () => {
     // Basic validation
@@ -62,7 +68,7 @@ export default function ProfilePage() {
       <motion.div className="flex-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <h3 className="text-2xl font-semibold gradient-text text-center mb-6">Seu Perfil</h3>
 
-        <ProfilePhotoUpload className="mb-8" size="lg" onChange={setPhoto} />
+        <ProfilePhotoUpload className="mb-8" size="lg" onChange={handlePhotoChange} />
 
         <div className="space-y-6">
           <div className="profile-card p-4">

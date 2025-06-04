@@ -1,4 +1,4 @@
-import type { GenderPreference, ProfileData, MatchResult } from "./types"
+import type { GenderPreference, ProfileData, MatchResult, SubscriptionPlan } from "./types"
 
 // Função para calcular a compatibilidade entre dois usuários
 export function calculateCompatibility(
@@ -117,6 +117,8 @@ export function getProfileRecommendations(
         userProfile.locations,
         profile.interests,
         profile.locations,
+        0, // userDistance - valor padrão
+        100 // maxAcceptableDistance - valor padrão
       )
 
       return {
@@ -136,7 +138,7 @@ export function getProfileRecommendations(
 }
 
 // Dados de planos de assinatura
-export const subscriptionPlans = [
+export const subscriptionPlans: SubscriptionPlan[] = [
   {
     id: "basic",
     name: "Básico",
@@ -179,7 +181,7 @@ export const subscriptionPlans = [
     tier: "VIP",
     discount: 20, // 20% de desconto na assinatura anual
   },
-] as const
+]
 
 export function isFeatureAvailable(feature: string, subscriptionTier: 'FREE' | 'PREMIUM' | 'VIP'): boolean {
   const featureAccess = {

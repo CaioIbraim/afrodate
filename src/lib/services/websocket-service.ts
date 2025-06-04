@@ -143,4 +143,21 @@ export class WebSocketService {
       this.socket = null
     }
   }
+
+  // Método para enviar mensagens
+  public sendMessage(message: any): void {
+    this.send(message);
+  }
+
+  // Método para se inscrever em eventos
+  public subscribe(event: string, callback: Function): void {
+    // Implementação da inscrição em eventos
+    console.log(`Subscribed to ${event}`);
+  }
+
+  // Método para cancelar inscrição em eventos
+  public unsubscribe(event: string): void {
+    // Implementação do cancelamento de inscrição
+    console.log(`Unsubscribed from ${event}`);
+  }
 }

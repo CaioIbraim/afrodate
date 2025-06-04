@@ -19,3 +19,8 @@ export const supabase = createClient(
     },
   }
 )
+
+// Função para obter a sessão atual do usuário
+export const getSession = async () => {
+  return await supabase.auth.getSession()
+}

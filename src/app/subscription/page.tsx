@@ -160,12 +160,12 @@ export default function SubscriptionPage() {
           {subscriptionPlans.map((plan) => (
             <div
               key={plan.id}
-              className={`profile-card p-4 cursor-pointer transition-all ${
+              className={`profile-card p-4 cursor-pointer transition-all ${  
                 selectedPlan?.id === plan.id ? "border-2 border-oraculo-purple" : "hover:border-oraculo-purple/50"
-              } ${plan.popular ? "relative overflow-visible" : ""}`}
+              } ${plan?.popular ? "relative overflow-visible" : ""}`}
               onClick={() => handleSelectPlan(plan)}
             >
-              {plan.popular && (
+              {plan?.popular && (
                 <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white text-xs py-1 px-3 rounded-full">
                   Mais Popular
                 </div>
