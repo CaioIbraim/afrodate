@@ -1,424 +1,573 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import Image from "next/image"
+'use client'
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs"
+} from "@/components/ui/tabs";
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { ChevronLeft, Heart } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { supabase } from "@/lib/supabase"
-import { useUser } from "@/hooks/use-user"
-import { useToast } from "@/components/ui/use-toast"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import { Loader2, ChevronLeft, Heart, MessageSquare, ChevronRight, ChevronLeft as ChevronLeftIcon } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
+import { motion } from "framer-motion";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-// Definindo a interface para os parâmetros da página
-interface PageParams {
-  params: Promise<{ id: string }>
-}
+// Types
+type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
+type Photo = {
+  name: string;
+  storage_path: string;
+  publicUrl: string;
+  isPrimary: boolean;
+};
+type ProfileData = {
+  id: string;
+  name: string;
+  birth_date: string;
+  gender: Gender;
+  bio: string;
+  city: string;
+  profession: string;
+  interests: string[];
+  avatar_url: string | null;
+};
 
-export default async function PublicProfilePage({ params }: PageParams) {
-  const router = useRouter()
-  const [profile, setProfile] = useState<any>(null)
-  const [photos, setPhotos] = useState<any[]>([])
-  const [isFavorited, setIsFavorited] = useState(false)
-  const [matchFound, setMatchFound] = useState(false)
-  const [loading, setLoading] = useState(true)
+// Componente para exibir informações do perfil
+const ProfileInfo = ({
+  profileData,
+  calculateAge,
+  primaryPhoto,
+}: {
+  profileData: ProfileData | null;
+  calculateAge: (birthDate: string) => number | null;
+  primaryPhoto: Photo | null;
+}) => (
+  <Card className="mb-6">
+    <CardHeader>
+      <CardTitle>Informações do Perfil</CardTitle>
+      <CardDescription>Detalhes sobre {profileData?.name || "o usuário"}</CardDescription>
+    </CardHeader>
+    <CardContent>
+      {profileData ? (
+        <div className="space-y-4">
+          <div className="flex flex-col items-center space-y-4">
+            {primaryPhoto ? (
+              <img
+                src={primaryPhoto.publicUrl}
+                alt="Foto principal"
+                className="w-48 h-48 object-cover rounded-full ring-2 ring-purple-500"
+                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+              />
+            ) : (
+              <Avatar className="w-48 h-48">
+                <AvatarImage
+                  src="/placeholder-image.png"
+                  alt={profileData.name}
+                  className="object-cover"
+                />
+                <AvatarFallback className="text-4xl">
+                  {profileData.name.charAt(0) || "?"}
+                </AvatarFallback>
+              </Avatar>
+            )}
+            <div className="text-center">
+              <h3 className="text-2xl font-semibold">{profileData.name}</h3>
+              {calculateAge(profileData.birth_date) && (
+                <p className="text-sm text-gray-500">
+                  {calculateAge(profileData.birth_date)} anos
+                </p>
+              )}
+              <p className="text-sm text-gray-500">{profileData.city}</p>
+            </div>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
+            <p className="text-gray-600">{profileData.profession || "Não informado"}</p>
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
+            <p className="text-gray-600">{profileData.bio || "Sem biografia"}</p>
+          </div>
+          {profileData.interests.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
+              <div className="flex flex-wrap gap-2">
+                {profileData.interests.map((interest, index) => (
+                  <span
+                    key={index}
+                    className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded"
+                  >
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-center text-gray-500">Nenhuma informação disponível.</p>
+      )}
+    </CardContent>
+  </Card>
+);
 
-  const { user, profile: currentUser } = useUser()
-  const currentUserId = currentUser?.id || null
+// Componente para exibir fotos do perfil em um carrossel
+const ProfilePhotosCarousel = ({
+  photos,
+}: {
+  photos: Photo[];
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Resolver os parâmetros da página
-  const resolvedParams = await params
-  const profileId = resolvedParams.id
+  const nextPhoto = () => {
+    setCurrentIndex((prev) => (prev + 1) % photos.length);
+  };
 
-  // Carrega o perfil público
-  useEffect(() => {
-    const loadPublicProfile = async () => {
-      if (!profileId || !currentUserId) return
-      if (profileId === currentUserId) {
-        router.push("/profile")
-        return
+  const prevPhoto = () => {
+    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
+
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Fotos</CardTitle>
+        <CardDescription>Fotos do perfil do usuário</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {photos.length === 0 ? (
+          <div className="text-center py-12 border border-dashed rounded-md">
+            <p>Sem fotos disponíveis.</p>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="flex justify-center">
+              <img
+                src={photos[currentIndex].publicUrl}
+                alt={`Foto ${currentIndex + 1}`}
+                className={`w-full max-w-md h-64 object-cover rounded-md ${photos[currentIndex].isPrimary ? "ring-2 ring-purple-500" : ""}`}
+                loading="lazy"
+                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+              />
+            </div>
+            {photos[currentIndex].isPrimary && (
+              <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
+                Principal
+              </div>
+            )}
+            {photos.length > 1 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2"
+                  onClick={prevPhoto}
+                  aria-label="Foto anterior"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  onClick={nextPhoto}
+                  aria-label="Próxima foto"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <div className="flex justify-center mt-2 space-x-2">
+                  {photos.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${index === currentIndex ? "bg-purple-500" : "bg-gray-300"}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default function ProfileView() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { user, isLoading: userLoading } = useUser();
+  const params = useParams();
+  const profileId = params.id as string;
+
+  // State
+  const [activeTab, setActiveTab] = useState<"fotos" | "informacoes">("fotos");
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [primaryPhoto, setPrimaryPhoto] = useState<Photo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [hasMatch, setHasMatch] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  // Calculate user age
+  const calculateAge = useCallback((birthDate: string): number | null => {
+    if (!birthDate) return null;
+    const birth = new Date(birthDate);
+    const today = new Date();
+    if (isNaN(birth.getTime()) || birth > today) return null;
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age >= 18 ? age : null;
+  }, []);
+
+  // Fetch profile data, photos, and match status
+  const loadProfile = useCallback(async () => {
+    if (!profileId) {
+      toast({
+        title: "Erro",
+        description: "ID do perfil não fornecido.",
+        variant: "destructive",
+      });
+      router.push("/dashboard");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      console.log("[loadProfile] Fetching profile for profile_id:", profileId);
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, name, birth_date, gender, bio, city, profession, interests, avatar_url")
+        .eq("id", profileId)
+        .single();
+      if (profileError) {
+        console.log("[loadProfile] Profile error:", profileError.message);
+        throw profileError;
+      }
+      setProfileData(profile);
+
+      console.log("[loadProfile] Fetching photos for profile_id:", profileId);
+      const { data: photosData, error: photosError } = await supabase
+        .from("profile_photos")
+        .select("storage_path, is_primary")
+        .eq("profile_id", profileId)
+        .order("created_at", { ascending: true });
+      if (photosError) {
+        console.log("[loadProfile] Photos error:", photosError.message);
+        throw photosError;
       }
 
-      try {
-        setLoading(true)
+      const photoUrls = await Promise.all(
+        photosData.map(async (photo) => {
+          const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
+          let url = publicUrlData.publicUrl;
+          try {
+            const response = await fetch(url, { method: "HEAD" });
+            if (!response.ok) throw new Error("Public URL inaccessible");
+            console.log("[loadProfile] Public URL accessible:", url);
+          } catch {
+            console.log("[loadProfile] Public URL failed, trying signed URL for:", photo.storage_path);
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+              .from("imagens")
+              .createSignedUrl(photo.storage_path, 3600);
+            if (signedUrlError) throw signedUrlError;
+            url = signedUrlData.signedUrl;
+            console.log("[loadProfile] Signed URL:", url);
+          }
+          return {
+            name: photo.storage_path.split("/").pop()!,
+            storage_path: photo.storage_path,
+            publicUrl: url,
+            isPrimary: photo.is_primary,
+          };
+        })
+      );
+      setPhotos(photoUrls);
+      const primary = photoUrls.find((photo) => photo.isPrimary) || photoUrls[0] || null;
+      setPrimaryPhoto(primary);
 
-        // Buscar perfil
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", profileId)
-          .single()
+      // Check if user has already liked this profile
+      if (user) {
+        const { data: likeData, error: likeError } = await supabase
+          .from("likes")
+          .select("id")
+          .eq("liker_id", user.id)
+          .eq("liked_profile_id", profileId)
+          .single();
+        if (likeError && likeError.code !== "PGRST116") {
+          console.log("[loadProfile] Like check error:", likeError.message);
+        }
+        setHasLiked(!!likeData);
 
-        if (profileError) throw profileError
-        setProfile(profileData)
-
-        // Buscar fotos
-        const { data: photosData, error: photosError } = await supabase
-          .from("photos")
-          .select("*")
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: false })
-
-        if (photosError) throw photosError
-        setPhotos(photosData || [])
-
-        // Verificar se está nos favoritos
-        const { data: favoriteData, error: favoriteError } = await supabase
-          .from("favorites")
-          .select("*")
-          .eq("user_id", currentUserId)
-          .eq("favorite_id", profileId)
-          .maybeSingle()
-
-        if (favoriteError) throw favoriteError
-        setIsFavorited(!!favoriteData)
-
-        // Verificar se há match
+        // Check for match
         const { data: matchData, error: matchError } = await supabase
           .from("matches")
-          .select("*")
-          .or(
-            `and(user1_id.eq.${currentUserId},user2_id.eq.${profileId}),` +
-              `and(user1_id.eq.${profileId},user2_id.eq.${currentUserId})`
-          )
-          .maybeSingle()
-
-        if (matchError) throw matchError
-        setMatchFound(!!matchData)
-      } catch (error) {
-        console.error("Erro ao carregar perfil:", error)
-      } finally {
-        setLoading(false)
+          .select("id")
+          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`)
+          .or(`user_id_1.eq.${profileId},user_id_2.eq.${profileId}`)
+          .single();
+        if (matchError && matchError.code !== "PGRST116") {
+          console.log("[loadProfile] Match check error:", matchError.message);
+        }
+        setHasMatch(!!matchData);
       }
+    } catch (error: any) {
+      console.log("[loadProfile] Error:", error.message);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar o perfil.",
+        variant: "destructive",
+      });
+      router.push("/dashboard");
+    } finally {
+      setIsLoading(false);
     }
+  }, [profileId, user, toast, router]);
 
-    loadPublicProfile()
-  }, [profileId, currentUserId, router])
-
-  // Função para adicionar/remover dos favoritos
-  const toggleFavorite = async () => {
-    if (!currentUserId || !profileId) return
-
+  // Handle like action
+  const handleLike = async () => {
+    if (!user || !profileId) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado ou perfil inválido.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
-      if (isFavorited) {
-        // Remover dos favoritos
-        const { error } = await supabase
-          .from("favorites")
-          .delete()
-          .eq("user_id", currentUserId)
-          .eq("favorite_id", profileId)
+      console.log("[handleLike] Liking profile_id:", profileId);
+      const { error } = await supabase.from("likes").insert({
+        liker_id: user.id,
+        liked_profile_id: profileId,
+        created_at: new Date().toISOString(),
+      });
+      if (error) {
+        console.log("[handleLike] Error:", error.message);
+        throw error;
+      }
+      setHasLiked(true);
 
-        if (error) throw error
-        setIsFavorited(false)
-      } else {
-        // Adicionar aos favoritos
-        const { error } = await supabase.from("favorites").insert({
-          user_id: currentUserId,
-          favorite_id: profileId,
+      // Check if the other user has liked back to create a match
+      const { data: returnLike, error: returnLikeError } = await supabase
+        .from("likes")
+        .select("id")
+        .eq("liker_id", profileId)
+        .eq("liked_profile_id", user.id)
+        .single();
+      if (returnLikeError && returnLikeError.code !== "PGRST116") {
+        console.log("[handleLike] Return like check error:", returnLikeError.message);
+      }
+      if (returnLike) {
+        const { error: matchError } = await supabase.from("matches").insert({
+          user_id_1: user.id,
+          user_id_2: profileId,
           created_at: new Date().toISOString(),
-        })
-
-        if (error) throw error
-        setIsFavorited(true)
-
-        // Verificar se há match (se a outra pessoa também favoritou)
-        const { data: otherFavorite, error: favoriteError } = await supabase
-          .from("favorites")
-          .select("*")
-          .eq("user_id", profileId)
-          .eq("favorite_id", currentUserId)
-          .maybeSingle()
-
-        if (favoriteError) throw favoriteError
-
-        // Se ambos favoritaram, criar um match
-        if (otherFavorite && !matchFound) {
-          const { error: matchError } = await supabase.from("matches").insert({
-            user1_id: currentUserId,
-            user2_id: profileId,
-            created_at: new Date().toISOString(),
-          })
-
-          if (matchError) throw matchError
-          setMatchFound(true)
+        });
+        if (matchError) {
+          console.log("[handleLike] Match insert error:", matchError.message);
+        } else {
+          setHasMatch(true);
+          toast({
+            title: "Novo Match!",
+            description: `Você e ${profileData?.name} deram match!`,
+          });
         }
       }
-    } catch (error) {
-      console.error("Erro ao atualizar favoritos:", error)
+      toast({
+        title: "Sucesso",
+        description: "Você curtiu este perfil!",
+      });
+    } catch (error: any) {
+      console.log("[handleLike] Error:", error.message);
+      toast({
+        title: "Erro",
+        description: "Não foi possível curtir o perfil.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  // Iniciar conversa
-  const startConversation = () => {
-    if (!profileId) return
-    router.push(`/messages/to/${profileId}`)
-  }
-
-  // Calcular idade
-  const calculateAge = (birthDate: string): number => {
-    if (!birthDate) return 0
-    const birth = new Date(birthDate)
-    const today = new Date()
-    let age = today.getFullYear() - birth.getFullYear()
-    const monthDiff = today.getMonth() - birth.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--
+  // Handle send message
+  const handleSendMessage = async () => {
+    if (!user || !profileId || !message.trim() || !hasMatch) {
+      toast({
+        title: "Erro",
+        description: !user
+          ? "Usuário não autenticado."
+          : !profileId
+          ? "Perfil inválido."
+          : !hasMatch
+          ? "Você só pode enviar mensagens após um match."
+          : "Digite uma mensagem antes de enviar.",
+        variant: "destructive",
+      });
+      return;
     }
-    return age
-  }
+    setIsSending(true);
+    try {
+      console.log("[handleSendMessage] Sending message to profile_id:", profileId);
+      const { error } = await supabase.from("messages").insert({
+        sender_id: user.id,
+        receiver_id: profileId,
+        content: message.trim(),
+        created_at: new Date().toISOString(),
+      });
+      if (error) {
+        console.log("[handleSendMessage] Error:", error.message);
+        throw error;
+      }
+      setMessage("");
+      toast({
+        title: "Sucesso",
+        description: "Mensagem enviada com sucesso!",
+      });
+    } catch (error: any) {
+      console.log("[handleSendMessage] Error:", error.message);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar a mensagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin h-12 w-12 rounded-full border-t-2 border-b-2 border-emerald-500"></div>
-      </div>
-    )
-  }
+  // Load profile on mount
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
-  if (!profile) {
+  // Loading state
+  if (isLoading || userLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-          className="mb-4"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-bold mb-2">Perfil não encontrado</h1>
-          <p className="text-muted-foreground mb-6">
-            O perfil que você está procurando não existe ou foi removido.
-          </p>
-          <Button onClick={() => router.push("/matches")}>Voltar para Matches</Button>
-        </div>
+      <div className="flex items-center justify-center min-h-screen" aria-label="Carregando">
+        <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
       </div>
-    )
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 pb-20">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
+      <header className="flex items-center justify-between mb-4">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => router.back()}
           aria-label="Voltar"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-6 w-6 text-gray-700" />
         </Button>
+        <Logo size="sm" />
+        <div className="w-10" />
+      </header>
 
-        <Button
-          variant={isFavorited ? "default" : "outline"}
-          size="icon"
-          onClick={toggleFavorite}
-          className={isFavorited ? "text-white bg-red-500 hover:bg-red-600" : ""}
-          aria-label={isFavorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+      <motion.main
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="max-w-md mx-auto w-full"
+      >
+        <h2 className="text-2xl font-bold gradient-text text-center mb-6">
+          Perfil de {profileData?.name || "Usuário"}
+        </h2>
+
+        <div className="flex justify-between mb-6">
+          <Button
+            onClick={handleLike}
+            disabled={hasLiked || !user}
+            className={`flex-1 mr-2 ${hasLiked ? "bg-gray-300" : "gradient-button"}`}
+            aria-label={hasLiked ? "Perfil já curtido" : "Curtir perfil"}
+          >
+            <Heart className={`h-4 w-4 mr-2 ${hasLiked ? "" : "fill-current"}`} aria-hidden="true" />
+            {hasLiked ? "Curtido" : "Curtir"}
+          </Button>
+          <Button
+            onClick={() => hasMatch && setActiveTab("fotos")}
+            disabled={!hasMatch || !user}
+            className={`flex-1 ml-2 ${hasMatch ? "gradient-button" : "bg-gray-300"}`}
+            aria-label={hasMatch ? "Enviar mensagem" : "Mensagem bloqueada até match"}
+          >
+            <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
+            Mensagem
+          </Button>
+        </div>
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
         >
-          <Heart className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
-        </Button>
-      </div>
+          <TabsList className="grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
+            <TabsTrigger value="fotos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              Fotos
+            </TabsTrigger>
+            <TabsTrigger value="informacoes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              Informações
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Informações do perfil */}
-      <div className="flex flex-col items-center mb-6">
-        <Avatar className="h-24 w-24 mb-4">
-          <AvatarImage src={profile.avatar_url} alt={profile.name} />
-          <AvatarFallback>
-            {profile.name
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+          <TabsContent value="fotos">
+            <ProfilePhotosCarousel photos={photos} />
+          </TabsContent>
 
-        <h1 className="text-2xl font-bold">
-          {profile.name}, {calculateAge(profile.birth_date)}
-        </h1>
+          <TabsContent value="informacoes">
+            <ProfileInfo
+              profileData={profileData}
+              calculateAge={calculateAge}
+              primaryPhoto={primaryPhoto}
+            />
+          </TabsContent>
+        </Tabs>
 
-        <div className="flex items-center mt-2 text-muted-foreground">
-          <p>{profile.city || "Cidade não informada"}</p>
-          {profile.distance && (
-            <>
-              <span className="mx-2">•</span>
-              <p>A {Math.round(profile.distance)} km</p>
-            </>
-          )}
-        </div>
-
-        <div className="flex gap-2 mt-4">
-          {matchFound ? (
-            <Button onClick={startConversation} className="bg-emerald-500 hover:bg-emerald-600">
-              Enviar Mensagem
-            </Button>
-          ) : (
-            <Button
-              onClick={toggleFavorite}
-              variant={isFavorited ? "default" : "outline"}
-              className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
-            >
-              {isFavorited ? "Favoritado" : "Favoritar"}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Conteúdo do perfil */}
-      <Tabs defaultValue="about" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="about">Sobre</TabsTrigger>
-          <TabsTrigger value="photos">Fotos</TabsTrigger>
-          <TabsTrigger value="interests">Interesses</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="about" className="mt-4">
-          <Card>
+        {user && hasMatch && (
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Sobre {profile.name.split(" ")[0]}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-medium mb-2">Bio</h3>
-                <p className="text-muted-foreground">
-                  {profile.bio || "Nenhuma biografia informada."}
-                </p>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium mb-2">Identidade</h3>
-                  <p className="text-muted-foreground">
-                    {profile.gender === "male"
-                      ? "Homem"
-                      : profile.gender === "female"
-                      ? "Mulher"
-                      : "Não informado"}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Orientação</h3>
-                  <p className="text-muted-foreground">
-                    {profile.orientation === "straight"
-                      ? "Heterossexual"
-                      : profile.orientation === "gay"
-                      ? "Homossexual"
-                      : profile.orientation === "bisexual"
-                      ? "Bissexual"
-                      : "Não informado"}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="font-medium mb-2">Altura</h3>
-                  <p className="text-muted-foreground">
-                    {profile.height ? `${profile.height} cm` : "Não informado"}
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="font-medium mb-2">Educação</h3>
-                  <p className="text-muted-foreground">
-                    {profile.education || "Não informado"}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="font-medium mb-2">Procurando por</h3>
-                <p className="text-muted-foreground">
-                  {profile.looking_for === "relationship"
-                    ? "Relacionamento sério"
-                    : profile.looking_for === "casual"
-                    ? "Algo casual"
-                    : profile.looking_for === "friendship"
-                    ? "Amizade"
-                    : "Não informado"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="photos" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Galeria de Fotos</CardTitle>
+              <CardTitle>Enviar Mensagem</CardTitle>
+              <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
             </CardHeader>
             <CardContent>
-              {photos.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {photos.map((photo) => (
-                    <div
-                      key={photo.id}
-                      className="relative aspect-square overflow-hidden rounded-md"
-                    >
-                      <Image
-                        src={photo.url}
-                        alt="Foto do perfil"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhuma foto disponível.
-                </p>
-              )}
+              <div className="space-y-4">
+                <Textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Digite sua mensagem..."
+                  disabled={isSending}
+                  aria-label="Mensagem"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={isSending || !message.trim()}
+                  className="w-full gradient-button"
+                  aria-label="Enviar mensagem"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                      Enviando...
+                    </>
+                  ) : (
+                    "Enviar"
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="interests" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Interesses</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {profile.interests && profile.interests.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profile.interests.map((interest: string, index: number) => (
-                    <Badge key={index} variant="secondary">
-                      {interest}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  Nenhum interesse informado.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </motion.main>
     </div>
-  )
+  );
 }

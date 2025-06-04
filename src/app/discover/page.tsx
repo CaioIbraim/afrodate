@@ -320,7 +320,7 @@ export default function DiscoverPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <Button variant="ghost" size="icon" onClick={() => router.push("/profile")}>
           <ChevronLeft className="h-6 w-6 text-gray-700" />
         </Button>
@@ -347,7 +347,7 @@ export default function DiscoverPage() {
               exit={{ opacity: 0, x: -100 }}
               transition={{ duration: 0.3 }}
             >
-              <Card className="mb-6">
+              <Card>
                 <CardContent className="p-0">
                   <div className="relative">
                     {profiles[currentIndex].photo?.publicUrl ||
@@ -358,10 +358,10 @@ export default function DiscoverPage() {
                           profiles[currentIndex].avatar_url!
                         }
                         alt={profiles[currentIndex].name}
-                        className="w-full h-64 object-cover rounded-t-lg"
+                        className="w-full h-screen object-cover rounded-t-lg"
                       />
                     ) : (
-                      <div className="w-full h-64 bg-gray-200 flex items-center justify-center rounded-t-lg">
+                      <div className="w-full h-screen bg-gray-200 flex items-center justify-center rounded-t-lg">
                         <Avatar className="w-32 h-32">
                           <AvatarFallback>
                             {profiles[currentIndex].name.charAt(0)}
