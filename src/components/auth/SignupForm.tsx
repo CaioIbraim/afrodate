@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { useSignupForm } from "@/hooks/useSignupForm"
-import { signupSchema, SignupFormValues } from "@/lib/validators/signupSchema"
+import { SignupFormValues } from "@/lib/validators/signupSchema"
 import { supabase } from "@/lib/supabase"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -25,8 +25,7 @@ export function SignupForm() {
     register,
     handleSubmit,
     formState: { errors },
-    control, // necessário para Controller
-    watch,
+    control,
   } = useSignupForm()
 
   const onSubmit = async (data: SignupFormValues) => {
@@ -51,7 +50,7 @@ export function SignupForm() {
         {
           user_id: signUpData.user.id,
           name: data.name,
-          username: data.email.split("@")[0], // simples username
+          username: data.email.split("@")[0],
         },
       ])
 
@@ -105,7 +104,12 @@ export function SignupForm() {
             className="pl-10"
             {...register("password")}
           />
-          <button type="button" className="absolute right-3 top-3.5" onClick={() => setShowPassword((v) => !v)}>
+          <button
+            type="button"
+            className="absolute right-3 top-3.5"
+            aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
+            onClick={() => setShowPassword((v) => !v)}
+          >
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
@@ -126,6 +130,7 @@ export function SignupForm() {
           <button
             type="button"
             className="absolute right-3 top-3.5"
+            aria-label={showConfirmPassword ? "Esconder confirmação de senha" : "Mostrar confirmação de senha"}
             onClick={() => setShowConfirmPassword((v) => !v)}
           >
             {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
