@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, ChevronLeft, Heart, MessageSquare, ChevronRight, ChevronLeft as ChevronLeftIcon } from "lucide-react";
+import { Loader2, ChevronLeft, Heart, MessageSquare } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { motion } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -48,11 +48,9 @@ type ProfileData = {
 const ProfileInfo = ({
   profileData,
   calculateAge,
-  primaryPhoto,
 }: {
   profileData: ProfileData | null;
   calculateAge: (birthDate: string) => number | null;
-  primaryPhoto: Photo | null;
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -62,28 +60,20 @@ const ProfileInfo = ({
     <CardContent>
       {profileData ? (
         <div className="space-y-4">
-          <div className="flex flex-col items-center space-y-4">
-            {primaryPhoto ? (
-              <img
-                src={primaryPhoto.publicUrl}
-                alt="Foto principal"
-                className="w-48 h-48 object-cover rounded-full ring-2 ring-purple-500"
+          <div className="flex items-center space-x-4">
+            <Avatar className="w-24 h-24">
+              <AvatarImage
+                src={profileData.avatar_url || "/placeholder-image.png"}
+                alt={profileData.name}
+                className="object-cover"
                 onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
               />
-            ) : (
-              <Avatar className="w-48 h-48">
-                <AvatarImage
-                  src="/placeholder-image.png"
-                  alt={profileData.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="text-4xl">
-                  {profileData.name.charAt(0) || "?"}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="text-center">
-              <h3 className="text-2xl font-semibold">{profileData.name}</h3>
+              <AvatarFallback className="text-2xl">
+                {profileData.name.charAt(0) || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="text-xl font-semibold">{profileData.name}</h3>
               {calculateAge(profileData.birth_date) && (
                 <p className="text-sm text-gray-500">
                   {calculateAge(profileData.birth_date)} anos
@@ -123,85 +113,45 @@ const ProfileInfo = ({
   </Card>
 );
 
-// Componente para exibir fotos do perfil em um carrossel
-const ProfilePhotosCarousel = ({
+// Componente para exibir fotos do perfil
+const ProfilePhotos = ({
   photos,
 }: {
   photos: Photo[];
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const nextPhoto = () => {
-    setCurrentIndex((prev) => (prev + 1) % photos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Fotos</CardTitle>
-        <CardDescription>Fotos do perfil do usuário</CardDescription>
-      </CardHeader>
-      <CardContent>
+}) => (
+  <Card className="mb-6">
+    <CardHeader>
+      <CardTitle>Fotos</CardTitle>
+      <CardDescription>Fotos do perfil do usuário</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {photos.length === 0 ? (
-          <div className="text-center py-12 border border-dashed rounded-md">
+          <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
             <p>Sem fotos disponíveis.</p>
           </div>
         ) : (
-          <div className="relative">
-            <div className="flex justify-center">
+          photos.map((photo, index) => (
+            <div key={photo.storage_path} className="relative">
               <img
-                src={photos[currentIndex].publicUrl}
-                alt={`Foto ${currentIndex + 1}`}
-                className={`w-full max-w-md h-64 object-cover rounded-md ${photos[currentIndex].isPrimary ? "ring-2 ring-purple-500" : ""}`}
+                src={photo.publicUrl}
+                alt={`Foto ${index + 1}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-purple-500" : ""}`}
                 loading="lazy"
                 onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
               />
-            </div>
-            {photos[currentIndex].isPrimary && (
-              <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
-                Principal
-              </div>
-            )}
-            {photos.length > 1 && (
-              <>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2"
-                  onClick={prevPhoto}
-                  aria-label="Foto anterior"
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                  onClick={nextPhoto}
-                  aria-label="Próxima foto"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <div className="flex justify-center mt-2 space-x-2">
-                  {photos.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${index === currentIndex ? "bg-purple-500" : "bg-gray-300"}`}
-                    />
-                  ))}
+              {photo.isPrimary && (
+                <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
+                  Principal
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          ))
         )}
-      </CardContent>
-    </Card>
-  );
-};
+      </div>
+    </CardContent>
+  </Card>
+);
 
 export default function ProfileView() {
   const router = useRouter();
@@ -211,13 +161,11 @@ export default function ProfileView() {
   const profileId = params.id as string;
 
   // State
-  const [activeTab, setActiveTab] = useState<"fotos" | "informacoes">("fotos");
+  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes");
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [primaryPhoto, setPrimaryPhoto] = useState<Photo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLiked, setHasLiked] = useState(false);
-  const [hasMatch, setHasMatch] = useState(false);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
 
@@ -235,7 +183,7 @@ export default function ProfileView() {
     return age >= 18 ? age : null;
   }, []);
 
-  // Fetch profile data, photos, and match status
+  // Fetch profile data and photos
   const loadProfile = useCallback(async () => {
     if (!profileId) {
       toast({
@@ -297,8 +245,6 @@ export default function ProfileView() {
         })
       );
       setPhotos(photoUrls);
-      const primary = photoUrls.find((photo) => photo.isPrimary) || photoUrls[0] || null;
-      setPrimaryPhoto(primary);
 
       // Check if user has already liked this profile
       if (user) {
@@ -312,18 +258,6 @@ export default function ProfileView() {
           console.log("[loadProfile] Like check error:", likeError.message);
         }
         setHasLiked(!!likeData);
-
-        // Check for match
-        const { data: matchData, error: matchError } = await supabase
-          .from("matches")
-          .select("id")
-          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`)
-          .or(`user_id_1.eq.${profileId},user_id_2.eq.${profileId}`)
-          .single();
-        if (matchError && matchError.code !== "PGRST116") {
-          console.log("[loadProfile] Match check error:", matchError.message);
-        }
-        setHasMatch(!!matchData);
       }
     } catch (error: any) {
       console.log("[loadProfile] Error:", error.message);
@@ -332,7 +266,7 @@ export default function ProfileView() {
         description: "Não foi possível carregar o perfil.",
         variant: "destructive",
       });
-      router.push("/dashboard");
+      router.push("/discover");
     } finally {
       setIsLoading(false);
     }
@@ -360,33 +294,6 @@ export default function ProfileView() {
         throw error;
       }
       setHasLiked(true);
-
-      // Check if the other user has liked back to create a match
-      const { data: returnLike, error: returnLikeError } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("liker_id", profileId)
-        .eq("liked_profile_id", user.id)
-        .single();
-      if (returnLikeError && returnLikeError.code !== "PGRST116") {
-        console.log("[handleLike] Return like check error:", returnLikeError.message);
-      }
-      if (returnLike) {
-        const { error: matchError } = await supabase.from("matches").insert({
-          user_id_1: user.id,
-          user_id_2: profileId,
-          created_at: new Date().toISOString(),
-        });
-        if (matchError) {
-          console.log("[handleLike] Match insert error:", matchError.message);
-        } else {
-          setHasMatch(true);
-          toast({
-            title: "Novo Match!",
-            description: `Você e ${profileData?.name} deram match!`,
-          });
-        }
-      }
       toast({
         title: "Sucesso",
         description: "Você curtiu este perfil!",
@@ -403,15 +310,13 @@ export default function ProfileView() {
 
   // Handle send message
   const handleSendMessage = async () => {
-    if (!user || !profileId || !message.trim() || !hasMatch) {
+    if (!user || !profileId || !message.trim()) {
       toast({
         title: "Erro",
         description: !user
           ? "Usuário não autenticado."
           : !profileId
           ? "Perfil inválido."
-          : !hasMatch
-          ? "Você só pode enviar mensagens após um match."
           : "Digite uma mensagem antes de enviar.",
         variant: "destructive",
       });
@@ -482,6 +387,9 @@ export default function ProfileView() {
         transition={{ duration: 0.3 }}
         className="max-w-md mx-auto w-full"
       >
+
+
+        
         <h2 className="text-2xl font-bold gradient-text text-center mb-6">
           Perfil de {profileData?.name || "Usuário"}
         </h2>
@@ -497,43 +405,16 @@ export default function ProfileView() {
             {hasLiked ? "Curtido" : "Curtir"}
           </Button>
           <Button
-            onClick={() => hasMatch && setActiveTab("fotos")}
-            disabled={!hasMatch || !user}
-            className={`flex-1 ml-2 ${hasMatch ? "gradient-button" : "bg-gray-300"}`}
-            aria-label={hasMatch ? "Enviar mensagem" : "Mensagem bloqueada até match"}
+            onClick={() => setActiveTab("informacoes")}
+            className="flex-1 ml-2 gradient-button"
+            aria-label="Enviar mensagem"
           >
             <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
             Mensagem
           </Button>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-        >
-          <TabsList className="grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
-            <TabsTrigger value="fotos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Fotos
-            </TabsTrigger>
-            <TabsTrigger value="informacoes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Informações
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="fotos">
-            <ProfilePhotosCarousel photos={photos} />
-          </TabsContent>
-
-          <TabsContent value="informacoes">
-            <ProfileInfo
-              profileData={profileData}
-              calculateAge={calculateAge}
-              primaryPhoto={primaryPhoto}
-            />
-          </TabsContent>
-        </Tabs>
-
-        {user && hasMatch && (
+        {user && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Enviar Mensagem</CardTitle>
@@ -567,6 +448,31 @@ export default function ProfileView() {
             </CardContent>
           </Card>
         )}
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+        >
+          <TabsList className="grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
+            <TabsTrigger value="informacoes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              Informações
+            </TabsTrigger>
+            <TabsTrigger value="fotos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              Fotos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="informacoes">
+            <ProfileInfo
+              profileData={profileData}
+              calculateAge={calculateAge}
+            />
+          </TabsContent>
+
+          <TabsContent value="fotos">
+            <ProfilePhotos photos={photos} />
+          </TabsContent>
+        </Tabs>
       </motion.main>
     </div>
   );
