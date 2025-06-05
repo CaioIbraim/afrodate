@@ -1,58 +1,61 @@
-'use client'
-import { useState, useEffect, useCallback } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { useRouter, useParams } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
+import Swal from "sweetalert2"
+import withReactContent from "sweetalert2-react-content"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+} from "@/components/ui/tabs"
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { supabase } from "@/lib/supabase";
-import { useUser } from "@/hooks/use-user";
-import { Loader2, ChevronLeft, Heart, MessageSquare, ChevronRight, ChevronLeft as ChevronLeftIcon } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
-import { motion } from "framer-motion";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import { supabase } from "@/lib/supabase"
+import { useUser } from "@/hooks/use-user"
+import { Loader2, ChevronLeft, Heart, MessageSquare } from "lucide-react"
+import { Logo } from "@/components/ui/logo"
+import { motion } from "framer-motion"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+
+const MySwal = withReactContent(Swal)
 
 // Types
-type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
+type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
 type Photo = {
-  name: string;
-  storage_path: string;
-  publicUrl: string;
-  isPrimary: boolean;
-};
+  name: string
+  storage_path: string
+  publicUrl: string
+  isPrimary: boolean
+}
 type ProfileData = {
-  id: string;
-  name: string;
-  birth_date: string;
-  gender: Gender;
-  bio: string;
-  city: string;
-  profession: string;
-  interests: string[];
-  avatar_url: string | null;
-};
+  id: string
+  name: string
+  birth_date: string
+  gender: Gender
+  bio: string
+  city: string
+  profession: string
+  interests: string[]
+  avatar_url: string | null
+}
 
 // Componente para exibir informações do perfil
 const ProfileInfo = ({
   profileData,
   calculateAge,
-  primaryPhoto,
 }: {
-  profileData: ProfileData | null;
-  calculateAge: (birthDate: string) => number | null;
-  primaryPhoto: Photo | null;
+  profileData: ProfileData | null
+  calculateAge: (birthDate: string) => number | null
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -62,32 +65,24 @@ const ProfileInfo = ({
     <CardContent>
       {profileData ? (
         <div className="space-y-4">
-          <div className="flex flex-col items-center space-y-4">
-            {primaryPhoto ? (
-              <img
-                src={primaryPhoto.publicUrl}
-                alt="Foto principal"
-                className="w-48 h-48 object-cover rounded-full ring-2 ring-purple-500"
-                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+          <div className="flex items-center space-x-4">
+            <Avatar className="w-24 h-24">
+              <AvatarImage
+                src={profileData.avatar_url || "/placeholder-image.png"}
+                alt={profileData.name}
+                className="object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder-image.png"
+                }}
               />
-            ) : (
-              <Avatar className="w-48 h-48">
-                <AvatarImage
-                  src="/placeholder-image.png"
-                  alt={profileData.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="text-4xl">
-                  {profileData.name.charAt(0) || "?"}
-                </AvatarFallback>
-              </Avatar>
-            )}
-            <div className="text-center">
-              <h3 className="text-2xl font-semibold">{profileData.name}</h3>
+              <AvatarFallback className="text-2xl">
+                {profileData.name.charAt(0) || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="text-xl font-semibold">{profileData.name}</h3>
               {calculateAge(profileData.birth_date) && (
-                <p className="text-sm text-gray-500">
-                  {calculateAge(profileData.birth_date)} anos
-                </p>
+                <p className="text-sm text-gray-500">{calculateAge(profileData.birth_date)} anos</p>
               )}
               <p className="text-sm text-gray-500">{profileData.city}</p>
             </div>
@@ -121,222 +116,215 @@ const ProfileInfo = ({
       )}
     </CardContent>
   </Card>
-);
+)
 
-// Componente para exibir fotos do perfil em um carrossel
-const ProfilePhotosCarousel = ({
-  photos,
-}: {
-  photos: Photo[];
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const nextPhoto = () => {
-    setCurrentIndex((prev) => (prev + 1) % photos.length);
-  };
-
-  const prevPhoto = () => {
-    setCurrentIndex((prev) => (prev - 1 + photos.length) % photos.length);
-  };
-
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Fotos</CardTitle>
-        <CardDescription>Fotos do perfil do usuário</CardDescription>
-      </CardHeader>
-      <CardContent>
+// Componente para exibir fotos do perfil
+const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
+  <Card className="mb-6">
+    <CardHeader>
+      <CardTitle>Fotos</CardTitle>
+      <CardDescription>Fotos do perfil do usuário</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {photos.length === 0 ? (
-          <div className="text-center py-12 border border-dashed rounded-md">
+          <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
             <p>Sem fotos disponíveis.</p>
           </div>
         ) : (
-          <div className="relative">
-            <div className="flex justify-center">
+          photos.map((photo, index) => (
+            <div key={photo.storage_path} className="relative">
               <img
-                src={photos[currentIndex].publicUrl}
-                alt={`Foto ${currentIndex + 1}`}
-                className={`w-full max-w-md h-64 object-cover rounded-md ${photos[currentIndex].isPrimary ? "ring-2 ring-purple-500" : ""}`}
+                src={photo.publicUrl}
+                alt={`Foto ${index + 1}`}
+                className={`w-full h-48 object-cover rounded-md ${
+                  photo.isPrimary ? "ring-2 ring-purple-500" : ""
+                }`}
                 loading="lazy"
-                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder-image.png"
+                }}
               />
-            </div>
-            {photos[currentIndex].isPrimary && (
-              <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
-                Principal
-              </div>
-            )}
-            {photos.length > 1 && (
-              <>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2"
-                  onClick={prevPhoto}
-                  aria-label="Foto anterior"
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                  onClick={nextPhoto}
-                  aria-label="Próxima foto"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <div className="flex justify-center mt-2 space-x-2">
-                  {photos.map((_, index) => (
-                    <div
-                      key={index}
-                      className={`w-2 h-2 rounded-full ${index === currentIndex ? "bg-purple-500" : "bg-gray-300"}`}
-                    />
-                  ))}
+              {photo.isPrimary && (
+                <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
+                  Principal
                 </div>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          ))
         )}
-      </CardContent>
-    </Card>
-  );
-};
+      </div>
+    </CardContent>
+  </Card>
+)
 
 export default function ProfileView() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { user, isLoading: userLoading } = useUser();
-  const params = useParams();
-  const profileId = params.id as string;
+  const router = useRouter()
+  const { toast } = useToast()
+  const { user, isLoading: userLoading } = useUser()
+  const params = useParams()
+  const profileId = params.id as string
 
   // State
-  const [activeTab, setActiveTab] = useState<"fotos" | "informacoes">("fotos");
-  const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [primaryPhoto, setPrimaryPhoto] = useState<Photo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasLiked, setHasLiked] = useState(false);
-  const [hasMatch, setHasMatch] = useState(false);
-  const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
+  const [profileData, setProfileData] = useState<ProfileData | null>(null)
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasLiked, setHasLiked] = useState(false)
+  const [hasMatch, setHasMatch] = useState(false)
+  const [message, setMessage] = useState("")
+  const [isSending, setIsSending] = useState(false)
+  const [matchAlertShown, setMatchAlertShown] = useState(false)
 
   // Calculate user age
   const calculateAge = useCallback((birthDate: string): number | null => {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    const today = new Date();
-    if (isNaN(birth.getTime()) || birth > today) return null;
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
+    if (!birthDate) return null
+    const birth = new Date(birthDate)
+    const today = new Date()
+    if (isNaN(birth.getTime()) || birth > today) return null
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
+      age--
     }
-    return age >= 18 ? age : null;
-  }, []);
+    return age >= 18 ? age : null
+  }, [])
 
-  // Fetch profile data, photos, and match status
+  // Show SweetAlert2 for match
+  const showMatchAlert = useCallback(() => {
+    if (matchAlertShown) return
+    MySwal.fire({
+      icon: "success",
+      title: "É um Match!",
+      html: `
+        <p class="text-lg text-gray-700">
+          Vocês são uma conexão cósmica, ${profileData?.name}! O universo alinhou seus caminhos para criar algo especial. 
+          Que tal começar essa jornada com uma mensagem incrível?
+        </p>
+      `,
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+      },
+      confirmButtonText: "Enviar Mensagem",
+      willOpen: (popup) => {
+        popup.setAttribute("aria-live", "assertive")
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setActiveTab("informacoes") // Focus on message input
+      }
+    })
+    setMatchAlertShown(true)
+  }, [profileData?.name, matchAlertShown])
+
+  // Fetch profile data, photos, likes, and match status
   const loadProfile = useCallback(async () => {
     if (!profileId) {
       toast({
         title: "Erro",
         description: "ID do perfil não fornecido.",
         variant: "destructive",
-      });
-      router.push("/dashboard");
-      return;
+      })
+      router.push("/profile")
+      return
     }
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      console.log("[loadProfile] Fetching profile for profile_id:", profileId);
+      console.log("[loadProfile] Fetching profile for profile_id:", profileId)
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, name, birth_date, gender, bio, city, profession, interests, avatar_url")
+        .select("id, name, birth_date, gender, bio, city, profession, interests, avatar_url, user_id")
         .eq("id", profileId)
-        .single();
+        .single()
       if (profileError) {
-        console.log("[loadProfile] Profile error:", profileError.message);
-        throw profileError;
+        console.log("[loadProfile] Profile error:", profileError.message)
+        throw profileError
       }
-      setProfileData(profile);
+      setProfileData(profile)
 
-      console.log("[loadProfile] Fetching photos for profile_id:", profileId);
+      console.log("[loadProfile] Fetching photos for profile_id:", profileId)
       const { data: photosData, error: photosError } = await supabase
         .from("profile_photos")
         .select("storage_path, is_primary")
         .eq("profile_id", profileId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
       if (photosError) {
-        console.log("[loadProfile] Photos error:", photosError.message);
-        throw photosError;
+        console.log("[loadProfile] Photos error:", photosError.message)
+        throw photosError
       }
 
       const photoUrls = await Promise.all(
         photosData.map(async (photo) => {
-          const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
-          let url = publicUrlData.publicUrl;
+          const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path)
+          let url = publicUrlData.publicUrl
           try {
-            const response = await fetch(url, { method: "HEAD" });
-            if (!response.ok) throw new Error("Public URL inaccessible");
-            console.log("[loadProfile] Public URL accessible:", url);
+            const response = await fetch(url, { method: "HEAD" })
+            if (!response.ok) throw new Error("Public URL inaccessible")
+            console.log("[loadProfile] Public URL accessible:", url)
           } catch {
-            console.log("[loadProfile] Public URL failed, trying signed URL for:", photo.storage_path);
+            console.log("[loadProfile] Public URL failed, trying signed URL for:", photo.storage_path)
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from("imagens")
-              .createSignedUrl(photo.storage_path, 3600);
-            if (signedUrlError) throw signedUrlError;
-            url = signedUrlData.signedUrl;
-            console.log("[loadProfile] Signed URL:", url);
+              .createSignedUrl(photo.storage_path, 3600)
+            if (signedUrlError) throw signedUrlError
+            url = signedUrlData.signedUrl
+            console.log("[loadProfile] Signed URL:", url)
           }
           return {
             name: photo.storage_path.split("/").pop()!,
             storage_path: photo.storage_path,
             publicUrl: url,
             isPrimary: photo.is_primary,
-          };
+          }
         })
-      );
-      setPhotos(photoUrls);
-      const primary = photoUrls.find((photo) => photo.isPrimary) || photoUrls[0] || null;
-      setPrimaryPhoto(primary);
+      )
+      setPhotos(photoUrls)
 
-      // Check if user has already liked this profile
-      if (user) {
+      // Check like and match status
+      if (user && profile?.user_id) {
+        // Check if user has liked this profile
         const { data: likeData, error: likeError } = await supabase
           .from("likes")
           .select("id")
-          .eq("liker_id", user.id)
+          .eq("profile_id", profile.id)
           .eq("liked_profile_id", profileId)
-          .single();
+          .single()
         if (likeError && likeError.code !== "PGRST116") {
-          console.log("[loadProfile] Like check error:", likeError.message);
+          console.log("[loadProfile] Like check error:", likeError.message)
         }
-        setHasLiked(!!likeData);
+        setHasLiked(!!likeData)
 
-        // Check for match
-        const { data: matchData, error: matchError } = await supabase
-          .from("matches")
-          .select("id")
-          .or(`user_id_1.eq.${user.id},user_id_2.eq.${user.id}`)
-          .or(`user_id_1.eq.${profileId},user_id_2.eq.${profileId}`)
-          .single();
-        if (matchError && matchError.code !== "PGRST116") {
-          console.log("[loadProfile] Match check error:", matchError.message);
+        // Check if there's a match (mutual like)
+        if (likeData) {
+          const { data: mutualLikeData, error: mutualLikeError } = await supabase
+            .from("likes")
+            .select("id")
+            .eq("profile_id", profile.id)
+            .eq("liked_profile_id", profileId)
+            .single()
+          if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
+            console.log("[loadProfile] Mutual like check error:", mutualLikeError.message)
+          }
+          setHasMatch(!!mutualLikeData)
+          if (mutualLikeData && !matchAlertShown) {
+            showMatchAlert()
+          }
         }
-        setHasMatch(!!matchData);
       }
     } catch (error: any) {
-      console.log("[loadProfile] Error:", error.message);
+      console.log("[loadProfile] Error:", error.message)
       toast({
         title: "Erro",
         description: "Não foi possível carregar o perfil.",
         variant: "destructive",
-      });
-      router.push("/dashboard");
+      })
+      router.push("/profile")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [profileId, user, toast, router]);
+  }, [profileId, user, toast, router, matchAlertShown, showMatchAlert])
 
   // Handle like action
   const handleLike = async () => {
@@ -345,112 +333,119 @@ export default function ProfileView() {
         title: "Erro",
         description: "Usuário não autenticado ou perfil inválido.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
+    }
+    if (hasLiked) {
+      toast({
+        title: "Aviso",
+        description: "Você já curtiu este perfil!",
+      })
+      return
     }
     try {
-      console.log("[handleLike] Liking profile_id:", profileId);
+      console.log("[handleLike] Liking profile_id:", profileId)
       const { error } = await supabase.from("likes").insert({
         liker_id: user.id,
         liked_profile_id: profileId,
         created_at: new Date().toISOString(),
-      });
+      })
       if (error) {
-        console.log("[handleLike] Error:", error.message);
-        throw error;
+        console.log("[handleLike] Error:", error.message)
+        throw error
       }
-      setHasLiked(true);
-
-      // Check if the other user has liked back to create a match
-      const { data: returnLike, error: returnLikeError } = await supabase
+      setHasLiked(true)
+      // Check for match after liking
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("id", profileId)
+        .single()
+      if (profileError) {
+        console.log("[handleLike] Profile fetch error:", profileError.message)
+        throw profileError
+      }
+      const { data: mutualLikeData, error: mutualLikeError } = await supabase
         .from("likes")
         .select("id")
-        .eq("liker_id", profileId)
+        .eq("liker_id", profile.user_id)
         .eq("liked_profile_id", user.id)
-        .single();
-      if (returnLikeError && returnLikeError.code !== "PGRST116") {
-        console.log("[handleLike] Return like check error:", returnLikeError.message);
+        .single()
+      if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
+        console.log("[handleLike] Mutual like check error:", mutualLikeError.message)
       }
-      if (returnLike) {
-        const { error: matchError } = await supabase.from("matches").insert({
-          user_id_1: user.id,
-          user_id_2: profileId,
-          created_at: new Date().toISOString(),
-        });
-        if (matchError) {
-          console.log("[handleLike] Match insert error:", matchError.message);
-        } else {
-          setHasMatch(true);
-          toast({
-            title: "Novo Match!",
-            description: `Você e ${profileData?.name} deram match!`,
-          });
-        }
+      if (mutualLikeData) {
+        setHasMatch(true)
+        showMatchAlert()
+      } else {
+        toast({
+          title: "Sucesso",
+          description: "Você curtiu este perfil! Aguardando um match...",
+        })
       }
-      toast({
-        title: "Sucesso",
-        description: "Você curtiu este perfil!",
-      });
     } catch (error: any) {
-      console.log("[handleLike] Error:", error.message);
+      console.log("[handleLike] Error:", error.message)
       toast({
         title: "Erro",
-        description: "Não foi possível curtir o perfil.",
+        description: error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível curtir o perfil.",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   // Handle send message
   const handleSendMessage = async () => {
-    if (!user || !profileId || !message.trim() || !hasMatch) {
+    if (!user || !profileId || !message.trim()) {
       toast({
         title: "Erro",
         description: !user
           ? "Usuário não autenticado."
           : !profileId
           ? "Perfil inválido."
-          : !hasMatch
-          ? "Você só pode enviar mensagens após um match."
           : "Digite uma mensagem antes de enviar.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
-    setIsSending(true);
+    setIsSending(true)
     try {
-      console.log("[handleSendMessage] Sending message to profile_id:", profileId);
+      console.log("[handleSendMessage] Sending message to profile_id:", profileId)
       const { error } = await supabase.from("messages").insert({
         sender_id: user.id,
         receiver_id: profileId,
         content: message.trim(),
         created_at: new Date().toISOString(),
-      });
+      })
       if (error) {
-        console.log("[handleSendMessage] Error:", error.message);
-        throw error;
+        console.log("[handleSendMessage] Error:", error.message)
+        throw error
       }
-      setMessage("");
+      setMessage("")
       toast({
         title: "Sucesso",
         description: "Mensagem enviada com sucesso!",
-      });
+      })
+      router.push(`/messages/${profileId}`)
     } catch (error: any) {
-      console.log("[handleSendMessage] Error:", error.message);
+      console.log("[handleSendMessage] Error:", error.message)
       toast({
         title: "Erro",
-        description: "Não foi possível enviar a mensagem.",
+        description: error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível enviar a mensagem.",
         variant: "destructive",
-      });
+      })
     } finally {
-      setIsSending(false);
+      setIsSending(false)
     }
-  };
+  }
 
   // Load profile on mount
   useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+    loadProfile()
+  }, [loadProfile])
 
   // Loading state
   if (isLoading || userLoading) {
@@ -458,7 +453,7 @@ export default function ProfileView() {
       <div className="flex items-center justify-center min-h-screen" aria-label="Carregando">
         <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
       </div>
-    );
+    )
   }
 
   return (
@@ -487,53 +482,28 @@ export default function ProfileView() {
         </h2>
 
         <div className="flex justify-between mb-6">
+          {!hasMatch && (
+            <Button
+              onClick={handleLike}
+              disabled={hasLiked || !user}
+              className={`flex-1 mr-2 ${hasLiked ? "bg-gray-300" : "gradient-button"}`}
+              aria-label={hasLiked ? "Perfil já curtido" : "Curtir perfil"}
+            >
+              <Heart className={`h-4 w-4 mr-2 ${hasLiked ? "" : "fill-current"}`} aria-hidden="true" />
+              {hasLiked ? "Curtido" : "Curtir"}
+            </Button>
+          )}
           <Button
-            onClick={handleLike}
-            disabled={hasLiked || !user}
-            className={`flex-1 mr-2 ${hasLiked ? "bg-gray-300" : "gradient-button"}`}
-            aria-label={hasLiked ? "Perfil já curtido" : "Curtir perfil"}
-          >
-            <Heart className={`h-4 w-4 mr-2 ${hasLiked ? "" : "fill-current"}`} aria-hidden="true" />
-            {hasLiked ? "Curtido" : "Curtir"}
-          </Button>
-          <Button
-            onClick={() => hasMatch && setActiveTab("fotos")}
-            disabled={!hasMatch || !user}
-            className={`flex-1 ml-2 ${hasMatch ? "gradient-button" : "bg-gray-300"}`}
-            aria-label={hasMatch ? "Enviar mensagem" : "Mensagem bloqueada até match"}
+            onClick={() => setActiveTab("informacoes")}
+            className={`flex-1 ${hasMatch ? "w-full" : "ml-2"} gradient-button`}
+            aria-label="Enviar mensagem"
           >
             <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
             Mensagem
           </Button>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-        >
-          <TabsList className="grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
-            <TabsTrigger value="fotos" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Fotos
-            </TabsTrigger>
-            <TabsTrigger value="informacoes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Informações
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="fotos">
-            <ProfilePhotosCarousel photos={photos} />
-          </TabsContent>
-
-          <TabsContent value="informacoes">
-            <ProfileInfo
-              profileData={profileData}
-              calculateAge={calculateAge}
-              primaryPhoto={primaryPhoto}
-            />
-          </TabsContent>
-        </Tabs>
-
-        {user && hasMatch && (
+        {user && (
           <Card className="mb-6">
             <CardHeader>
               <CardTitle>Enviar Mensagem</CardTitle>
@@ -567,7 +537,35 @@ export default function ProfileView() {
             </CardContent>
           </Card>
         )}
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
+        >
+          <TabsList className="grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
+            <TabsTrigger
+              value="informacoes"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
+              Informações
+            </TabsTrigger>
+            <TabsTrigger
+              value="fotos"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+            >
+              Fotos
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="informacoes">
+            <ProfileInfo profileData={profileData} calculateAge={calculateAge} />
+          </TabsContent>
+
+          <TabsContent value="fotos">
+            <ProfilePhotos photos={photos} />
+          </TabsContent>
+        </Tabs>
       </motion.main>
     </div>
-  );
+  )
 }

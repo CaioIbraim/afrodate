@@ -1,0 +1,19 @@
+/* styles/sweetalert-custom.css */
+.swal-gradient {
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 1rem;
+    background: linear-gradient(to right, #8e2de2, #4ac8ed);
+    padding: 2rem;
+    color: white;
+  }
+  .swal-title, .swal-text, .swal-button {
+    color: white !important;
+  }
+  .swal-button {
+    background: transparent !important;
+    border: 1px solid white !important;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+  }
+  

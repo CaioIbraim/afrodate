@@ -1,65 +1,68 @@
-'use client'
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+"use client"
+
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
+import Swal from "sweetalert2"
+import withReactContent from "sweetalert2-react-content"
 import {
   Tabs,
-  TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+  TabsContent,
+} from "@/components/ui/tabs"
 import {
   Card,
   CardHeader,
   CardTitle,
   CardDescription,
   CardContent,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/supabase";
-import { useUser } from "@/hooks/use-user";
-import { Loader2, ChevronLeft, Star, Trash2, Upload } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
-import { motion } from "framer-motion";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { v4 as uuidv4 } from "uuid";
-import { setTimeout } from "timers/promises";
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { supabase } from "@/lib/supabase"
+import { useUser } from "@/hooks/use-user"
+import { Loader2, ChevronLeft, Star, Trash2, Upload, ArrowRight, LogOut } from "lucide-react"
+import { Logo } from "@/components/ui/logo"
+import { motion, AnimatePresence } from "framer-motion"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Progress } from "@/components/ui/progress"
+import { v4 as uuidv4 } from "uuid"
+
+const MySwal = withReactContent(Swal)
 
 // Types
-type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
-type GenderPreference = "HOMEM" | "MULHER" | "TODOS";
+type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
+type GenderPreference = "HOMEM" | "MULHER" | "TODOS"
 type Photo = {
-  name: string;
-  storage_path: string;
-  publicUrl: string;
-  isPrimary: boolean;
-};
+  name: string
+  storage_path: string
+  publicUrl: string
+  isPrimary: boolean
+}
 type ProfileData = {
-  name: string;
-  birth_date: string;
-  gender: Gender;
-  bio: string;
-  city: string;
-  profession: string;
-  interests: string[];
-};
+  name: string
+  birth_date: string
+  gender: Gender
+  bio: string
+  city: string
+  profession: string
+  interests: string[]
+}
 type Preferences = {
-  genderPreference: GenderPreference;
-  minAge: number;
-  maxAge: number;
-  maxDistance: number;
-  showProfile: boolean;
-  matchNotifications: boolean;
-  messageNotifications: boolean;
-};
-type Errors = Record<string, string>;
+  genderPreference: GenderPreference
+  minAge: number
+  maxAge: number
+  maxDistance: number
+  showProfile: boolean
+  matchNotifications: boolean
+  messageNotifications: boolean
+}
+type Errors = Record<string, string>
 
 // Componente para a aba de Informações
 const ProfileInfo = ({
@@ -75,17 +78,17 @@ const ProfileInfo = ({
   handleFileChange,
   calculateAge,
 }: {
-  profileData: ProfileData;
-  setProfileData: (data: ProfileData) => void;
-  errors: Errors;
-  validateField: (field: keyof ProfileData, value: any) => void;
-  saving: boolean;
-  uploading: boolean;
-  handleUpdateProfile: () => void;
-  isNewProfile: boolean;
-  photos: Photo[];
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  calculateAge: (birthDate: string) => number | null;
+  profileData: ProfileData
+  setProfileData: (data: ProfileData) => void
+  errors: Errors
+  validateField: (field: keyof ProfileData, value: any) => void
+  saving: boolean
+  uploading: boolean
+  handleUpdateProfile: () => void
+  isNewProfile: boolean
+  photos: Photo[]
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  calculateAge: (birthDate: string) => number | null
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -105,7 +108,9 @@ const ProfileInfo = ({
                 src={photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || ""}
                 alt={profileData.name || "Foto de perfil"}
                 className="object-cover"
-                onError={(e: { currentTarget: { src: string; }; }) => { e.currentTarget.src = "/placeholder-image.png"; }}
+                onError={(e: { currentTarget: { src: string } }) => {
+                  e.currentTarget.src = "/placeholder-image.png"
+                }}
               />
               <AvatarFallback className="text-2xl">
                 {profileData.name.charAt(0) || "?"}
@@ -149,8 +154,8 @@ const ProfileInfo = ({
             type="date"
             value={profileData.birth_date}
             onChange={(e) => {
-              setProfileData({ ...profileData, birth_date: e.target.value });
-              validateField("birth_date", e.target.value);
+              setProfileData({ ...profileData, birth_date: e.target.value })
+              validateField("birth_date", e.target.value)
             }}
             className={errors.birth_date ? "border-red-500" : ""}
             disabled={saving || uploading}
@@ -172,8 +177,8 @@ const ProfileInfo = ({
                 placeholder="Seu nome"
                 value={profileData.name}
                 onChange={(e) => {
-                  setProfileData({ ...profileData, name: e.target.value });
-                  validateField("name", e.target.value);
+                  setProfileData({ ...profileData, name: e.target.value })
+                  validateField("name", e.target.value)
                 }}
                 className={errors.name ? "border-red-500" : ""}
                 disabled={saving || uploading}
@@ -217,8 +222,8 @@ const ProfileInfo = ({
                 placeholder="Conte sobre você..."
                 value={profileData.bio}
                 onChange={(e) => {
-                  setProfileData({ ...profileData, bio: e.target.value });
-                  validateField("bio", e.target.value);
+                  setProfileData({ ...profileData, bio: e.target.value })
+                  validateField("bio", e.target.value)
                 }}
                 className={errors.bio ? "border-red-500" : ""}
                 disabled={saving || uploading}
@@ -239,8 +244,8 @@ const ProfileInfo = ({
                   placeholder="Sua cidade"
                   value={profileData.city}
                   onChange={(e) => {
-                    setProfileData({ ...profileData, city: e.target.value });
-                    validateField("city", e.target.value);
+                    setProfileData({ ...profileData, city: e.target.value })
+                    validateField("city", e.target.value)
                   }}
                   className={errors.city ? "border-red-500" : ""}
                   disabled={saving || uploading}
@@ -259,8 +264,8 @@ const ProfileInfo = ({
                   placeholder="Sua profissão"
                   value={profileData.profession}
                   onChange={(e) => {
-                    setProfileData({ ...profileData, profession: e.target.value });
-                    validateField("profession", e.target.value);
+                    setProfileData({ ...profileData, profession: e.target.value })
+                    validateField("profession", e.target.value)
                   }}
                   className={errors.profession ? "border-red-500" : ""}
                   disabled={saving || uploading}
@@ -279,7 +284,7 @@ const ProfileInfo = ({
         <Button
           onClick={handleUpdateProfile}
           disabled={saving || uploading || Object.keys(errors).length > 0}
-          className="w-full mt-4 gradient-button"
+          className="w-full mt-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
           aria-label={isNewProfile ? "Criar perfil" : "Salvar informações"}
         >
           {saving ? (
@@ -292,7 +297,7 @@ const ProfileInfo = ({
       </div>
     </CardContent>
   </Card>
-);
+)
 
 // Componente para a aba de Fotos
 const ProfilePhotos = ({
@@ -303,12 +308,12 @@ const ProfilePhotos = ({
   handleDeletePhoto,
   handleSetPrimaryPhoto,
 }: {
-  photos: Photo[];
-  uploading: boolean;
-  saving: boolean;
-  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleDeletePhoto: (photoName: string) => void;
-  handleSetPrimaryPhoto: (storagePath: string) => void;
+  photos: Photo[]
+  uploading: boolean
+  saving: boolean
+  handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleDeletePhoto: (photoName: string) => void
+  handleSetPrimaryPhoto: (storagePath: string) => void
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -364,9 +369,9 @@ const ProfilePhotos = ({
               <img
                 src={photo.publicUrl}
                 alt={`Foto ${index + 1}`}
-                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-purple-500" : ""}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""}`}
                 loading="lazy"
-                onError={(e) => { e.currentTarget.src = "/placeholder-image.png"; }}
+                onError={(e) => { e.currentTarget.src = "/placeholder-image.png" }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 gap-2">
                 {!photo.isPrimary && (
@@ -391,7 +396,7 @@ const ProfilePhotos = ({
                 </Button>
               </div>
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-oraculo-purple text-white text-xs px-2 py-1 rounded">
                   Principal
                 </div>
               )}
@@ -401,7 +406,7 @@ const ProfilePhotos = ({
       </div>
     </CardContent>
   </Card>
-);
+)
 
 // Componente para a aba de Preferências
 const ProfilePreferences = ({
@@ -411,11 +416,11 @@ const ProfilePreferences = ({
   uploading,
   handleUpdateProfile,
 }: {
-  preferences: Preferences;
-  setPreferences: (prefs: Preferences) => void;
-  saving: boolean;
-  uploading: boolean;
-  handleUpdateProfile: () => void;
+  preferences: Preferences
+  setPreferences: (prefs: Preferences) => void
+  saving: boolean
+  uploading: boolean
+  handleUpdateProfile: () => void
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -544,7 +549,7 @@ const ProfilePreferences = ({
         <Button
           onClick={handleUpdateProfile}
           disabled={saving || uploading}
-          className="w-full gradient-button"
+          className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
           aria-label="Salvar preferências"
         >
           {saving ? (
@@ -557,21 +562,18 @@ const ProfilePreferences = ({
       </div>
     </CardContent>
   </Card>
-);
+)
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const { user, profile, isLoading } = useUser();
-
-  // State
-  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos" | "preferencias">("informacoes");
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [isNewProfile, setIsNewProfile] = useState(true);
-  const [profileId, setProfileId] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Errors>({});
+  const router = useRouter()
+  const { user, profile, isLoading } = useUser()
+  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos" | "preferencias">("informacoes")
+  const [photos, setPhotos] = useState<Photo[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [isNewProfile, setIsNewProfile] = useState(true)
+  const [profileId, setProfileId] = useState<string | null>(null)
+  const [errors, setErrors] = useState<Errors>({})
   const [profileData, setProfileData] = useState<ProfileData>({
     name: "",
     birth_date: "",
@@ -580,7 +582,7 @@ export default function ProfilePage() {
     city: "",
     profession: "",
     interests: [],
-  });
+  })
   const [preferences, setPreferences] = useState<Preferences>({
     genderPreference: "TODOS",
     minAge: 18,
@@ -589,122 +591,209 @@ export default function ProfilePage() {
     showProfile: true,
     matchNotifications: true,
     messageNotifications: true,
-  });
+  })
 
+  const showAlert = async (type: "success" | "error", title: string, text: string) => {
+    return MySwal.fire({
+      icon: type,
+      title,
+      text,
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+      },
+      willOpen: (popup) => {
+        popup.setAttribute("aria-live", "assertive")
+      },
+    })
+  }
+
+  
   // Calculate user age
   const calculateAge = useCallback((birthDate: string): number | null => {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    const today = new Date();
-    if (isNaN(birth.getTime()) || birth > today) return null;
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
+    if (!birthDate) return null
+    const birth = new Date(birthDate)
+    const today = new Date()
+    if (isNaN(birth.getTime()) || birth > today) return null
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
+      age--
     }
-    return age >= 18 ? age : null;
-  }, []);
+    return age >= 18 ? age : null
+  }, [])
 
   // Real-time field validation
   const validateField = useCallback(
     (field: keyof ProfileData, value: any) => {
-      const newErrors = { ...errors };
+      const newErrors = { ...errors }
       switch (field) {
         case "name":
           if (!value.trim()) {
-            newErrors.name = "O nome é obrigatório.";
+            newErrors.name = "O nome é obrigatório."
           } else if (value.length < 2) {
-            newErrors.name = "O nome deve ter pelo menos 2 caracteres.";
+            newErrors.name = "O nome deve ter pelo menos 2 caracteres."
           } else {
-            delete newErrors.name;
+            delete newErrors.name
           }
-          break;
+          break
         case "birth_date":
           if (!value) {
-            newErrors.birth_date = "A data de nascimento é obrigatória.";
+            newErrors.birth_date = "A data de nascimento é obrigatória."
           } else {
-            const birthDate = new Date(value);
-            const today = new Date();
+            const birthDate = new Date(value)
+            const today = new Date()
             if (isNaN(birthDate.getTime()) || birthDate > today) {
-              newErrors.birth_date = "Data de nascimento inválida.";
+              newErrors.birth_date = "Data de nascimento inválida."
             } else {
-              const age = calculateAge(value);
+              const age = calculateAge(value)
               if (age === null || age < 18) {
-                newErrors.birth_date = "Você deve ter pelo menos 18 anos.";
+                newErrors.birth_date = "Você deve ter pelo menos 18 anos."
               } else {
-                delete newErrors.birth_date;
+                delete newErrors.birth_date
               }
             }
           }
-          break;
+          break
         case "bio":
           if (value.length > 500) {
-            newErrors.bio = "A biografia deve ter no máximo 500 caracteres.";
+            newErrors.bio = "A biografia deve ter no máximo 500 caracteres."
           } else {
-            delete newErrors.bio;
+            delete newErrors.bio
           }
-          break;
+          break
         case "city":
           if (!value.trim()) {
-            newErrors.city = "A cidade é obrigatória.";
+            newErrors.city = "A cidade é obrigatória."
           } else {
-            delete newErrors.city;
+            delete newErrors.city
           }
-          break;
+          break
         case "profession":
           if (!value.trim()) {
-            newErrors.profession = "A profissão é obrigatória.";
+            newErrors.profession = "A profissão é obrigatória."
           } else {
-            delete newErrors.profession;
+            delete newErrors.profession
           }
-          break;
+          break
       }
-      setErrors(newErrors);
+      setErrors(newErrors)
     },
     [errors, calculateAge]
-  );
+  )
+
+  // Check if profile is 100% complete
+  const isProfileComplete = useMemo(() => {
+    return (
+      photos.length > 0 &&
+      profileData.birth_date &&
+      !errors.birth_date &&
+      profileData.name.trim() &&
+      !errors.name &&
+      profileData.gender &&
+      profileData.city.trim() &&
+      !errors.city &&
+      profileData.profession.trim() &&
+      !errors.profession &&
+      profileData.bio.trim() &&
+      !errors.bio &&
+      preferences.genderPreference &&
+      preferences.minAge >= 18 &&
+      preferences.maxAge <= 99 &&
+      preferences.maxDistance >= 1
+    )
+  }, [photos, profileData, errors, preferences])
+
+  // Handle logout
+  const handleLogout = async () => {
+    const result = await MySwal.fire({
+      title: "Sair?",
+      text: "Deseja realmente sair da sua conta?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sair",
+      cancelButtonText: "Cancelar",
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
+      },
+      willOpen: (popup) => {
+        popup.setAttribute("aria-live", "assertive")
+      },
+    })
+
+    if (result.isConfirmed) {
+      setSaving(true)
+      try {
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          console.log("[handleLogout] Error:", error.message)
+          throw error
+        }
+        await showAlert("success", "Sucesso", "Você saiu da sua conta com sucesso!")
+        router.push("/login")
+      } catch (error: any) {
+        console.log("[handleLogout] Error:", error.message)
+        await showAlert(
+          "error",
+          "Erro",
+          error.message === "too_many_requests"
+            ? "Muitas tentativas. Tente novamente em alguns minutos."
+            : "Não foi possível sair da sua conta. Tente novamente."
+        )
+        setSaving(false)
+      }
+    }
+  }
 
   // Fetch profile_id on mount
   useEffect(() => {
-    let mounted = true;
+    let mounted = true
     const fetchProfileId = async () => {
       try {
         if (!user) {
- console.log("[fetchProfileId] User is null. Cannot fetch profile.");
- setProfileId(null); // Ensure profileId is null if user is null
- return; // Exit function if user is null
- }
-        console.log("[fetchProfileId] Fetching profile for user_id:", user!.id);
+          console.log("[fetchProfileId] User is null. Cannot fetch profile.")
+          setProfileId(null)
+          return
+        }
+        console.log("[fetchProfileId] Fetching profile for user_id:", user.id)
         const { data, error } = await supabase
           .from("profiles")
           .select("id")
           .eq("user_id", user.id)
-          .single();
+          .single()
         if (error && error.code !== "PGRST116") {
-          console.log("[fetchProfileId] Error:", error.message);
-          throw error;
+          console.log("[fetchProfileId] Error:", error.message)
+          throw error
         }
-        if (mounted) setProfileId(data?.id || null);
-        if (!data) setIsNewProfile(true);
+        if (mounted) setProfileId(data?.id || null)
+        if (!data) setIsNewProfile(true)
       } catch (error: any) {
-        console.log("[fetchProfileId] Error:", error.message);
+        console.log("[fetchProfileId] Error:", error.message)
         if (mounted) {
-          toast({
-            title: "Erro",
-            description: "Não foi possível carregar o perfil.",
-            variant: "destructive",
-          });
+          showAlert(
+            "error",
+            "Erro",
+            error.message === "too_many_requests"
+              ? "Muitas tentativas. Tente novamente em alguns minutos."
+              : "Não foi possível carregar o perfil. Tente novamente."
+          )
         }
       }
-    };
-    fetchProfileId();
-    return () => { mounted = false; };
-  }, [user, router, toast]);
+    }
+    fetchProfileId()
+    return () => {
+      mounted = false
+    }
+  }, [user])
 
   // Load user data and photos
   useEffect(() => {
-    let mounted = true;
-    if (isLoading || !user) return;
+    let mounted = true
+    if (isLoading || !user) return
     if (profile && mounted) {
       setProfileData({
         name: profile.name || "",
@@ -714,7 +803,7 @@ export default function ProfilePage() {
         city: profile.city || "",
         profession: profile.profession || "",
         interests: profile.interests || [],
-      });
+      })
       setPreferences({
         genderPreference: profile.gender_preference || "TODOS",
         minAge: profile.min_age || 18,
@@ -723,205 +812,200 @@ export default function ProfilePage() {
         showProfile: profile.show_profile !== false,
         matchNotifications: profile.match_notifications !== false,
         messageNotifications: profile.message_notifications !== false,
-      });
-      setIsNewProfile(false);
-      loadPhotos();
+      })
+      setIsNewProfile(false)
+      loadPhotos()
     } else if (profileId === null) {
-      setIsNewProfile(true);
-      setPhotos([]);
+      setIsNewProfile(true)
+      setPhotos([])
     }
-    return () => { mounted = false; };
-  }, [isLoading, user, profile, profileId]);
+    return () => {
+      mounted = false
+    }
+  }, [isLoading, user, profile, profileId])
 
   // Validate profile data before saving
   const validateProfileData = useCallback((): boolean => {
-    const newErrors: Errors = {};
+    const newErrors: Errors = {}
     if (!profileData.birth_date) {
-      newErrors.birth_date = "A data de nascimento é obrigatória.";
+      newErrors.birth_date = "A data de nascimento é obrigatória."
     } else {
-      const age = calculateAge(profileData.birth_date);
+      const age = calculateAge(profileData.birth_date)
       if (age === null || age < 18) {
-        newErrors.birth_date = "Você deve ter pelo menos 18 anos.";
+        newErrors.birth_date = "Você deve ter pelo menos 18 anos."
       }
     }
     if (isNewProfile && photos.length === 0) {
-      newErrors.photos = "Por favor, adicione pelo menos uma foto ao seu perfil.";
+      newErrors.photos = "Por favor, adicione pelo menos uma foto ao seu perfil."
     }
     if (!isNewProfile || (photos.length > 0 && profileData.birth_date && !newErrors.birth_date)) {
-      if (!profileData!.name.trim()) newErrors.name = "O nome é obrigatório.";
-      if (!profileData.city.trim()) newErrors.city = "A cidade é obrigatória.";
-      if (!profileData.profession.trim()) newErrors.profession = "A profissão é obrigatória.";
-      if (profileData.bio.length > 500) newErrors.bio = "A biografia deve ter no máximo 500 caracteres.";
+      if (!profileData.name.trim()) newErrors.name = "O nome é obrigatório."
+      if (!profileData.city.trim()) newErrors.city = "A cidade é obrigatória."
+      if (!profileData.profession.trim()) newErrors.profession = "A profissão é obrigatória."
+      if (profileData.bio.length > 500) newErrors.bio = "A biografia deve ter no máximo 500 caracteres."
     }
-    setErrors(newErrors);
+    setErrors(newErrors)
     if (Object.keys(newErrors).length > 0) {
-      toast({
-        title: "Erro",
-        description: "Por favor, corrija os erros nos campos antes de salvar.",
-        variant: "destructive",
-      });
-      return false;
+      showAlert("error", "Erro", "Por favor, corrija os erros nos campos antes de salvar.")
+      return false
     }
-    return true;
-  }, [profileData, photos, isNewProfile, calculateAge, toast]);
+    return true
+  }, [profileData, photos, isNewProfile, calculateAge])
 
   // Load user photos
   const loadPhotos = async () => {
     if (!user || !profileId) {
-      console.log("[loadPhotos] Skipping: No user or profileId");
-      setPhotos([]);
-      return;
+      console.log("[loadPhotos] Skipping: No user or profileId")
+      setPhotos([])
+      return
     }
     try {
-      console.log("[loadPhotos] Fetching photos for profile_id:", profileId);
+      console.log("[loadPhotos] Fetching photos for profile_id:", profileId)
       const { data: photosData, error: photosError } = await supabase
         .from("profile_photos")
         .select("storage_path, is_primary")
         .eq("profile_id", profileId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
       if (photosError) {
-        console.log("[loadPhotos] Photos error:", photosError.message);
-        throw photosError;
+        console.log("[loadPhotos] Photos error:", photosError.message)
+        throw photosError
       }
       const photoUrls = await Promise.all(
-        photosData.map(async (photo: { storage_path: string; is_primary: any; }) => {
-          const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
-          let url = publicUrlData.publicUrl;
+        photosData.map(async (photo: { storage_path: string; is_primary: any }) => {
+          const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path)
+          let url = publicUrlData.publicUrl
           try {
-            const response = await fetch(url, { method: "HEAD" });
-            if (!response.ok) throw new Error("Public URL inaccessible");
-            console.log("[loadPhotos] Public URL accessible:", url);
+            const response = await fetch(url, { method: "HEAD" })
+            if (!response.ok) throw new Error("Public URL inaccessible")
+            console.log("[loadPhotos] Public URL accessible:", url)
           } catch {
-            console.log("[loadPhotos] Public URL failed, trying signed URL for:", photo.storage_path);
+            console.log("[loadPhotos] Public URL failed, trying signed URL for:", photo.storage_path)
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from("imagens")
-              .createSignedUrl(photo.storage_path, 3600);
-            if (signedUrlError) throw signedUrlError;
-            url = signedUrlData.signedUrl;
-            console.log("[loadPhotos] Signed URL:", url);
+              .createSignedUrl(photo.storage_path, 3600)
+            if (signedUrlError) throw signedUrlError
+            url = signedUrlData.signedUrl
+            console.log("[loadPhotos] Signed URL:", url)
           }
           return {
             name: photo.storage_path.split("/").pop()!,
             storage_path: photo.storage_path,
             publicUrl: url,
             isPrimary: photo.is_primary,
-          };
+          }
         })
-      );
-      setPhotos(photoUrls);
+      )
+      setPhotos(photoUrls)
     } catch (error: any) {
-      console.log("[loadPhotos] Error:", error.message);
-      setPhotos([]);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar suas fotos.",
-        variant: "destructive",
-      });
+      console.log("[loadPhotos] Error:", error.message)
+      showAlert(
+        "error",
+        "Erro",
+        error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível carregar suas fotos. Tente novamente."
+      )
+      setPhotos([])
     }
-  };
+  }
 
   // Compress image before upload
   const compressImage = async (file: File): Promise<File> => {
     try {
-      const image = await createImageBitmap(file);
-      const canvas = document.createElement("canvas");
-      const maxSize = 800;
-      let width = image.width;
-      let height = image.height;
+      const image = await createImageBitmap(file)
+      const canvas = document.createElement("canvas")
+      const maxSize = 800
+      let width = image.width
+      let height = image.height
       if (width > height) {
         if (width > maxSize) {
-          height = Math.round((height * maxSize) / width);
-          width = maxSize;
+          height = Math.round((height * maxSize) / width)
+          width = maxSize
         }
       } else {
         if (height > maxSize) {
-          width = Math.round((width * maxSize) / height);
-          height = maxSize;
+          width = Math.round((width * maxSize) / height)
+          height = maxSize
         }
       }
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(image, 0, 0, width, height);
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext("2d")
+      ctx?.drawImage(image, 0, 0, width, height)
       return new Promise((resolve, reject) => {
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              resolve(new File([blob], file.name, { type: file.type }));
+              resolve(new File([blob], file.name, { type: file.type }))
             } else {
-              reject(new Error("Falha ao comprimir imagem"));
+              reject(new Error("Falha ao comprimir imagem"))
             }
           },
           file.type,
           0.8
-        );
-      });
+        )
+      })
     } catch (error: any) {
-      console.log("[compressImage] Error:", error.message);
-      throw error;
+      console.log("[compressImage] Error:", error.message)
+      throw error
     }
-  };
+  }
 
   // Handle photo upload with real progress
   const handlePhotoUpload = useCallback(
     async (file: File, uploadId: string) => {
       if (!user || !file) {
-        toast({
-          title: "Erro",
-          description: !user ? "Usuário não autenticado." : "Nenhum arquivo selecionado.",
-          variant: "destructive",
-        });
-        return;
+        await showAlert(
+          "error",
+          "Erro",
+          !user ? "Usuário não autenticado." : "Nenhum arquivo selecionado."
+        )
+        return
       }
-      const validTypes = ["image/jpeg", "image/png", "image/webp"];
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      const validTypes = ["image/jpeg", "image/png", "image/webp"]
+      const maxSize = 5 * 1024 * 1024 // 5MB
       if (!validTypes.includes(file.type)) {
-        toast({
-          title: "Erro",
-          description: "Envie uma imagem nos formatos JPEG, PNG ou WebP.",
-          variant: "destructive",
-        });
-        return;
+        await showAlert("error", "Erro", "Envie uma imagem nos formatos JPEG, PNG ou WebP.")
+        return
       }
       if (file.size > maxSize || file.size === 0) {
-        toast({
-          title: "Erro",
-          description: file.size > maxSize ? "A imagem deve ter no máximo 5MB." : "O arquivo está vazio ou corrompido.",
-          variant: "destructive",
-        });
-        return;
+        await showAlert(
+          "error",
+          "Erro",
+          file.size > maxSize ? "A imagem deve ter no máximo 5MB." : "O arquivo está vazio ou corrompido."
+        )
+        return
       }
 
-      setUploading(true);
+      setUploading(true)
       try {
-        const compressedFile = await compressImage(file);
-        const fileExt = compressedFile.name.split(".").pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        const compressedFile = await compressImage(file)
+        const fileExt = compressedFile.name.split(".").pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`
+        const filePath = `${user.id}/${fileName}`
 
-        console.log("[handlePhotoUpload] Uploading to:", filePath);
+        console.log("[handlePhotoUpload] Uploading to:", filePath)
         const { error: uploadError } = await supabase.storage
           .from("imagens")
-          .upload(filePath, compressedFile, { contentType: file.type, upsert: false });
+          .upload(filePath, compressedFile, { contentType: file.type, upsert: false })
         if (uploadError) {
-          console.log("[handlePhotoUpload] Upload error:", uploadError.message);
-          throw uploadError;
+          console.log("[handlePhotoUpload] Upload error:", uploadError.message)
+          throw uploadError
         }
 
-        let profileIdToUse = profileId;
+        let profileIdToUse = profileId
         if (!profileIdToUse) {
           const { data: profileData, error: profileError } = await supabase
             .from("profiles")
             .select("id")
             .eq("user_id", user.id)
-            .single();
+            .single()
           if (profileError && profileError.code !== "PGRST116") {
-            console.log("[handlePhotoUpload] Profile fetch error:", profileError.message);
-            throw profileError;
+            console.log("[handlePhotoUpload] Profile fetch error:", profileError.message)
+            throw profileError
           }
           if (!profileData) {
-            // If no profile exists, generate a username based on a default or user ID part
-            const username = await generateUsername("user"); // Use a default name for generating username
+            const username = await generateUsername("user")
             const { data: newProfile, error: insertError } = await supabase
               .from("profiles")
               .insert({
@@ -930,121 +1014,118 @@ export default function ProfilePage() {
                 created_at: new Date().toISOString(),
               })
               .select("id")
-              .single();
+              .single()
             if (insertError) {
-              console.log("[handlePhotoUpload] Profile insert error:", insertError.message);
-              throw insertError;
+              console.log("[handlePhotoUpload] Profile insert error:", insertError.message)
+              throw insertError
             }
-            profileIdToUse = newProfile.id;
-            setProfileId(newProfile.id);
-            setIsNewProfile(false);
+            profileIdToUse = newProfile.id
+            setProfileId(newProfile.id)
+            setIsNewProfile(false)
           } else {
-            profileIdToUse = profileData.id;
-            setProfileId(profileData.id);
+            profileIdToUse = profileData.id
+            setProfileId(profileData.id)
           }
         }
 
-        const isFirstPhoto = photos.length === 0;
-        console.log("[handlePhotoUpload] Inserting photo for profile_id:", profileIdToUse, "is_primary:", isFirstPhoto);
+        const isFirstPhoto = photos.length === 0
+        console.log("[handlePhotoUpload] Inserting photo for profile_id:", profileIdToUse, "is_primary:", isFirstPhoto)
         if (!isFirstPhoto) {
           await supabase
             .from("profile_photos")
             .update({ is_primary: false })
             .eq("profile_id", profileIdToUse)
-            .eq("is_primary", true);
+            .eq("is_primary", true)
         }
 
         const { error: insertError } = await supabase.from("profile_photos").insert({
           profile_id: profileIdToUse,
           storage_path: filePath,
           is_primary: isFirstPhoto,
-        });
+        })
         if (insertError) {
-          console.log("[handlePhotoUpload] Insert error:", insertError.message);
-          await supabase.storage.from("imagens").remove([filePath]);
-          throw insertError;
+          console.log("[handlePhotoUpload] Insert error:", insertError.message)
+          await supabase.storage.from("imagens").remove([filePath])
+          throw insertError
         }
 
-        const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(filePath);
+        const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(filePath)
         if (isFirstPhoto) {
-          console.log("[handlePhotoUpload] Setting avatar_url:", urlData.publicUrl);
+          console.log("[handlePhotoUpload] Setting avatar_url:", urlData.publicUrl)
           const { error: avatarError } = await supabase
             .from("profiles")
             .update({ avatar_url: urlData.publicUrl })
-            .eq("id", profileIdToUse);
+            .eq("id", profileIdToUse)
           if (avatarError) {
-            console.log("[handlePhotoUpload] Avatar update error:", avatarError.message);
-            throw avatarError;
+            console.log("[handlePhotoUpload] Avatar update error:", avatarError.message)
+            throw avatarError
           }
         }
 
-        toast({
-          title: "Sucesso",
-          description: `Foto ${isFirstPhoto ? "principal" : ""} enviada com sucesso!`,
-        });
-        await loadPhotos();
+        await showAlert("success", "Sucesso", `Foto ${isFirstPhoto ? "principal" : ""} enviada com sucesso!`)
+        await loadPhotos()
       } catch (error: any) {
-        console.log("[handlePhotoUpload] Error:", error.message);
-        toast({
-          title: "Erro",
-          description: "Não foi possível enviar sua foto. Tente novamente.",
-          variant: "destructive",
-        });
+        console.log("[handlePhotoUpload] Error:", error.message)
+        await showAlert(
+          "error",
+          "Erro",
+          error.message === "too_many_requests"
+            ? "Muitas tentativas. Tente novamente em alguns minutos."
+            : error.message.includes("compress")
+            ? "Falha ao comprimir a imagem. Tente outro arquivo."
+            : "Não foi possível enviar sua foto. Tente novamente."
+        )
       } finally {
-        setUploading(false);
+        setUploading(false)
       }
     },
-    [user, photos, profileId, toast]
-  );
+    [user, photos, profileId]
+  )
 
   // Handle file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files?.[0]
     if (!file) {
-      toast({
-        title: "Erro",
-        description: "Nenhum arquivo selecionado.",
-        variant: "destructive",
-      });
-      return;
+      showAlert("error", "Erro", "Nenhum arquivo selecionado.")
+      return
     }
-    const uploadId = uuidv4();
-    handlePhotoUpload(file, uploadId);
-    e.target.value = "";
-  };
+    const uploadId = uuidv4()
+    handlePhotoUpload(file, uploadId)
+    e.target.value = ""
+  }
 
   // Delete photo
   const handleDeletePhoto = async (photoName: string) => {
     if (!user || !profileId) {
-      toast({ title: "Erro", description: "Usuário ou perfil não encontrado.", variant: "destructive" });
-      return;
+      await showAlert("error", "Erro", "Usuário ou perfil não encontrado.")
+      return
     }
     try {
-      const filePath = `${user.id}/${photoName}`;
-      console.log("[handleDeletePhoto] Deleting:", filePath);
+      const filePath = `${user.id}/${photoName}`
+      console.log("[handleDeletePhoto] Deleting:", filePath)
       const { data: photoData, error: photoError } = await supabase
         .from("profile_photos")
         .select("is_primary")
         .eq("storage_path", filePath)
         .eq("profile_id", profileId)
-        .single();
+        .single()
       if (photoError) {
-        console.log("[handleDeletePhoto] Photo fetch error:", photoError.message);
-        throw photoError;
+        console.log("[handleDeletePhoto] Photo fetch error:", photoError.message)
+        throw photoError
       }
-      const { error: deleteError } = await supabase.storage.from("imagens").remove([filePath]);
+      const { error: deleteError } = await supabase.storage.from("imagens").remove([filePath])
       if (deleteError) {
-        console.log("[handleDeletePhoto] Delete error:", deleteError.message);
-        throw deleteError;
+        console.log("[handleDeletePhoto] Delete error:", deleteError.message)
+        throw deleteError
       }
       const { error: dbError } = await supabase
         .from("profile_photos")
         .delete()
         .eq("storage_path", filePath)
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
       if (dbError) {
-        console.log("[handleDeletePhoto] DB error:", dbError.message);
-        throw dbError;
+        console.log("[handleDeletePhoto] DB error:", dbError.message)
+        throw dbError
       }
       if (photoData.is_primary) {
         const { data: remainingPhotos } = await supabase
@@ -1052,118 +1133,122 @@ export default function ProfilePage() {
           .select("storage_path")
           .eq("profile_id", profileId)
           .order("created_at", { ascending: true })
-          .limit(1);
+          .limit(1)
         if (remainingPhotos && remainingPhotos.length > 0) {
           const { error: updatePrimaryError } = await supabase
             .from("profile_photos")
             .update({ is_primary: true })
             .eq("storage_path", remainingPhotos[0].storage_path)
-            .eq("profile_id", profileId);
+            .eq("profile_id", profileId)
           if (updatePrimaryError) {
-            console.log("[handleDeletePhoto] Update primary error:", updatePrimaryError.message);
-            throw updatePrimaryError;
+            console.log("[handleDeletePhoto] Update primary error:", updatePrimaryError.message)
+            throw updatePrimaryError
           }
-          const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(remainingPhotos[0].storage_path);
+          const { data: urlData } = supabase.storage.from("imagens").getPublicUrl(remainingPhotos[0].storage_path)
           const { error: avatarError } = await supabase
             .from("profiles")
             .update({ avatar_url: urlData.publicUrl })
-            .eq("id", profileId);
+            .eq("id", profileId)
           if (avatarError) {
-            console.log("[handleDeletePhoto] Avatar update error:", avatarError.message);
-            throw avatarError;
+            console.log("[handleDeletePhoto] Avatar update error:", avatarError.message)
+            throw avatarError
           }
         } else {
           const { error: avatarError } = await supabase
             .from("profiles")
             .update({ avatar_url: null })
-            .eq("id", profileId);
+            .eq("id", profileId)
           if (avatarError) {
-            console.log("[handleDeletePhoto] Avatar reset error:", avatarError.message);
-            throw avatarError;
+            console.log("[handleDeletePhoto] Avatar reset error:", avatarError.message)
+            throw avatarError
           }
         }
       }
-      toast({ title: "Sucesso", description: "Foto excluída com sucesso." });
-      await loadPhotos();
+      await showAlert("success", "Sucesso", "Foto excluída com sucesso.")
+      await loadPhotos()
     } catch (error: any) {
-      console.log("[handleDeletePhoto] Error:", error.message);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover sua foto.",
-        variant: "destructive",
-      });
+      console.log("[handleDeletePhoto] Error:", error.message)
+      await showAlert(
+        "error",
+        "Erro",
+        error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível remover sua foto. Tente novamente."
+      )
     }
-  };
+  }
 
   // Set primary photo
   const handleSetPrimaryPhoto = async (storagePath: string) => {
     if (!user || !profileId) {
-      toast({ title: "Erro", description: "Usuário ou perfil não encontrado.", variant: "destructive" });
-      return;
+      await showAlert("error", "Erro", "Usuário ou perfil não encontrado.")
+      return
     }
     try {
-      console.log("[handleSetPrimaryPhoto] Setting primary:", storagePath);
-      await supabase.from("profile_photos").update({ is_primary: false }).eq("profile_id", profileId);
+      console.log("[handleSetPrimaryPhoto] Setting primary:", storagePath)
+      await supabase.from("profile_photos").update({ is_primary: false }).eq("profile_id", profileId)
       const { error: updateError } = await supabase
         .from("profile_photos")
         .update({ is_primary: true })
         .eq("storage_path", storagePath)
-        .eq("profile_id", profileId);
+        .eq("profile_id", profileId)
       if (updateError) {
-        console.log("[handleSetPrimaryPhoto] Update error:", updateError.message);
-        throw updateError;
+        console.log("[handleSetPrimaryPhoto] Update error:", updateError.message)
+        throw updateError
       }
-      const { data: publicUrl } = supabase.storage.from("imagens").getPublicUrl(storagePath);
-      console.log("[handleSetPrimaryPhoto] Updating avatar_url:", publicUrl.publicUrl);
+      const { data: publicUrl } = supabase.storage.from("imagens").getPublicUrl(storagePath)
+      console.log("[handleSetPrimaryPhoto] Updating avatar_url:", publicUrl.publicUrl)
       const { error: avatarError } = await supabase
         .from("profiles")
         .update({ avatar_url: publicUrl.publicUrl })
-        .eq("id", profileId);
+        .eq("id", profileId)
       if (avatarError) {
-        console.log("[handleSetPrimaryPhoto] Avatar error:", avatarError.message);
-        throw avatarError;
+        console.log("[handleSetPrimaryPhoto] Avatar error:", avatarError.message)
+        throw avatarError
       }
-      toast({ title: "Sucesso", description: "Foto principal atualizada!" });
-      await loadPhotos();
+      await showAlert("success", "Sucesso", "Foto principal atualizada!")
+      await loadPhotos()
     } catch (error: any) {
-      console.log("[handleSetPrimaryPhoto] Error:", error.message);
-      toast({
-        title: "Erro",
-        description: "Não foi possível definir esta foto como principal.",
-        variant: "destructive",
-      });
+      console.log("[handleSetPrimaryPhoto] Error:", error.message)
+      await showAlert(
+        "error",
+        "Erro",
+        error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível definir esta foto como principal. Tente novamente."
+      )
     }
-  };
+  }
 
   // Generate unique username
   const generateUsername = async (name: string): Promise<string> => {
-    let baseUsername = "@" + name.toLowerCase().replace(/\s+/g, "");
-    let username = baseUsername;
-    let counter = 1;
+    let baseUsername = "@" + name.toLowerCase().replace(/\s+/g, "")
+    let username = baseUsername
+    let counter = 1
     while (true) {
       const { data, error } = await supabase
         .from("profiles")
         .select("username")
         .eq("username", username)
-        .single();
-      if (error || !data) break;
-      username = `${baseUsername}${counter}`;
-      counter++;
+        .single()
+      if (error || !data) break
+      username = `${baseUsername}${counter}`
+      counter++
     }
-    return username;
-  };
+    return username
+  }
 
   // Save profile information
   const handleUpdateProfile = async () => {
     if (!user || !validateProfileData()) {
-      toast({
-        title: "Erro",
-        description: "Usuário não autenticado ou dados inválidos.",
-        variant: "destructive",
-      });
-      return;
+      await showAlert(
+        "error",
+        "Erro",
+        !user ? "Usuário não autenticado." : "Por favor, corrija os erros nos campos antes de salvar."
+      )
+      return
     }
-    setSaving(true);
+    setSaving(true)
     try {
       const profilePayload = {
         name: profileData.name,
@@ -1182,56 +1267,68 @@ export default function ProfilePage() {
         message_notifications: preferences.messageNotifications,
         updated_at: new Date().toISOString(),
         avatar_url: photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || null,
-      };
-      console.log("[handleUpdateProfile] Saving profile:", profilePayload);
-      let error;
+      }
+      console.log("[handleUpdateProfile] Saving profile:", profilePayload)
+      let error
       if (profileId) {
         const { error: updateError } = await supabase
           .from("profiles")
           .update({ ...profilePayload, username: await generateUsername(profileData.name) })
-          .eq("id", profileId);
-        error = updateError;
+          .eq("id", profileId)
+        error = updateError
       } else {
-        const username = await generateUsername(profileData.name);
-        const { data, error: insertError } = await supabase.from("profiles").insert({
-          ...profilePayload,
-          user_id: user.id,
-          username,
-          created_at: new Date().toISOString(),
-        }).select("id").single();
-        error = insertError;
-        if (data) setProfileId(data.id);
-        setIsNewProfile(false);
+        const username = await generateUsername(profileData.name)
+        const { data, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            ...profilePayload,
+            user_id: user.id,
+            username,
+            created_at: new Date().toISOString(),
+          })
+          .select("id")
+          .single()
+        error = insertError
+        if (data) setProfileId(data.id)
+        setIsNewProfile(false)
       }
       if (error) {
-        console.log("[handleUpdateProfile] Save error:", error.message);
-        throw error;
+        console.log("[handleUpdateProfile] Save error:", error.message)
+        throw error
       }
-      toast({
-        title: "Sucesso",
-        description: profileId ? "Perfil atualizado com sucesso!" : "Perfil criado com sucesso!",
-      });
+      await showAlert(
+        "success",
+        "Sucesso",
+        profileId ? "Perfil atualizado com sucesso!" : "Perfil criado com sucesso!"
+      )
       if (!profileId) {
-        await loadPhotos();
-        router.push("/dashboard");
+        await loadPhotos()
+        router.push("/dashboard")
       }
     } catch (error: any) {
-      console.log("[handleUpdateProfile] Error:", error.message);
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar seu perfil: " + error.message,
-        variant: "destructive",
-      });
+      console.log("[handleUpdateProfile] Error:", error.message)
+      await showAlert(
+        "error",
+        "Erro",
+        error.message === "too_many_requests"
+          ? "Muitas tentativas. Tente novamente em alguns minutos."
+          : "Não foi possível salvar seu perfil. Tente novamente."
+      )
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
+
+  // Handle redirect to questionnaire
+  const handleRedirectToQuestionnaire = () => {
+    router.push("/questionnaire")
+  }
 
   // Check if initial requirements (photo and birth_date) are met
   const initialRequirementsMet = useMemo(
     () => photos.length > 0 && profileData.birth_date && !errors.birth_date,
     [photos, profileData.birth_date, errors.birth_date]
-  );
+  )
 
   // Loading state
   if (isLoading || profileId === null) {
@@ -1239,11 +1336,26 @@ export default function ProfilePage() {
       <div className="flex items-center justify-center min-h-screen" aria-label="Carregando">
         <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
       </div>
-    );
+    )
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
+      {/* Loader fullscreen */}
+      <AnimatePresence>
+        {saving && (
+          <motion.div
+            className="fixed inset-0 bg-white z-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Logo size="lg" className="animate-pulse" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <header className="flex items-center justify-between mb-4">
         <Button
           variant="ghost"
@@ -1254,7 +1366,15 @@ export default function ProfilePage() {
           <ChevronLeft className="h-6 w-6 text-gray-700" />
         </Button>
         <Logo size="sm" />
-        <div className="w-10" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleLogout}
+          aria-label="Sair"
+          className="text-gray-700 hover:bg-gray-200 focus:ring-2 focus:ring-oraculo-purple"
+        >
+          <LogOut className="h-6 w-6" />
+        </Button>
       </header>
 
       <motion.main
@@ -1263,11 +1383,29 @@ export default function ProfilePage() {
         transition={{ duration: 0.3 }}
         className="max-w-md mx-auto w-full"
       >
-        <h2 className="text-2xl font-bold gradient-text text-center mb-6">Meu Perfil</h2>
+        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-center mb-6">
+          Meu Perfil
+        </h2>
 
         {isNewProfile && !initialRequirementsMet && (
           <div className="mb-6 text-center text-gray-600">
             <p>Por favor, adicione uma foto de perfil e sua data de nascimento para continuar.</p>
+          </div>
+        )}
+
+        {isProfileComplete && (
+          <div className="mb-6 text-center">
+            <p className="text-green-600 font-semibold mb-2">
+              Perfil 100% completo! Você pode prosseguir para o questionário.
+            </p>
+            <Button
+              onClick={handleRedirectToQuestionnaire}
+              className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+              aria-label="Ir para o questionário"
+            >
+              Ir para o Questionário
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
         )}
 
@@ -1317,19 +1455,19 @@ export default function ProfilePage() {
               handleDeletePhoto={handleDeletePhoto}
               handleSetPrimaryPhoto={handleSetPrimaryPhoto}
             />
-            </TabsContent>
+          </TabsContent>
 
-            <TabsContent value="preferencias">
-              <ProfilePreferences
-                preferences={preferences}
-                setPreferences={setPreferences}
-                saving={saving}
-                uploading={uploading}
-                handleUpdateProfile={handleUpdateProfile}
-              />
-            </TabsContent>
-          </Tabs>
-        </motion.main>
-      </div>
-    );
-  }
+          <TabsContent value="preferencias">
+            <ProfilePreferences
+              preferences={preferences}
+              setPreferences={setPreferences}
+              saving={saving}
+              uploading={uploading}
+              handleUpdateProfile={handleUpdateProfile}
+            />
+          </TabsContent>
+        </Tabs>
+      </motion.main>
+    </div>
+  )
+}
