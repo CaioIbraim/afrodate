@@ -7,7 +7,7 @@
 - [ ] Implementação do sistema de notificações em tempo real
 - [ ] Finalização do onboarding com preferências de usuário
 - [ ] Testes finais de integração e deploys
-
+- [ ] Criar mecanismo de apagar contas ou desativar
 **Detalhes Técnicos:**
 
 1. **Triggers de Curtidas**
