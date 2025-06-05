@@ -7,6 +7,12 @@
 - [ ] Implementação do sistema de notificações em tempo real
 - [ ] Finalização do onboarding com preferências de usuário
 - [ ] Testes finais de integração e deploys
+- [ ] Criar Interação com Magic Link
+- [ ] Melhorar feedback de usuário na tela de cadastro
+- [ ] Implementar tela de sugestões de perfis compatíveis com apenas 3 opções
+- [ ] Mostrar matches do usuário na tela inicial
+- [ ] Implementar notificações de curtidas
+- [ ] Criar tela de apresentação de pessoas que curtiram e que não deu match
 
 **Detalhes Técnicos:**
 
