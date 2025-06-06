@@ -146,7 +146,7 @@ export const subscriptionPlans: SubscriptionPlan[] = [
     interval: "month",
     features: [
       "Acesso a perfis básicos",
-      "Matches limitados por dia",
+      "Um like e um match por dia",
       "Filtros básicos de busca",
     ],
     tier: "FREE",
@@ -176,7 +176,7 @@ export const subscriptionPlans: SubscriptionPlan[] = [
       "Contato direto via WhatsApp",
       "Prioridade nos matches",
       "Suporte VIP 24/7",
-      "Eventos exclusivos",
+      //"Eventos exclusivos",
     ],
     tier: "VIP",
     discount: 20, // 20% de desconto na assinatura anual

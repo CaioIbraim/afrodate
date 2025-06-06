@@ -13,13 +13,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
+import { Profile } from "@/lib/profile-data";
 
 interface LikedMeProfile {
+  // This interface describes the structure of the profiles after processing the fetched data
   profile_id: string;
   name: string;
   avatar_url: string | null;
   gender: string | null; // Added for placeholder image logic
   isMatch: boolean;
+}
+
+// Define the type for items fetched from the 'likes' table with the 'profiles' join
+interface LikeItemWithProfile { // Corrected interface name for clarity if it was used elsewhere
+  // This interface describes the raw data structure returned directly by the Supabase query
+  profile_id: string;
+  // The 'profiles' property is expected to be an object or null, matching the Supabase select syntax
+  profiles: { name: string; avatar_url: string | null; gender: string | null; } | null;
 }
 
 export default function LikedMePage() {
@@ -70,7 +80,7 @@ export default function LikedMePage() {
           ])
         );
 
-        const profilesData: LikedMeProfile[] = likesData
+        const profilesData: LikedMeProfile[] = likesData // Removed unnecessary type assertion
           .filter((item) => item.profiles && item.profiles.name && item.profile_id)
           .map((item) => ({
             profile_id: item.profile_id,
@@ -102,7 +112,7 @@ export default function LikedMePage() {
     try {
       const { error } = await supabase
         .from("likes")
-        .insert({ profile_id: profile.id, liked_profile_id: likerProfileId });
+        .insert({ profile_id: profile!.id, liked_profile_id: likerProfileId });
 
       if (error) {
         console.error("Error liking back:", error.message);
@@ -135,7 +145,7 @@ export default function LikedMePage() {
         ])
       );
 
-      const profilesData: LikedMeProfile[] = likesData
+      const profilesData: LikedMeProfile[] = likesData // Removed unnecessary type assertion
         .filter((item) => item.profiles && item.profiles.name && item.profile_id)
         .map((item) => ({
           profile_id: item.profile_id,

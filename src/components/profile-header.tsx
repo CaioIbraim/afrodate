@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { MoreVertical, Video, Phone, LogOut, Heart, Search, User } from "lucide-react"
+import { MoreVertical, Video, Phone, LogOut, Heart, Search, User, Star } from "lucide-react"
 import { PremiumBadge } from "@/components/ui/premium-badge"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -119,6 +119,7 @@ export function ProfileHeader({
                     <Heart className="h-4 w-4 mr-2" />
                     Likes
                   </button>
+                 
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
                     onClick={navigateToDiscover}
@@ -157,7 +158,14 @@ export function ProfileHeader({
                 <User className="h-4 w-4 mr-2" />
                 Ver perfil
               </button>
-              
+
+              <button
+                      className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center text-yellow-600 hover:bg-yellow-50"
+                      onClick={() => router.push("/subscription")} // Link para a página de subscriptions
+                    >
+                  <Star className="h-4 w-4 mr-2" />    
+                  Seja Premium
+                  </button>
               {/* <button
                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
               >

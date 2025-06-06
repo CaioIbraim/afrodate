@@ -7,6 +7,8 @@ import { Logo } from "@/components/ui/logo"
 import { motion, AnimatePresence } from "framer-motion"
 import { Hourglass } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { ProfileHeader } from "@/components/profile-header"
+import { useUser } from "@/hooks/use-user"
 
 // Perguntas com foco em conhecimentos afrodiaspóricos
 const questions = [
@@ -132,6 +134,7 @@ export default function QuestionnairePage() {
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(false)
   const totalQuestions = questions.length
+  const { user, profile, isLoading: userLoading } = useUser()
 
   const handleStart = () => {
     setStarted(true)
@@ -160,74 +163,98 @@ export default function QuestionnairePage() {
   useEffect(() => {
     if (loading) {
       const timer = setTimeout(() => {
-        router.push("/matches")
+        router.push("/oraculo")
       }, 3000)
 
       return () => clearTimeout(timer)
     }
   }, [loading, router])
 
-  if (loading) {
+  // Handle loading state for user data
+  if (userLoading) {
     return (
       <div className="app-container justify-center items-center">
-        <Logo size="md" className="mb-12" />
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center max-w-lg"
-        >
-          <h2 className="text-3xl font-bold gradient-text mb-4">Processando suas respostas</h2>
-          <p className="text-xl mb-8 text-oraculo-dark">
-            Aguarde enquanto nossa inteligência artificial analisa suas conexões com a cultura afrodiaspórica
-            para encontrar suas almas gêmeas.
-          </p>
-
-          <Hourglass className="text-oraculo-purple w-32 h-32 mx-auto animate-pulse" />
-        </motion.div>
+        <Hourglass className="text-oraculo-purple w-32 h-32 mx-auto animate-pulse" />
+        <p className="text-xl text-oraculo-dark mt-8">Carregando informações do usuário...</p>
       </div>
+    );
+  }
+
+  // After user data is loaded, handle other states
+
+  if (loading) {
+    return (
+      <>
+        <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+        <div className="app-container justify-center items-center">
+          <Logo size="md" className="mb-12" />
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center max-w-lg"
+          >
+            <h2 className="text-3xl font-bold gradient-text mb-4">Processando suas respostas</h2>
+            <p className="text-xl mb-8 text-oraculo-dark">
+              Aguarde enquanto nossa inteligência artificial analisa suas conexões com a cultura afrodiaspórica
+              para encontrar suas almas gêmeas.
+            </p>
+
+            <Hourglass className="text-oraculo-purple w-32 h-32 mx-auto animate-pulse" />
+          </motion.div>
+        </div>
+      </>
     )
   }
 
   if (!started) {
     return (
-      <div className="app-container justify-center items-center">
-        <Logo size="md" className="mb-12" />
+      <>
+        <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+        <div className="app-container justify-center items-center">
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-12 profile-card p-8 max-w-lg"
-        >
-          <h3 className="gradient-text text-2xl mb-6 font-semibold">Descubra suas conexões ancestrais</h3>
-          <p className="text-oraculo-dark mb-4">
-            Este questionário foi cuidadosamente elaborado para compreender sua conexão com a cultura
-            afrodiaspórica e encontrar perfis que compartilham de suas afinidades culturais.
-          </p>
-          <p className="text-oraculo-muted mb-6">
-            Reserve alguns minutos para responder com calma e sinceridade. Suas respostas são fundamentais
-            para encontrarmos as melhores conexões para você.
-          </p>
-          <div className="flex flex-col gap-4">
-            <Button className="w-full gradient-button h-14" onClick={handleStart}>
-              COMEÇAR JORNADA
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full h-14 text-oraculo-muted hover:text-oraculo-dark transition-colors"
-              onClick={() => router.push("/matches")}
-            >
-              PULAR QUESTIONÁRIO
-            </Button>
-          </div>
-        </motion.div>
-      </div>
+      
+
+
+
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12 profile-card p-8 max-w-lg"
+          >
+            <h3 className="gradient-text text-2xl mb-6 font-semibold">Descubra suas conexões verdadeiras</h3>
+            <p className="text-oraculo-dark mb-4">
+              Este questionário foi cuidadosamente elaborado para compreender sua conexão o mundo a sua volta e 
+              encontrar perfis que compartilham de suas afinidades culturais.
+            </p>
+            <p className="text-oraculo-muted mb-6">
+              Reserve alguns minutos para responder com calma e sinceridade. Suas respostas são fundamentais
+              para encontrarmos as melhores conexões para você.
+            </p>
+            <div className="flex flex-col gap-4">
+              <Button className="w-full gradient-button h-14" onClick={handleStart}>
+                COMEÇAR JORNADA
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-14 text-oraculo-muted hover:text-oraculo-dark transition-colors"
+                onClick={() => router.push("/oraculo")}
+              >
+                PULAR QUESTIONÁRIO
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="app-container">
+    <>
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+      <div className="app-container">
       <div className="flex justify-between items-center mb-8">
         <Logo size="sm" />
         <div className="text-oraculo-dark text-xl font-bold">
@@ -263,7 +290,8 @@ export default function QuestionnairePage() {
           </div>
         </motion.div>
       </AnimatePresence>
-    </div>
+      </div>
+    </>
   )
 }
 

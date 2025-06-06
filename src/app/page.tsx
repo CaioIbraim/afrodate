@@ -37,6 +37,18 @@ export default function Home() {
                 Cadastre-se agora e esteja mais próximo a quem você ama
               </a>
             </div>
+
+
+            <div className="rounded-md shadow mt-6">
+              <a
+                href="/login"
+                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-oraculo-purple to-oraculo-cyan hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300"
+              >
+                Entrar agora 
+              </a>
+            </div>
+
+            
           </div>
         </section>
 

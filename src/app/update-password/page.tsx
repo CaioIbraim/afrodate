@@ -11,6 +11,11 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabase"
 import { VivaLogo } from "@/components/viva-logo"
+import { Navbar } from "@/components/navbar"
+import { ProfileHeader } from "@/components/profile-header"
+import { MainNavigation } from "@/components/navigation/main-nav"
+import { NavigationMenu } from "@/components/ui/navigation-menu"
+import { Menubar } from "@/components/ui/menubar"
 
 export default function UpdatePasswordPage() {
   const router = useRouter()
@@ -93,6 +98,8 @@ export default function UpdatePasswordPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header with gradient */}
+      
+     
       <div className="auth-gradient h-2" />
 
       <div className="flex-1 flex items-center justify-center p-6">

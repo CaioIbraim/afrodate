@@ -4,17 +4,20 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Check, Crown, Star } from "lucide-react"
-import { Logo } from "@/components/ui/logo"
+
 import { motion } from "framer-motion"
 import { subscriptionPlans } from "@/lib/match-utils"
 import type { SubscriptionPlan } from "@/lib/types"
 import { useToast } from "@/components/ui/use-toast"
+import { ProfileHeader } from "@/components/profile-header"
+import { useUser } from "@/hooks/use-user"
 
 export default function SubscriptionPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
   const [paymentStep, setPaymentStep] = useState(false)
+  const { user, profile, isLoading: userLoading } = useUser()
 
   const handleBack = () => {
     if (paymentStep) {
@@ -48,21 +51,23 @@ export default function SubscriptionPage() {
     })
 
     setTimeout(() => {
-      router.push("/discover")
+      router.push("/profile")
     }, 1500)
+  }
+
+  // Exibe estado de carregamento enquanto os dados do usuário não estão prontos
+  if (userLoading || !profile) {
+    return (
+      <div className="app-container flex items-center justify-center h-screen">
+        <p className="text-oraculo-muted">Carregando...</p>
+      </div>
+    )
   }
 
   if (paymentStep) {
     return (
       <div className="app-container">
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" size="icon" className="text-oraculo-muted" onClick={handleBack}>
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <Logo size="sm" />
-          <div className="w-10"></div> {/* Spacer for centering */}
-        </div>
-
+        
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
           <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Finalizar Pagamento</h2>
           <p className="text-oraculo-muted text-center mb-6">
@@ -71,7 +76,6 @@ export default function SubscriptionPage() {
 
           <div className="profile-card p-6 mb-6">
             <h3 className="text-xl font-semibold text-oraculo-dark mb-4">Informações de Pagamento</h3>
-
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm text-oraculo-muted">Número do Cartão</label>
@@ -141,116 +145,124 @@ export default function SubscriptionPage() {
   }
 
   return (
-    <div className="app-container">
-      <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" size="icon" className="text-oraculo-muted" onClick={handleBack}>
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <Logo size="sm" />
-        <div className="w-10"></div> {/* Spacer for centering */}
-      </div>
+    <>
+      <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
+      <div className="app-container">
+        
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-        <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Desbloqueie Todo o Potencial</h2>
-        <p className="text-oraculo-muted text-center mb-6">
-          Escolha o plano ideal para você e aumente suas chances de encontrar sua alma gêmea
-        </p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
+          <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Desbloqueie Todo o Potencial</h2>
+          <p className="text-oraculo-muted text-center mb-6">
+            Escolha o plano ideal para você e aumente suas chances de encontrar sua alma gêmea
+          </p>
 
-        <div className="space-y-4 mb-6">
-          {subscriptionPlans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`profile-card p-4 cursor-pointer transition-all ${  
-                selectedPlan?.id === plan.id ? "border-2 border-oraculo-purple" : "hover:border-oraculo-purple/50"
-              } ${plan?.popular ? "relative overflow-visible" : ""}`}
-              onClick={() => handleSelectPlan(plan)}
-            >
-              {plan?.popular && (
-                <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white text-xs py-1 px-3 rounded-full">
-                  Mais Popular
-                </div>
-              )}
+          <div className="space-y-4 mb-6">
+            {subscriptionPlans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`profile-card p-4 cursor-pointer transition-all ${
+                  selectedPlan?.id === plan.id
+                    ? "border-2 border-oraculo-purple"
+                    : "hover:border-oraculo-purple/50"
+                } ${plan?.popular ? "relative overflow-visible" : ""}`}
+                onClick={() => handleSelectPlan(plan)}
+              >
+                {plan?.popular && (
+                  <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white text-xs py-1 px-3 rounded-full">
+                    Mais Popular
+                  </div>
+                )}
 
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-oraculo-dark flex items-center">
-                    {plan.tier === "VIP" ? (
-                      <Crown className="h-5 w-5 text-amber-500 mr-1" />
-                    ) : plan.tier === "PREMIUM" ? (
-                      <Star className="h-5 w-5 text-oraculo-purple mr-1" />
-                    ) : null}
-                    {plan.name}
-                  </h3>
-                  <p className="text-oraculo-muted text-sm">
-                    {plan.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
-                  </p>
-                </div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-oraculo-dark flex items-center">
+                      {plan.tier === "VIP" ? (
+                        <Crown className="h-5 w-5 text-amber-500 mr-1" />
+                      ) : plan.tier === "PREMIUM" ? (
+                        <Star className="h-5 w-5 text-oraculo-purple mr-1" />
+                      ) : null}
+                      {plan.name}
+                    </h3>
+                    <p className="text-oraculo-muted text-sm">
+                      {plan.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
+                    </p>
+                  </div>
 
-                <div className="flex items-center">
-                  {plan.price > 0 ? (
-                    <div className="text-right">
-                      {plan.discount && (
-                        <div className="text-xs text-green-600 font-semibold">Economize {plan.discount}%</div>
-                      )}
-                      <div className="text-xl font-bold gradient-text">
-                        R$ {plan.price.toFixed(2).replace(".", ",")}
+                  <div className="flex items-center">
+                    {plan.price > 0 ? (
+                      <div className="text-right">
+                        {plan.discount && (
+                          <div className="text-xs text-green-600 font-semibold">
+                            Economize {plan.discount}%
+                          </div>
+                        )}
+                        <div className="text-xl font-bold gradient-text">
+                          R$ {plan.price.toFixed(2).replace(".", ",")}
+                        </div>
                       </div>
+                    ) : (
+                      <div className="text-xl font-bold text-oraculo-muted">Grátis</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {plan.features.map((feature, index) => (
+                    <div key={index} className="flex items-center">
+                      <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                      <span className="text-oraculo-dark text-sm">{feature}</span>
                     </div>
-                  ) : (
-                    <div className="text-xl font-bold text-oraculo-muted">Grátis</div>
+                  ))}
+                </div>
+
+                <div
+                  className={`w-6 h-6 rounded-full border-2 mt-3 flex items-center justify-center ${
+                    selectedPlan?.id === plan.id
+                      ? "border-oraculo-purple bg-oraculo-purple/10"
+                      : "border-oraculo-muted"
+                  }`}
+                >
+                  {selectedPlan?.id === plan.id && (
+                    <div className="w-3 h-3 rounded-full bg-oraculo-purple" />
                   )}
                 </div>
               </div>
+            ))}
+          </div>
 
-              <div className="space-y-2">
-                {plan.features.map((feature, index) => (
-                  <div key={index} className="flex items-center">
-                    <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                    <span className="text-oraculo-dark text-sm">{feature}</span>
-                  </div>
-                ))}
+          <div className="profile-card p-4 mb-6">
+            <h3 className="text-lg font-semibold gradient-text mb-3">Por que fazer upgrade?</h3>
+            <div className="space-y-2">
+              <div className="flex items-start">
+                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-oraculo-dark text-sm">
+                  <span className="font-semibold">3x mais matches</span> do que usuários gratuitos
+                </p>
               </div>
-
-              <div
-                className={`w-6 h-6 rounded-full border-2 mt-3 flex items-center justify-center ${
-                  selectedPlan?.id === plan.id ? "border-oraculo-purple bg-oraculo-purple/10" : "border-oraculo-muted"
-                }`}
-              >
-                {selectedPlan?.id === plan.id && <div className="w-3 h-3 rounded-full bg-oraculo-purple" />}
+              <div className="flex items-start">
+                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-oraculo-dark text-sm">
+                  <span className="font-semibold">Contato direto via WhatsApp</span> com seus matches (plano VIP)
+                </p>
               </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="profile-card p-4 mb-6">
-          <h3 className="text-lg font-semibold gradient-text mb-3">Por que fazer upgrade?</h3>
-          <div className="space-y-2">
-            <div className="flex items-start">
-              <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-              <p className="text-oraculo-dark text-sm">
-                <span className="font-semibold">3x mais matches</span> do que usuários gratuitos
-              </p>
-            </div>
-            <div className="flex items-start">
-              <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-              <p className="text-oraculo-dark text-sm">
-                <span className="font-semibold">Contato direto via WhatsApp</span> com seus matches (plano VIP)
-              </p>
-            </div>
-            <div className="flex items-start">
-              <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-              <p className="text-oraculo-dark text-sm">
-                <span className="font-semibold">Destaque no topo da busca</span> para mais visibilidade
-              </p>
+              <div className="flex items-start">
+                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-oraculo-dark text-sm">
+                  <span className="font-semibold">Destaque no topo da busca</span> para mais visibilidade
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      <Button className="w-full gradient-button h-14" onClick={handleContinue} disabled={!selectedPlan}>
-        Continuar
-      </Button>
-    </div>
+        <Button
+          className="w-full gradient-button h-14"
+          onClick={handleContinue}
+          disabled={!selectedPlan}
+        >
+          Continuar
+        </Button>
+      </div>
+    </>
   )
 }
-
