@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { v4 as uuidv4 } from "uuid"
+import { ProfileHeader } from "@/components/profile-header"
 
 const MySwal = withReactContent(Swal)
 
@@ -1356,27 +1357,9 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <header className="flex items-center justify-between mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-          aria-label="Voltar"
-        >
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
-        </Button>
-        <Logo size="sm" />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleLogout}
-          aria-label="Sair"
-          className="text-gray-700 hover:bg-gray-200 focus:ring-2 focus:ring-oraculo-purple"
-        >
-          <LogOut className="h-6 w-6" />
-        </Button>
-      </header>
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
 
+     
       <motion.main
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

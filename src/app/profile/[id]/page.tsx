@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useToast } from "@/components/ui/use-toast"
 import Swal from "sweetalert2"
 import withReactContent from "sweetalert2-react-content"
 import {
@@ -22,10 +21,12 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/hooks/use-user"
-import { Loader2, ChevronLeft, Heart, MessageSquare } from "lucide-react"
-import { Logo } from "@/components/ui/logo"
+import { Loader2, Heart, MessageSquare } from "lucide-react"
 import { motion } from "framer-motion"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { ProfileHeader } from "@/components/profile-header"
+import { Badge } from "@/components/ui/badge"
+import { Sparkles } from "lucide-react"
 
 const MySwal = withReactContent(Swal)
 
@@ -47,6 +48,7 @@ type ProfileData = {
   profession: string
   interests: string[]
   avatar_url: string | null
+  user_id: string
 }
 
 // Componente para exibir informações do perfil
@@ -57,7 +59,7 @@ const ProfileInfo = ({
   profileData: ProfileData | null
   calculateAge: (birthDate: string) => number | null
 }) => (
-  <Card className="mb-6">
+  <Card className="mb-6 border-none shadow-sm">
     <CardHeader>
       <CardTitle>Informações do Perfil</CardTitle>
       <CardDescription>Detalhes sobre {profileData?.name || "o usuário"}</CardDescription>
@@ -80,20 +82,20 @@ const ProfileInfo = ({
               </AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="text-xl font-semibold">{profileData.name}</h3>
+              <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
               {calculateAge(profileData.birth_date) && (
-                <p className="text-sm text-gray-500">{calculateAge(profileData.birth_date)} anos</p>
+                <p className="text-sm text-oraculo-muted">{calculateAge(profileData.birth_date)} anos</p>
               )}
-              <p className="text-sm text-gray-500">{profileData.city}</p>
+              <p className="text-sm text-oraculo-muted">{profileData.city}</p>
             </div>
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
-            <p className="text-gray-600">{profileData.profession || "Não informado"}</p>
+            <p className="text-oraculo-muted">{profileData.profession || "Não informado"}</p>
           </div>
           <div>
             <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
-            <p className="text-gray-600">{profileData.bio || "Sem biografia"}</p>
+            <p className="text-oraculo-muted">{profileData.bio || "Sem biografia"}</p>
           </div>
           {profileData.interests.length > 0 && (
             <div>
@@ -102,7 +104,7 @@ const ProfileInfo = ({
                 {profileData.interests.map((interest, index) => (
                   <span
                     key={index}
-                    className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded"
+                    className="bg-oraculo-purple/10 text-oraculo-purple text-xs px-2 py-1 rounded"
                   >
                     {interest}
                   </span>
@@ -112,7 +114,7 @@ const ProfileInfo = ({
           )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Nenhuma informação disponível.</p>
+        <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
       )}
     </CardContent>
   </Card>
@@ -120,7 +122,7 @@ const ProfileInfo = ({
 
 // Componente para exibir fotos do perfil
 const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
-  <Card className="mb-6">
+  <Card className="mb-6 border-none shadow-sm">
     <CardHeader>
       <CardTitle>Fotos</CardTitle>
       <CardDescription>Fotos do perfil do usuário</CardDescription>
@@ -129,7 +131,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {photos.length === 0 ? (
           <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
-            <p>Sem fotos disponíveis.</p>
+            <p className="text-oraculo-muted">Sem fotos disponíveis.</p>
           </div>
         ) : (
           photos.map((photo, index) => (
@@ -138,7 +140,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
                 src={photo.publicUrl}
                 alt={`Foto ${index + 1}`}
                 className={`w-full h-48 object-cover rounded-md ${
-                  photo.isPrimary ? "ring-2 ring-purple-500" : ""
+                  photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""
                 }`}
                 loading="lazy"
                 onError={(e) => {
@@ -146,7 +148,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
                 }}
               />
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-purple-500 text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-oraculo-purple text-white text-xs px-2 py-1 rounded">
                   Principal
                 </div>
               )}
@@ -160,8 +162,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
 
 export default function ProfileView() {
   const router = useRouter()
-  const { toast } = useToast()
-  const { user, isLoading: userLoading } = useUser()
+  const { user, isLoading: userLoading, profile } = useUser()
   const params = useParams()
   const profileId = params.id as string
 
@@ -175,6 +176,9 @@ export default function ProfileView() {
   const [message, setMessage] = useState("")
   const [isSending, setIsSending] = useState(false)
   const [matchAlertShown, setMatchAlertShown] = useState(false)
+
+  // Check subscription level
+  const hasPremiumSubscription = profile?.subscription === 3
 
   // Calculate user age
   const calculateAge = useCallback((birthDate: string): number | null => {
@@ -199,7 +203,7 @@ export default function ProfileView() {
       html: `
         <p class="text-lg text-gray-700">
           Vocês são uma conexão cósmica, ${profileData?.name}! O universo alinhou seus caminhos para criar algo especial. 
-          Que tal começar essa jornada com uma mensagem incrível?
+          ${hasPremiumSubscription ? "Que tal começar essa jornada com uma mensagem incrível?" : "Faça um upgrade para Premium para enviar mensagens!"}
         </p>
       `,
       customClass: {
@@ -207,53 +211,97 @@ export default function ProfileView() {
         title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
         confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
       },
-      confirmButtonText: "Enviar Mensagem",
+      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive")
       },
     }).then((result) => {
-      if (result.isConfirmed) {
+      if (result.isConfirmed && hasPremiumSubscription) {
         setActiveTab("informacoes") // Focus on message input
+      } else if (result.isConfirmed && !hasPremiumSubscription) {
+        router.push("/subscription")
       }
     })
     setMatchAlertShown(true)
-  }, [profileData?.name, matchAlertShown])
+  }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
 
   // Fetch profile data, photos, likes, and match status
   const loadProfile = useCallback(async () => {
-    if (!profileId) {
-      toast({
-        title: "Erro",
-        description: "ID do perfil não fornecido.",
-        variant: "destructive",
+    if (!user) {
+      MySwal.fire({
+        icon: "error",
+        title: "Acesso Negado",
+        html: '<p class="text-lg text-gray-700">Você precisa estar logado para visualizar este perfil.</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "Ir para Login",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/login")
+        }
       })
-      router.push("/profile")
       return
     }
+
+    if (!profileId) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-lg text-gray-700">ID do perfil não fornecido.</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "Voltar",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/discover")
+        }
+      })
+      return
+    }
+
+    if (!profile) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-lg text-gray-700">Seu perfil não está carregado. Tente novamente.</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "Tentar Novamente",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/profile")
+        }
+      })
+      return
+    }
+
     setIsLoading(true)
     try {
-      console.log("[loadProfile] Fetching profile for profile_id:", profileId)
-      const { data: profile, error: profileError } = await supabase
+      // Fetch profile data
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, name, birth_date, gender, bio, city, profession, interests, avatar_url, user_id")
         .eq("id", profileId)
         .single()
-      if (profileError) {
-        console.log("[loadProfile] Profile error:", profileError.message)
-        throw profileError
-      }
-      setProfileData(profile)
+      if (profileError) throw profileError
+      setProfileData(profileData)
 
-      console.log("[loadProfile] Fetching photos for profile_id:", profileId)
+      // Fetch photos
       const { data: photosData, error: photosError } = await supabase
         .from("profile_photos")
         .select("storage_path, is_primary")
         .eq("profile_id", profileId)
         .order("created_at", { ascending: true })
-      if (photosError) {
-        console.log("[loadProfile] Photos error:", photosError.message)
-        throw photosError
-      }
+      if (photosError) throw photosError
 
       const photoUrls = await Promise.all(
         photosData.map(async (photo) => {
@@ -262,15 +310,12 @@ export default function ProfileView() {
           try {
             const response = await fetch(url, { method: "HEAD" })
             if (!response.ok) throw new Error("Public URL inaccessible")
-            console.log("[loadProfile] Public URL accessible:", url)
           } catch {
-            console.log("[loadProfile] Public URL failed, trying signed URL for:", photo.storage_path)
             const { data: signedUrlData, error: signedUrlError } = await supabase.storage
               .from("imagens")
-              .createSignedUrl(photo.storage_path, 3600)
+              . createSignedUrl(photo.storage_path, 3600)
             if (signedUrlError) throw signedUrlError
             url = signedUrlData.signedUrl
-            console.log("[loadProfile] Signed URL:", url)
           }
           return {
             name: photo.storage_path.split("/").pop()!,
@@ -282,160 +327,191 @@ export default function ProfileView() {
       )
       setPhotos(photoUrls)
 
-      // Check like and match status
-      if (user && profile?.user_id) {
-        // Check if user has liked this profile
-        const { data: likeData, error: likeError } = await supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .eq("liked_profile_id", profileId)
-          .single()
-        if (likeError && likeError.code !== "PGRST116") {
-          console.log("[loadProfile] Like check error:", likeError.message)
-        }
-        setHasLiked(!!likeData)
+      // Check like status
+      const { data: likeData, error: likeError } = await supabase
+        .from("likes")
+        .select("id")
+        .eq("profile_id", profile.id)
+        .eq("liked_profile_id", profileId)
+        .single()
+      if (likeError && likeError.code !== "PGRST116") throw likeError
+      setHasLiked(!!likeData)
 
-        // Check if there's a match (mutual like)
-        if (likeData) {
-          const { data: mutualLikeData, error: mutualLikeError } = await supabase
-            .from("likes")
-            .select("id")
-            .eq("profile_id", profile.id)
-            .eq("liked_profile_id", profileId)
-            .single()
-          if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
-            console.log("[loadProfile] Mutual like check error:", mutualLikeError.message)
-          }
-          setHasMatch(!!mutualLikeData)
-          if (mutualLikeData && !matchAlertShown) {
-            showMatchAlert()
-          }
-        }
+      // Check match status
+      const { data: matchData, error: matchError } = await supabase
+        .from("matches")
+        .select("id")
+        .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
+        .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
+        .single()
+      if (matchError && matchError.code !== "PGRST116") throw matchError
+      setHasMatch(!!matchData)
+      if (matchData && !matchAlertShown) {
+        showMatchAlert()
       }
     } catch (error: any) {
-      console.log("[loadProfile] Error:", error.message)
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar o perfil.",
-        variant: "destructive",
+      MySwal.fire({
+        icon: "error",
+        title: "Erro ao Carregar Perfil",
+        html: `<p class="text-lg text-gray-700">Não foi possível carregar o perfil. ${error.message}</p>`,
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "Voltar",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/discover")
+        }
       })
-      router.push("/profile")
     } finally {
       setIsLoading(false)
     }
-  }, [profileId, user, toast, router, matchAlertShown, showMatchAlert])
+  }, [profileId, user, profile, router, matchAlertShown, showMatchAlert])
 
   // Handle like action
   const handleLike = async () => {
-    if (!user || !profileId) {
-      toast({
+    if (!user || !profile || !profileId) {
+      MySwal.fire({
+        icon: "error",
         title: "Erro",
-        description: "Usuário não autenticado ou perfil inválido.",
-        variant: "destructive",
-      })
-      return
-    }
-    if (hasLiked) {
-      toast({
-        title: "Aviso",
-        description: "Você já curtiu este perfil!",
+        html: '<p class="text-lg text-gray-700">Usuário não autenticado ou perfil inválido.</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "OK",
       })
       return
     }
     try {
-      console.log("[handleLike] Liking profile_id:", profileId)
       const { error } = await supabase.from("likes").insert({
-        liker_id: user.id,
+        profile_id: profile.id,
         liked_profile_id: profileId,
         created_at: new Date().toISOString(),
       })
-      if (error) {
-        console.log("[handleLike] Error:", error.message)
-        throw error
-      }
+      if (error) throw error
       setHasLiked(true)
-      // Check for match after liking
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("id", profileId)
-        .single()
-      if (profileError) {
-        console.log("[handleLike] Profile fetch error:", profileError.message)
-        throw profileError
-      }
+      MySwal.fire({
+        icon: "success",
+        title: "Perfil Curtido!",
+        html: '<p class="text-lg text-gray-700">Você curtiu este perfil! Aguardando um match...</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "OK",
+      })
+
+      // Check for match
       const { data: mutualLikeData, error: mutualLikeError } = await supabase
         .from("likes")
         .select("id")
-        .eq("liker_id", profile.user_id)
-        .eq("liked_profile_id", user.id)
+        .eq("profile_id", profileId)
+        .eq("liked_profile_id", profile.id)
         .single()
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
-        console.log("[handleLike] Mutual like check error:", mutualLikeError.message)
-      }
+      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw mutualLikeError
       if (mutualLikeData) {
         setHasMatch(true)
         showMatchAlert()
-      } else {
-        toast({
-          title: "Sucesso",
-          description: "Você curtiu este perfil! Aguardando um match...",
-        })
       }
     } catch (error: any) {
-      console.log("[handleLike] Error:", error.message)
-      toast({
-        title: "Erro",
-        description: error.message === "too_many_requests"
-          ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível curtir o perfil.",
-        variant: "destructive",
+      MySwal.fire({
+        icon: "error",
+        title: "Erro ao Curtir",
+        html: `<p class="text-lg text-gray-700">${
+          error.message === "too_many_requests"
+            ? "Muitas tentativas. Tente novamente em alguns minutos."
+            : "Não foi possível curtir o perfil."
+        }</p>`,
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "OK",
       })
     }
   }
 
   // Handle send message
   const handleSendMessage = async () => {
-    if (!user || !profileId || !message.trim()) {
-      toast({
+    if (!user || !profileId || !message.trim() || !hasPremiumSubscription) {
+      MySwal.fire({
+        icon: "error",
         title: "Erro",
-        description: !user
-          ? "Usuário não autenticado."
-          : !profileId
-          ? "Perfil inválido."
-          : "Digite uma mensagem antes de enviar.",
-        variant: "destructive",
+        html: `<p class="text-lg text-gray-700">${
+          !user
+            ? "Usuário não autenticado."
+            : !profileId
+            ? "Perfil inválido."
+            : !message.trim()
+            ? "Digite uma mensagem antes de enviar."
+            : "Você precisa de uma assinatura Premium para enviar mensagens."
+        }</p>`,
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: !hasPremiumSubscription ? "Fazer Upgrade" : "OK",
+      }).then((result) => {
+        if (result.isConfirmed && !hasPremiumSubscription) {
+          router.push("/subscription")
+        }
       })
       return
     }
     setIsSending(true)
     try {
-      console.log("[handleSendMessage] Sending message to profile_id:", profileId)
+      const { data: receiverProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("id", profileId)
+        .single()
+      if (profileError) throw profileError
+
       const { error } = await supabase.from("messages").insert({
         sender_id: user.id,
-        receiver_id: profileId,
+        receiver_id: receiverProfile.user_id,
         content: message.trim(),
         created_at: new Date().toISOString(),
       })
-      if (error) {
-        console.log("[handleSendMessage] Error:", error.message)
-        throw error
-      }
+      if (error) throw error
       setMessage("")
-      toast({
-        title: "Sucesso",
-        description: "Mensagem enviada com sucesso!",
+      MySwal.fire({
+        icon: "success",
+        title: "Mensagem Enviada!",
+        html: '<p class="text-lg text-gray-700">Sua mensagem foi enviada com sucesso!</p>',
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "Ir para Mensagens",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push(`/messages/${profileId}`)
+        }
       })
-      router.push(`/messages/${profileId}`)
     } catch (error: any) {
-      console.log("[handleSendMessage] Error:", error.message)
-      toast({
-        title: "Erro",
-        description: error.message === "too_many_requests"
-          ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível enviar a mensagem.",
-        variant: "destructive",
+      MySwal.fire({
+        icon: "error",
+        title: "Erro ao Enviar",
+        html: `<p class="text-lg text-gray-700">${
+          error.message === "too_many_requests"
+            ? "Muitas tentativas. Tente novamente em alguns minutos."
+            : "Não foi possível enviar a mensagem."
+        }</p>`,
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+        confirmButtonText: "OK",
       })
     } finally {
       setIsSending(false)
@@ -451,29 +527,18 @@ export default function ProfileView() {
   if (isLoading || userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen" aria-label="Carregando">
-        <Loader2 className="h-8 w-8 animate-spin" aria-hidden="true" />
+        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" aria-hidden="true" />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
-      <header className="flex items-center justify-between mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.back()}
-          aria-label="Voltar"
-        >
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
-        </Button>
-        <Logo size="sm" />
-        <div className="w-10" />
-      </header>
+    <div className="app-container flex flex-col min-h-screen bg-gray-50 px-4 py-6">
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
 
       <motion.main
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className="max-w-md mx-auto w-full"
       >
@@ -481,30 +546,38 @@ export default function ProfileView() {
           Perfil de {profileData?.name || "Usuário"}
         </h2>
 
+        {hasMatch && (
+          <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center justify-center mb-6">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Match!
+          </Badge>
+        )}
+
         <div className="flex justify-between mb-6">
-          {!hasMatch && (
+          {!hasLiked && !hasMatch && (
             <Button
               onClick={handleLike}
-              disabled={hasLiked || !user}
-              className={`flex-1 mr-2 ${hasLiked ? "bg-gray-300" : "gradient-button"}`}
-              aria-label={hasLiked ? "Perfil já curtido" : "Curtir perfil"}
+              className="flex-1 mr-2 gradient-button"
+              aria-label="Curtir perfil"
             >
-              <Heart className={`h-4 w-4 mr-2 ${hasLiked ? "" : "fill-current"}`} aria-hidden="true" />
-              {hasLiked ? "Curtido" : "Curtir"}
+              <Heart className="h-4 w-4 mr-2 fill-current" aria-hidden="true" />
+              Curtir
             </Button>
           )}
-          <Button
-            onClick={() => setActiveTab("informacoes")}
-            className={`flex-1 ${hasMatch ? "w-full" : "ml-2"} gradient-button`}
-            aria-label="Enviar mensagem"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
-            Mensagem
-          </Button>
+          {hasMatch && hasPremiumSubscription && (
+            <Button
+              onClick={() => setActiveTab("informacoes")}
+              className="flex-1 gradient-button"
+              aria-label="Enviar mensagem"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
+              Mensagem
+            </Button>
+          )}
         </div>
 
-        {user && (
-          <Card className="mb-6">
+        {hasMatch && hasPremiumSubscription && (
+          <Card className="mb-6 border-none shadow-sm">
             <CardHeader>
               <CardTitle>Enviar Mensagem</CardTitle>
               <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
@@ -534,6 +607,22 @@ export default function ProfileView() {
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {!hasMatch && !hasPremiumSubscription && (
+          <Card className="mb-6 border-none shadow-sm">
+            <CardContent className="text-center py-4">
+              <p className="text-oraculo-muted">
+                Faça um upgrade para Premium para enviar mensagens após um match!
+              </p>
+              <Button
+                onClick={() => router.push("/subscription")}
+                className="mt-4 gradient-button"
+              >
+                Fazer Upgrade
+              </Button>
             </CardContent>
           </Card>
         )}

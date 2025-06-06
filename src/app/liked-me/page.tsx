@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { ProfileHeader } from "@/components/profile-header";
 
 interface LikedMeProfile {
   profile_id: string;
@@ -206,8 +207,12 @@ export default function LikedMePage() {
   }
 
   return (
+    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
+        
+    <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+   
     <div className="app-container">
-      <div className="flex justify-between items-center mb-6">
+      {/* <div className="flex justify-between items-center mb-6">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ChevronLeft className="h-6 w-6 text-oraculo-muted" />
         </Button>
@@ -226,10 +231,10 @@ export default function LikedMePage() {
           <Link href="/profile">
             <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
               <User2Icon className="h-6 w-6" />
-            </Button>
-          </Link>
-        </div>
-      </div>
+              </Button>
+              </Link>
+              </div>
+              </div> */}
 
       <h2 className="text-xl gradient-text mb-8 text-center font-semibold">Pessoas que Curtiram Você</h2>
 
@@ -330,6 +335,7 @@ export default function LikedMePage() {
           </Link>
         </div>
       )}
+    </div>
     </div>
   );
 }

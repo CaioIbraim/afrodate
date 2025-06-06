@@ -19,6 +19,7 @@ import { Logo } from "@/components/ui/logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import { ProfileHeader } from "@/components/profile-header";
 
 // Tipos
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
@@ -320,13 +321,7 @@ export default function DiscoverPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/profile")}>
-          <ChevronLeft className="h-6 w-6 text-gray-700" />
-        </Button>
-        <Logo size="sm" />
-        <div className="w-10"></div>
-      </div>
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
 
       <motion.div
         initial={{ opacity: 0 }}
