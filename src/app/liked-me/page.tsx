@@ -2,39 +2,54 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, ChevronLeft, User, Sparkles, Heart, MessageCircle, Grid3X3, User2Icon } from "lucide-react";
+import { Loader2, ChevronLeft, User2Icon, Sparkles, Heart, MessageCircle, Grid3X3 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
-import { Profile } from "@/lib/profile-data";
+
+const MySwal = withReactContent(Swal)
 
 interface LikedMeProfile {
-  // This interface describes the structure of the profiles after processing the fetched data
   profile_id: string;
   name: string;
   avatar_url: string | null;
-  gender: string | null; // Added for placeholder image logic
+  gender: string | null;
   isMatch: boolean;
 }
 
-// Define the type for items fetched from the 'likes' table with the 'profiles' join
-interface LikeItemWithProfile { // Corrected interface name for clarity if it was used elsewhere
-  // This interface describes the raw data structure returned directly by the Supabase query
+interface LikeItemWithProfile {
   profile_id: string;
-  // The 'profiles' property is expected to be an object or null, matching the Supabase select syntax
-  profiles: { name: string; avatar_url: string | null; gender: string | null; } | null;
+  profiles: { name: string; avatar_url: string | null; gender: string | null } | null;
 }
+
+
+const showAlert = async (type: "success" | "error", title: string, text: string) => {
+  return MySwal.fire({
+    icon: type,
+    title,
+    text,
+    customClass: {
+      popup: "border-2 border-transparent bg-white rounded-xl",
+      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+      confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+    },
+    willOpen: (popup) => {
+      popup.setAttribute("aria-live", "assertive")
+    },
+  })
+}
+
 
 export default function LikedMePage() {
   const router = useRouter();
-  const { toast } = useToast();
   const { user, profile, isLoading: userLoading } = useUser();
   const [likedMeProfiles, setLikedMeProfiles] = useState<LikedMeProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,6 +77,8 @@ export default function LikedMePage() {
           throw likesError;
         }
 
+        console.log("Raw likes data:", likesData);
+
         // Fetch mutual matches
         const { data: matchesData, error: matchesError } = await supabase
           .from("matches")
@@ -73,6 +90,8 @@ export default function LikedMePage() {
           throw matchesError;
         }
 
+        console.log("Raw matches data:", matchesData);
+
         // Process likes and matches
         const matchedProfileIds = new Set(
           matchesData.flatMap((match) => [
@@ -80,32 +99,38 @@ export default function LikedMePage() {
           ])
         );
 
-        const profilesData: LikedMeProfile[] = likesData // Removed unnecessary type assertion
- .filter((item) => item.profiles && item.profiles[0]?.name && item.profile_id)
-          .map((item) => ({
+        const profilesData: LikedMeProfile[] = likesData
+          .filter((item: LikeItemWithProfile) => item.profiles && item.profiles.name && item.profile_id)
+          .map((item: LikeItemWithProfile) => ({
             profile_id: item.profile_id,
- name: item.profiles[0]?.name,
- avatar_url: item.profiles[0]?.avatar_url,
- gender: item.profiles[0]?.gender,
- isMatch: matchedProfileIds.has(item.profile_id),
+            name: item.profiles.name,
+            avatar_url: item.profiles.avatar_url,
+            gender: item.profiles.gender,
+            isMatch: matchedProfileIds.has(item.profile_id),
           }));
 
         setLikedMeProfiles(profilesData);
         console.log("Liked me profiles loaded:", profilesData);
+
+
+        await showAlert("success", "Sucesso", "Parbéns!!  Você recebeu curtidas!")
+        
       } catch (error: any) {
         console.error("Error fetching liked me profiles:", error.message);
-        toast({
+        Swal.fire({
           title: "Erro",
-          description: "Não foi possível carregar quem te curtiu.",
-          variant: "destructive",
+          text: "Não foi possível carregar quem te curtiu.",
+          icon: "error",
+          confirmButtonColor: "#7C3AED",
         });
       } finally {
         setIsLoading(false);
       }
     };
 
+    console.log("Current profile ID:", profile?.id);
     fetchLikedMeProfiles();
-  }, [user, profile, userLoading, toast]);
+  }, [user, profile, userLoading]);
 
   // Handle liking back to create a match
   const handleLikeBack = async (likerProfileId: string) => {
@@ -119,10 +144,8 @@ export default function LikedMePage() {
         throw error;
       }
 
-      toast({
-        title: "Sucesso",
-        description: "Você deu like de volta! Verifique seus matches.",
-      });
+      await showAlert("success", "Sucesso", "Você deu like de volta! Verifique seus matches.")
+      
 
       // Refresh the list
       setIsLoading(true);
@@ -145,23 +168,22 @@ export default function LikedMePage() {
         ])
       );
 
-      const profilesData: LikedMeProfile[] = likesData! // Removed unnecessary type assertion
- .filter((item) => item.profiles && item.profiles[0]?.name && item.profile_id)
-        .map((item) => ({
+      const profilesData: LikedMeProfile[] = likesData!
+        .filter((item: LikeItemWithProfile) => item.profiles && item.profiles.name && item.profile_id)
+        .map((item: LikeItemWithProfile) => ({
           profile_id: item.profile_id,
- name: item.profiles[0]?.name,
- avatar_url: item.profiles[0]?.avatar_url,
- gender: item.profiles[0]?.gender,
+          name: item.profiles.name,
+          avatar_url: item.profiles.avatar_url,
+          gender: item.profiles.gender,
           isMatch: matchedProfileIds.has(item.profile_id),
         }));
 
       setLikedMeProfiles(profilesData);
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível dar like de volta.",
-        variant: "destructive",
-      });
+
+      await showAlert("error", "Ooops!", "Não foi possível dar like de volta.")
+
+      
     } finally {
       setIsLoading(false);
     }
@@ -180,22 +202,16 @@ export default function LikedMePage() {
         console.error("Error ignoring like:", error.message);
         throw error;
       }
-
-      toast({
-        title: "Sucesso",
-        description: "Like ignorado.",
-      });
+      await showAlert("success", "Ok!", "Like ignorado.")
 
       // Update the list by removing the ignored profile
       setLikedMeProfiles((prev) =>
         prev.filter((p) => p.profile_id !== likerProfileId)
       );
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível ignorar o like.",
-        variant: "destructive",
-      });
+
+      await showAlert("error", "Ooops!", "Não foi possível ignorar o like.")
+      
     }
   };
 
@@ -218,134 +234,110 @@ export default function LikedMePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
-        
-    <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
-   
-    <div className="app-container">
-      {/* <div className="flex justify-between items-center mb-6">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
-          <ChevronLeft className="h-6 w-6 text-oraculo-muted" />
-        </Button>
-        <Logo size="md" />
-        <div className="flex gap-2">
-          <Link href="/messages">
-            <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
-              <MessageCircle className="h-6 w-6" />
-            </Button>
-          </Link>
-          <Link href="/discover">
-            <Button variant="ghost" size="icon" className="text-oraculo-muted">
-              <Grid3X3 className="h-6 w-6" />
-            </Button>
-          </Link>
-          <Link href="/profile">
-            <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
-              <User2Icon className="h-6 w-6" />
-              </Button>
-              </Link>
-              </div>
-              </div> */}
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
 
-      <h2 className="text-xl gradient-text mb-8 text-center font-semibold">Pessoas que Curtiram Você</h2>
+      <div className="app-container">
 
-      {likedMeProfiles.length > 0 ? (
-        <div className="space-y-6">
-          {likedMeProfiles.map((likedProfile, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <div className="profile-card flex items-center gap-4 p-4">
-                <div className="w-24 h-32 rounded-lg overflow-hidden">
-                  {likedProfile.avatar_url ? (
-                    <Image
-                      src={likedProfile.avatar_url}
-                      alt={`Foto de ${likedProfile.name}`}
-                      width={200}
-                      height={300}
-                      className="object-cover w-full h-full"
-                    />
-                  ) : (
-                    <Image
-                      src={
-                        likedProfile.gender === "MULHER"
-                          ? index % 2 === 0
-                            ? "/images/female-profile-1.png"
-                            : "/images/female-profile.png"
-                          : "/images/male-profile-1.png"
-                      }
-                      alt={`Foto de ${likedProfile.name}`}
-                      width={200}
-                      height={300}
-                      className="object-cover w-full h-full"
-                    />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-oraculo-dark text-xl">{likedProfile.name}</h3>
-                    <Badge
-                      className={
-                        likedProfile.isMatch
-                          ? "bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center"
-                          : "bg-white text-oraculo-muted text-xs border border-oraculo-purple/20"
-                      }
-                    >
-                      {likedProfile.isMatch ? (
-                        <>
-                          <Sparkles className="h-3 w-3 mr-1" />
-                          Match!
-                        </>
-                      ) : (
-                        <>
-                          <Heart className="h-3 w-3 mr-1" />
-                          Like Recebido
-                        </>
-                      )}
-                    </Badge>
+        <h2 className="text-xl gradient-text mb-8 text-center font-semibold">Pessoas que Curtiram Você</h2>
+
+        {likedMeProfiles.length > 0 ? (
+          <div className="space-y-6">
+            {likedMeProfiles.map((likedProfile, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+              >
+                <div className="profile-card flex items-center gap-4 p-4">
+                  <div className="w-24 h-32 rounded-lg overflow-hidden">
+                    {likedProfile.avatar_url ? (
+                      <Image
+                        src={likedProfile.avatar_url}
+                        alt={`Foto de ${likedProfile.name}`}
+                        width={200}
+                        height={300}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Image
+                        src={
+                          likedProfile.gender === "MULHER"
+                            ? index % 2 === 0
+                              ? "/images/female-profile-1.png"
+                              : "/images/female-profile.png"
+                            : "/images/male-profile-1.png"
+                        }
+                        alt={`Foto de ${likedProfile.name}`}
+                        width={200}
+                        height={300}
+                        className="object-cover w-full h-full"
+                      />
+                    )}
                   </div>
-                  {likedProfile.isMatch ? (
-                    <Link href={`/profile/${likedProfile.profile_id}`}>
-                      <Button className="gradient-button mt-3">Ver Perfil</Button>
-                    </Link>
-                  ) : (
-                    <div className="flex gap-2 mt-3">
-                      <Button
-                        className="gradient-button flex-1"
-                        onClick={() => handleLikeBack(likedProfile.profile_id)}
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-oraculo-dark text-xl">{likedProfile.name}</h3>
+                      <Badge
+                        className={
+                          likedProfile.isMatch
+                            ? "bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center"
+                            : "bg-white text-oraculo-muted text-xs border border-oraculo-purple/20"
+                        }
                       >
-                        Dar Like
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="flex-1 text-oraculo-muted"
-                        onClick={() => handleIgnore(likedProfile.profile_id)}
-                      >
-                        Ignorar
-                      </Button>
+                        {likedProfile.isMatch ? (
+                          <>
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Match!
+                          </>
+                        ) : (
+                          <>
+                            <Heart className="h-3 w-3 mr-1" />
+                            Like Recebido
+                          </>
+                        )}
+                      </Badge>
                     </div>
-                  )}
+                    {likedProfile.isMatch ? (
+                      <Link href={`/profile/${likedProfile.profile_id}`}>
+                        <Button className="gradient-button mt-3">Ver Perfil</Button>
+                      </Link>
+                    ) : (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          className="gradient-button flex-1"
+                          onClick={() => handleLikeBack(likedProfile.profile_id)}
+                        >
+                          Dar Like
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className="flex-1 text-oraculo-muted"
+                          onClick={() => handleIgnore(likedProfile.profile_id)}
+                        >
+                          Ignorar
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div className="profile-card p-6 text-center">
-          <h3 className="text-xl font-semibold text-oraculo-dark mb-4">
-            Ninguém te curtiu ainda
-          </h3>
-          <p className="text-oraculo-muted mb-6">
-            Parece que você ainda não recebeu curtidas. Continue explorando perfis no modo Descobrir!
-          </p>
-          <Link href="/discover">
-            <Button className="gradient-button">Explorar Perfis</Button>
-          </Link>
-        </div>
-      )}
-    </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="profile-card p-6 text-center">
+            <h3 className="text-xl font-semibold text-oraculo-dark mb-4">
+              Ninguém te curtiu ainda
+            </h3>
+            <p className="text-oraculo-muted mb-6">
+              Parece que você ainda não recebeu curtidas. Continue explorando perfis no modo Descobrir!
+            </p>
+            <Link href="/discover">
+              <Button className="gradient-button">Explorar Perfis</Button>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
