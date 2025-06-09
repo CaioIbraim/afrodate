@@ -70,6 +70,11 @@ export function ProfileHeader({
     router.push("/oraculo")
   }
 
+  // Navegação para a página de discover
+  const navigateToLogout = () => {
+    router.push("/signout")
+  }
+
   
   // Navegação para a página de discover
   const navigateToProfile = () => {
@@ -174,7 +179,7 @@ export function ProfileHeader({
               
               <button 
                 className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
-                onClick={handleLogout}
+                onClick={navigateToLogout}
                 disabled={isLoggingOut}
               >
                 <LogOut className="h-4 w-4 mr-2" />

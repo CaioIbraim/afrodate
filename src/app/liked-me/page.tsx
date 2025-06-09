@@ -117,8 +117,6 @@ export default function LikedMePage() {
             console.warn("Incomplete profile data:", item);
           }
 
-       
-
           return {
             profile_id: item.profile_id || "unknown",
             name: item!.profiles!.name || "Usuário Sem Nome",
@@ -129,7 +127,8 @@ export default function LikedMePage() {
         });
 
         setLikedMeProfiles(profilesData);
-    
+        console.log("Liked me profiles loaded:", profilesData);
+
         if (profilesData.length > 0) {
           await showAlert("success", "Sucesso", "Parabéns!! Você recebeu curtidas!");
         }
