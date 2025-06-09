@@ -15,7 +15,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
 
-const MySwal = withReactContent(Swal)
+const MySwal = withReactContent(Swal);
 
 interface LikedMeProfile {
   profile_id: string;
@@ -27,9 +27,8 @@ interface LikedMeProfile {
 
 interface LikeItemWithProfile {
   profile_id: string;
-  profiles: { name: string; avatar_url: string | null; gender: string | null } | null;
+  profiles: { name: string; avatar_url: string | null; gender: string | null }[] | null;
 }
-
 
 const showAlert = async (type: "success" | "error", title: string, text: string) => {
   return MySwal.fire({
@@ -42,11 +41,10 @@ const showAlert = async (type: "success" | "error", title: string, text: string)
       confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
     },
     willOpen: (popup) => {
-      popup.setAttribute("aria-live", "assertive")
+      popup.setAttribute("aria-live", "assertive");
     },
-  })
-}
-
+  });
+};
 
 export default function LikedMePage() {
   const router = useRouter();
@@ -72,8 +70,19 @@ export default function LikedMePage() {
           `)
           .eq("liked_profile_id", profile.id);
 
+          console.log("Likes recebidos:", likesData);
+
         if (likesError) {
-          console.error("Error fetching likes:", likesError.message);
+          console.log("Error fetching likes:", likesError.message);
+          throw likesError;
+        }
+
+        console.log("Raw likes data:", likesData);
+
+        
+
+        if (likesError) {
+          console.log("Error fetching likes:");
           throw likesError;
         }
 
@@ -86,7 +95,7 @@ export default function LikedMePage() {
           .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`);
 
         if (matchesError) {
-          console.error("Error fetching matches:", matchesError.message);
+          console.log("Error fetching matches:", matchesError.message);
           throw matchesError;
         }
 
@@ -99,30 +108,34 @@ export default function LikedMePage() {
           ])
         );
 
-        const profilesData: LikedMeProfile[] = likesData
-          .filter((item: LikeItemWithProfile) => item.profiles && item.profiles.name && item.profile_id)
-          .map((item: LikeItemWithProfile) => ({
-            profile_id: item.profile_id,
-            name: item.profiles.name,
-            avatar_url: item.profiles.avatar_url,
-            gender: item.profiles.gender,
+
+      
+
+        const profilesData: LikedMeProfile[] = likesData.map((item: LikeItemWithProfile) => {
+          const profile = item.profiles?.[0];
+          if (!item.profile_id || !profile) {
+            console.warn("Incomplete profile data:", item);
+          }
+
+       
+
+          return {
+            profile_id: item.profile_id || "unknown",
+            name: item!.profiles!.name || "Usuário Sem Nome",
+            avatar_url: item!.profiles!.avatar_url || null,
+            gender: item!.profiles!.gender || null,
             isMatch: matchedProfileIds.has(item.profile_id),
-          }));
+          };
+        });
 
         setLikedMeProfiles(profilesData);
-        console.log("Liked me profiles loaded:", profilesData);
-
-
-        await showAlert("success", "Sucesso", "Parbéns!!  Você recebeu curtidas!")
-        
+    
+        if (profilesData.length > 0) {
+          await showAlert("success", "Sucesso", "Parabéns!! Você recebeu curtidas!");
+        }
       } catch (error: any) {
-        console.error("Error fetching liked me profiles:", error.message);
-        Swal.fire({
-          title: "Erro",
-          text: "Não foi possível carregar quem te curtiu.",
-          icon: "error",
-          confirmButtonColor: "#7C3AED",
-        });
+        console.log("Error fetching liked me profiles:", error.message);
+        await showAlert("error", "Ooops!", "Não foi possível carregar quem te curtiu.");
       } finally {
         setIsLoading(false);
       }
@@ -140,16 +153,15 @@ export default function LikedMePage() {
         .insert({ profile_id: profile!.id, liked_profile_id: likerProfileId });
 
       if (error) {
-        console.error("Error liking back:", error.message);
+        console.log("Error liking back:", error.message);
         throw error;
       }
 
-      await showAlert("success", "Sucesso", "Você deu like de volta! Verifique seus matches.")
-      
+      await showAlert("success", "Sucesso", "Você deu like de volta! Verifique seus matches.");
 
       // Refresh the list
       setIsLoading(true);
-      const { data: likesData } = await supabase
+      const { data: likesData, error: likesError } = await supabase
         .from("likes")
         .select(`
           profile_id,
@@ -157,10 +169,20 @@ export default function LikedMePage() {
         `)
         .eq("liked_profile_id", profile!.id);
 
-      const { data: matchesData } = await supabase
+      if (likesError) {
+        console.log("Error fetching likes:", likesError.message);
+        throw likesError;
+      }
+
+      const { data: matchesData, error: matchesError } = await supabase
         .from("matches")
         .select("profile1_id, profile2_id")
         .or(`profile1_id.eq.${profile!.id},profile2_id.eq.${profile!.id}`);
+
+      if (matchesError) {
+        console.log("Error fetching matches:", matchesError.message);
+        throw matchesError;
+      }
 
       const matchedProfileIds = new Set(
         matchesData!.flatMap((match) => [
@@ -169,21 +191,18 @@ export default function LikedMePage() {
       );
 
       const profilesData: LikedMeProfile[] = likesData!
-        .filter((item: LikeItemWithProfile) => item.profiles && item.profiles.name && item.profile_id)
+        .filter((item: LikeItemWithProfile) => item.profiles && item.profiles[0]?.name && item.profile_id)
         .map((item: LikeItemWithProfile) => ({
           profile_id: item.profile_id,
-          name: item.profiles.name,
-          avatar_url: item.profiles.avatar_url,
-          gender: item.profiles.gender,
+          name: item.profiles![0].name,
+          avatar_url: item.profiles![0].avatar_url,
+          gender: item.profiles![0].gender,
           isMatch: matchedProfileIds.has(item.profile_id),
         }));
 
       setLikedMeProfiles(profilesData);
     } catch (error: any) {
-
-      await showAlert("error", "Ooops!", "Não foi possível dar like de volta.")
-
-      
+      await showAlert("error", "Ooops!", "Não foi possível dar like de volta.");
     } finally {
       setIsLoading(false);
     }
@@ -199,19 +218,18 @@ export default function LikedMePage() {
         .eq("liked_profile_id", profile!.id);
 
       if (error) {
-        console.error("Error ignoring like:", error.message);
+        console.log("Error ignoring like:", error.message);
         throw error;
       }
-      await showAlert("success", "Ok!", "Like ignorado.")
+
+      await showAlert("success", "Ok!", "Like ignorado.");
 
       // Update the list by removing the ignored profile
       setLikedMeProfiles((prev) =>
         prev.filter((p) => p.profile_id !== likerProfileId)
       );
     } catch (error: any) {
-
-      await showAlert("error", "Ooops!", "Não foi possível ignorar o like.")
-      
+      await showAlert("error", "Ooops!", "Não foi possível ignorar o like.");
     }
   };
 
@@ -237,7 +255,6 @@ export default function LikedMePage() {
       <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
 
       <div className="app-container">
-
         <h2 className="text-xl gradient-text mb-8 text-center font-semibold">Pessoas que Curtiram Você</h2>
 
         {likedMeProfiles.length > 0 ? (
