@@ -28,7 +28,7 @@ type Profile = {
   age: number
   gender: string
   city: string
-  bio: string
+ bio: string | null // Bio can be null
   compatibility: number
   interests: string[]
   crossMatches: string[]
@@ -178,8 +178,8 @@ export default function MatchesPage() {
           })
           .map((profileData) => {
             const commonInterests =
-              profile.interests?.filter((interest) =>
-                profileData.interests?.includes(interest)
+              profile.interests?.filter((interest : any) =>
+ (profileData.interests as string[] | null | undefined)?.includes(interest as any) // Explicitly cast interest to any temporarily for includes
               ) || []
             const interestCompatibility =
               profile.interests?.length > 0
@@ -210,7 +210,7 @@ export default function MatchesPage() {
               bio: profileData.bio,
               compatibility: interestCompatibility,
               interests: profileData.interests || [],
-              crossMatches: commonInterests.map((interest) => interest).slice(0, 3),
+              crossMatches: commonInterests.map((interest : any) => interest).slice(0, 3),
               distance,
               avatar_url: profileData.avatar_url,
             }

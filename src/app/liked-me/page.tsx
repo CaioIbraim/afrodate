@@ -81,13 +81,13 @@ export default function LikedMePage() {
         );
 
         const profilesData: LikedMeProfile[] = likesData // Removed unnecessary type assertion
-          .filter((item) => item.profiles && item.profiles.name && item.profile_id)
+ .filter((item) => item.profiles && item.profiles[0]?.name && item.profile_id)
           .map((item) => ({
             profile_id: item.profile_id,
-            name: item.profiles.name,
-            avatar_url: item.profiles.avatar_url,
-            gender: item.profiles.gender,
-            isMatch: matchedProfileIds.has(item.profile_id),
+ name: item.profiles[0]?.name,
+ avatar_url: item.profiles[0]?.avatar_url,
+ gender: item.profiles[0]?.gender,
+ isMatch: matchedProfileIds.has(item.profile_id),
           }));
 
         setLikedMeProfiles(profilesData);
@@ -132,26 +132,26 @@ export default function LikedMePage() {
           profile_id,
           profiles!likes_profile_id_fkey(name, avatar_url, gender)
         `)
-        .eq("liked_profile_id", profile.id);
+        .eq("liked_profile_id", profile!.id);
 
       const { data: matchesData } = await supabase
         .from("matches")
         .select("profile1_id, profile2_id")
-        .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`);
+        .or(`profile1_id.eq.${profile!.id},profile2_id.eq.${profile!.id}`);
 
       const matchedProfileIds = new Set(
-        matchesData.flatMap((match) => [
-          match.profile1_id === profile.id ? match.profile2_id : match.profile1_id,
+        matchesData!.flatMap((match) => [
+          match.profile1_id === profile!.id ? match.profile2_id : match.profile1_id,
         ])
       );
 
-      const profilesData: LikedMeProfile[] = likesData // Removed unnecessary type assertion
-        .filter((item) => item.profiles && item.profiles.name && item.profile_id)
+      const profilesData: LikedMeProfile[] = likesData! // Removed unnecessary type assertion
+ .filter((item) => item.profiles && item.profiles[0]?.name && item.profile_id)
         .map((item) => ({
           profile_id: item.profile_id,
-          name: item.profiles.name,
-          avatar_url: item.profiles.avatar_url,
-          gender: item.profiles.gender,
+ name: item.profiles[0]?.name,
+ avatar_url: item.profiles[0]?.avatar_url,
+ gender: item.profiles[0]?.gender,
           isMatch: matchedProfileIds.has(item.profile_id),
         }));
 
@@ -174,7 +174,7 @@ export default function LikedMePage() {
         .from("likes")
         .delete()
         .eq("profile_id", likerProfileId)
-        .eq("liked_profile_id", profile.id);
+        .eq("liked_profile_id", profile!.id);
 
       if (error) {
         console.error("Error ignoring like:", error.message);
@@ -271,7 +271,7 @@ export default function LikedMePage() {
                     <Image
                       src={
                         likedProfile.gender === "MULHER"
-                          ? likedProfile.profile_id % 2 === 0
+                          ? index % 2 === 0
                             ? "/images/female-profile-1.png"
                             : "/images/female-profile.png"
                           : "/images/male-profile-1.png"
