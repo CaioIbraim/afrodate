@@ -1,22 +1,13 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Swal from "sweetalert2"
 import withReactContent from "sweetalert2-react-content"
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from "@/components/ui/tabs"
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,13 +17,14 @@ import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/hooks/use-user"
-import { Loader2, ChevronLeft, Star, Trash2, Upload, ArrowRight, LogOut } from "lucide-react"
+import { Loader2, Star, Trash2, Upload, ArrowRight, MapPin, Navigation } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 import { motion, AnimatePresence } from "framer-motion"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { v4 as uuidv4 } from "uuid"
 import { ProfileHeader } from "@/components/profile-header"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const MySwal = withReactContent(Swal)
 
@@ -53,6 +45,8 @@ type ProfileData = {
   city: string
   profession: string
   interests: string[]
+  latitude?: number | null
+  longitude?: number | null
 }
 type Preferences = {
   genderPreference: GenderPreference
@@ -64,6 +58,411 @@ type Preferences = {
   messageNotifications: boolean
 }
 type Errors = Record<string, string>
+
+type LocationState = {
+  status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error"
+  latitude: number | null
+  longitude: number | null
+  error: string | null
+  accuracy: number | null
+}
+
+// Location Component
+const LocationCapture = ({
+  profileData,
+  setProfileData,
+  saving,
+  uploading,
+  onLocationUpdate,
+}: {
+  profileData: ProfileData
+  setProfileData: (data: ProfileData) => void
+  saving: boolean
+  uploading: boolean
+  onLocationUpdate: (lat: number, lng: number) => void
+}) => {
+  const [locationState, setLocationState] = useState<LocationState>({
+    status: "idle",
+    latitude: null,
+    longitude: null,
+    error: null,
+    accuracy: null,
+  })
+
+  // Check if geolocation is supported
+  const isGeolocationSupported = useMemo(() => {
+    return "geolocation" in navigator
+  }, [])
+
+  // Check current permission status
+  const checkPermissionStatus = useCallback(async () => {
+    if (!isGeolocationSupported) {
+      setLocationState((prev) => ({
+        ...prev,
+        status: "unavailable",
+        error: "Geolocalização não é suportada neste dispositivo",
+      }))
+      return
+    }
+
+    try {
+      if ("permissions" in navigator) {
+        const permission = await navigator.permissions.query({ name: "geolocation" })
+
+        if (permission.state === "granted") {
+          // Permission already granted, get location
+          getCurrentLocation()
+        } else if (permission.state === "denied") {
+          setLocationState((prev) => ({
+            ...prev,
+            status: "denied",
+            error: "Permissão de localização foi negada",
+          }))
+        } else {
+          // Permission not yet determined
+          setLocationState((prev) => ({ ...prev, status: "idle" }))
+        }
+
+        // Listen for permission changes
+        permission.addEventListener("change", () => {
+          if (permission.state === "granted") {
+            getCurrentLocation()
+          } else if (permission.state === "denied") {
+            setLocationState((prev) => ({
+              ...prev,
+              status: "denied",
+              error: "Permissão de localização foi negada",
+            }))
+          }
+        })
+      }
+    } catch (error) {
+      console.error("[checkPermissionStatus] Error:", error)
+      setLocationState((prev) => ({
+        ...prev,
+        status: "error",
+        error: "Erro ao verificar permissões de localização",
+      }))
+    }
+  }, [isGeolocationSupported])
+
+  // Get current location
+  const getCurrentLocation = useCallback(() => {
+    if (!isGeolocationSupported) {
+      setLocationState((prev) => ({
+        ...prev,
+        status: "unavailable",
+        error: "Geolocalização não é suportada neste dispositivo",
+      }))
+      return
+    }
+
+    setLocationState((prev) => ({ ...prev, status: "requesting", error: null }))
+
+    const options: PositionOptions = {
+      enableHighAccuracy: true,
+      timeout: 15000, // 15 seconds
+      maximumAge: 300000, // 5 minutes
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords
+
+        setLocationState({
+          status: "granted",
+          latitude,
+          longitude,
+          error: null,
+          accuracy,
+        })
+
+        // Update profile data
+        setProfileData({
+          ...profileData,
+          latitude,
+          longitude,
+        })
+
+        // Call the update callback
+        onLocationUpdate(latitude, longitude)
+
+        MySwal.fire({
+          icon: "success",
+          title: "Localização Capturada!",
+          text: `Coordenadas obtidas com precisão de ${Math.round(accuracy || 0)}m`,
+          timer: 3000,
+          showConfirmButton: false,
+          customClass: {
+            popup: "border-2 border-transparent bg-white rounded-xl",
+            title:
+              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          },
+        })
+      },
+      (error) => {
+        console.error("[getCurrentLocation] Error:", error)
+
+        let errorMessage = "Erro desconhecido ao obter localização"
+        let status: LocationState["status"] = "error"
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Permissão de localização foi negada pelo usuário"
+            status = "denied"
+            break
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Localização não disponível no momento"
+            status = "unavailable"
+            break
+          case error.TIMEOUT:
+            errorMessage = "Tempo limite excedido para obter localização"
+            status = "error"
+            break
+          default:
+            errorMessage = error.message || "Erro ao obter localização"
+            status = "error"
+            break
+        }
+
+        setLocationState((prev) => ({
+          ...prev,
+          status,
+          error: errorMessage,
+        }))
+
+        MySwal.fire({
+          icon: "error",
+          title: "Erro de Localização",
+          text: errorMessage,
+          customClass: {
+            popup: "border-2 border-transparent bg-white rounded-xl",
+            title:
+              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+            confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          },
+        })
+      },
+      options,
+    )
+  }, [isGeolocationSupported, profileData, setProfileData, onLocationUpdate])
+
+  // Request location permission and get location
+  const requestLocation = useCallback(async () => {
+    if (!isGeolocationSupported) {
+      await MySwal.fire({
+        icon: "error",
+        title: "Não Suportado",
+        text: "Seu dispositivo não suporta geolocalização",
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        },
+      })
+      return
+    }
+
+    // Show explanation dialog first
+    const result = await MySwal.fire({
+      icon: "info",
+      title: "Permissão de Localização",
+      html: `
+        <div class="text-left">
+          <p class="mb-3">Precisamos da sua localização para:</p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+            <li>Mostrar pessoas próximas a você</li>
+            <li>Calcular distâncias precisas</li>
+            <li>Melhorar suas recomendações</li>
+          </ul>
+          <p class="mt-3 text-sm text-gray-500">Sua localização será armazenada de forma segura e você pode removê-la a qualquer momento.</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Permitir Localização",
+      cancelButtonText: "Agora Não",
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
+      },
+    })
+
+    if (result.isConfirmed) {
+      getCurrentLocation()
+    }
+  }, [isGeolocationSupported, getCurrentLocation])
+
+  // Clear location data
+  const clearLocation = useCallback(async () => {
+    const result = await MySwal.fire({
+      icon: "question",
+      title: "Remover Localização?",
+      text: "Isso pode afetar a qualidade das suas recomendações",
+      showCancelButton: true,
+      confirmButtonText: "Remover",
+      cancelButtonText: "Cancelar",
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-red-500 text-white px-4 py-2 rounded shadow",
+        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
+      },
+    })
+
+    if (result.isConfirmed) {
+      setLocationState({
+        status: "idle",
+        latitude: null,
+        longitude: null,
+        error: null,
+        accuracy: null,
+      })
+
+      setProfileData({
+        ...profileData,
+        latitude: null,
+        longitude: null,
+      })
+
+      onLocationUpdate(0, 0) // Clear coordinates
+    }
+  }, [profileData, setProfileData, onLocationUpdate])
+
+  // Check permission status on mount
+  useEffect(() => {
+    checkPermissionStatus()
+  }, [checkPermissionStatus])
+
+  useEffect(() => {
+    if (profileData.latitude !== undefined && profileData.longitude !== undefined) {
+      setLocationState((prev) => ({
+        ...prev,
+        status: "granted",
+        latitude: profileData.latitude ?? null, // Use nullish coalescing to handle undefined
+        longitude: profileData.longitude ?? null, // Use nullish coalescing to handle undefined
+      }));
+    }
+  }, [profileData.latitude, profileData.longitude]);
+
+  const renderLocationStatus = () => {
+    switch (locationState.status) {
+      case "idle":
+        return (
+          <Alert>
+            <MapPin className="h-4 w-4" />
+            <AlertDescription>Adicione sua localização para encontrar pessoas próximas a você.</AlertDescription>
+          </Alert>
+        )
+
+      case "requesting":
+        return (
+          <Alert>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <AlertDescription>Obtendo sua localização... Isso pode levar alguns segundos.</AlertDescription>
+          </Alert>
+        )
+
+      case "granted":
+        return (
+          <Alert className="border-green-200 bg-green-50">
+            <Navigation className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Localização capturada!</p>
+                  {locationState.accuracy && (
+                    <p className="text-sm">Precisão: ~{Math.round(locationState.accuracy)}m</p>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearLocation}
+                  disabled={saving || uploading}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  Remover
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )
+
+      case "denied":
+        return (
+          <Alert className="border-red-200 bg-red-50">
+            <MapPin className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <div>
+                <p className="font-medium">Permissão de localização negada</p>
+                <p className="text-sm mt-1">
+                  Para habilitar: vá em Configurações do navegador → Privacidade → Localização
+                </p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )
+
+      case "unavailable":
+        return (
+          <Alert className="border-yellow-200 bg-yellow-50">
+            <MapPin className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800">
+              Geolocalização não está disponível neste dispositivo ou navegador.
+            </AlertDescription>
+          </Alert>
+        )
+
+      case "error":
+        return (
+          <Alert className="border-red-200 bg-red-50">
+            <MapPin className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <div>
+                <p className="font-medium">Erro ao obter localização</p>
+                <p className="text-sm mt-1">{locationState.error}</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-base font-medium">Localização</Label>
+        <p className="text-sm text-gray-600">Compartilhe sua localização para encontrar pessoas próximas</p>
+      </div>
+
+      {renderLocationStatus()}
+
+      {(locationState.status === "idle" || locationState.status === "error") && (
+        <Button
+          onClick={requestLocation}
+          disabled={saving || uploading || !isGeolocationSupported}
+          variant="outline"
+          className="w-full"
+        >
+          <MapPin className="mr-2 h-4 w-4" />
+          Capturar Localização
+        </Button>
+      )}
+
+      {locationState.status === "granted" && (
+        <Button onClick={getCurrentLocation} disabled={saving || uploading} variant="outline" className="w-full">
+          <Navigation className="mr-2 h-4 w-4" />
+          Atualizar Localização
+        </Button>
+      )}
+    </div>
+  )
+}
 
 // Componente para a aba de Informações
 const ProfileInfo = ({
@@ -78,6 +477,7 @@ const ProfileInfo = ({
   photos,
   handleFileChange,
   calculateAge,
+  onLocationUpdate,
 }: {
   profileData: ProfileData
   setProfileData: (data: ProfileData) => void
@@ -90,6 +490,7 @@ const ProfileInfo = ({
   photos: Photo[]
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   calculateAge: (birthDate: string) => number | null
+  onLocationUpdate: (lat: number, lng: number) => void
 }) => (
   <Card className="mb-6">
     <CardHeader>
@@ -99,11 +500,7 @@ const ProfileInfo = ({
     <CardContent>
       <div className="space-y-4">
         <div className="flex flex-col items-center mb-6">
-          <label
-            htmlFor="photo-upload"
-            className="relative cursor-pointer group"
-            aria-label="Carregar foto de perfil"
-          >
+          <label htmlFor="photo-upload" className="relative cursor-pointer group" aria-label="Carregar foto de perfil">
             <Avatar className="w-32 h-32">
               <AvatarImage
                 src={photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || ""}
@@ -113,9 +510,7 @@ const ProfileInfo = ({
                   e.currentTarget.src = "/placeholder-image.png"
                 }}
               />
-              <AvatarFallback className="text-2xl">
-                {profileData.name.charAt(0) || "?"}
-              </AvatarFallback>
+              <AvatarFallback className="text-2xl">{profileData.name.charAt(0) || "?"}</AvatarFallback>
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
                 <Upload className="h-6 w-6 text-white" aria-hidden="true" />
               </div>
@@ -142,9 +537,7 @@ const ProfileInfo = ({
             </p>
           )}
           {calculateAge(profileData.birth_date) && (
-            <p className="mt-2 text-sm text-gray-500">
-              Idade: {calculateAge(profileData.birth_date)} anos
-            </p>
+            <p className="mt-2 text-sm text-gray-500">Idade: {calculateAge(profileData.birth_date)} anos</p>
           )}
         </div>
 
@@ -199,7 +592,11 @@ const ProfileInfo = ({
                 onValueChange={(value: Gender) => setProfileData({ ...profileData, gender: value })}
                 disabled={saving || uploading}
               >
-                <SelectTrigger id="gender" className={errors.gender ? "border-red-500" : ""} aria-describedby="gender-error">
+                <SelectTrigger
+                  id="gender"
+                  className={errors.gender ? "border-red-500" : ""}
+                  aria-describedby="gender-error"
+                >
                   <SelectValue placeholder="Selecione seu gênero" />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,6 +676,15 @@ const ProfileInfo = ({
                 )}
               </div>
             </div>
+
+            {/* Location Capture Component */}
+            <LocationCapture
+              profileData={profileData}
+              setProfileData={setProfileData}
+              saving={saving}
+              uploading={uploading}
+              onLocationUpdate={onLocationUpdate}
+            />
           </>
         )}
 
@@ -293,7 +699,11 @@ const ProfileInfo = ({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               Salvando...
             </>
-          ) : isNewProfile ? "Criar Perfil" : "Salvar Informações"}
+          ) : isNewProfile ? (
+            "Criar Perfil"
+          ) : (
+            "Salvar Informações"
+          )}
         </Button>
       </div>
     </CardContent>
@@ -368,11 +778,13 @@ const ProfilePhotos = ({
           photos.map((photo, index) => (
             <div key={photo.storage_path} className="relative group">
               <img
-                src={photo.publicUrl}
+                src={photo.publicUrl || "/placeholder.svg"}
                 alt={`Foto ${index + 1}`}
                 className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""}`}
                 loading="lazy"
-                onError={(e) => { e.currentTarget.src = "/placeholder-image.png" }}
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder-image.png"
+                }}
               />
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100 gap-2">
                 {!photo.isPrimary && (
@@ -516,9 +928,7 @@ const ProfilePreferences = ({
               <Label htmlFor="matchNotifications" className="text-base">
                 Notificações de Match
               </Label>
-              <p className="text-sm text-gray-500">
-                Receber notificações quando ocorrer um novo match
-              </p>
+              <p className="text-sm text-gray-500">Receber notificações quando ocorrer um novo match</p>
             </div>
             <Switch
               id="matchNotifications"
@@ -533,9 +943,7 @@ const ProfilePreferences = ({
               <Label htmlFor="messageNotifications" className="text-base">
                 Notificações de Mensagens
               </Label>
-              <p className="text-sm text-gray-500">
-                Receber notificações quando receber novas mensagens
-              </p>
+              <p className="text-sm text-gray-500">Receber notificações quando receber novas mensagens</p>
             </div>
             <Switch
               id="messageNotifications"
@@ -558,7 +966,9 @@ const ProfilePreferences = ({
               <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
               Salvando...
             </>
-          ) : "Salvar Preferências"}
+          ) : (
+            "Salvar Preferências"
+          )}
         </Button>
       </div>
     </CardContent>
@@ -583,6 +993,8 @@ export default function ProfilePage() {
     city: "",
     profession: "",
     interests: [],
+    latitude: null,
+    longitude: null,
   })
   const [preferences, setPreferences] = useState<Preferences>({
     genderPreference: "TODOS",
@@ -610,7 +1022,36 @@ export default function ProfilePage() {
     })
   }
 
-  
+  // Handle location update
+  const handleLocationUpdate = useCallback(
+    async (latitude: number, longitude: number) => {
+      if (!user || !profileId) {
+        console.log("[handleLocationUpdate] No user or profileId available")
+        return
+      }
+
+      try {
+        console.log("[handleLocationUpdate] Updating location:", { latitude, longitude })
+
+        const updateData =
+          latitude === 0 && longitude === 0 ? { latitude: null, longitude: null } : { latitude, longitude }
+
+        const { error } = await supabase.from("profiles").update(updateData).eq("id", profileId)
+
+        if (error) {
+          console.error("[handleLocationUpdate] Error:", error.message)
+          throw error
+        }
+
+        console.log("[handleLocationUpdate] Location updated successfully")
+      } catch (error: any) {
+        console.error("[handleLocationUpdate] Error:", error.message)
+        await showAlert("error", "Erro", "Não foi possível salvar sua localização. Tente novamente.")
+      }
+    },
+    [user, profileId],
+  )
+
   // Calculate user age
   const calculateAge = useCallback((birthDate: string): number | null => {
     if (!birthDate) return null
@@ -681,7 +1122,7 @@ export default function ProfilePage() {
       }
       setErrors(newErrors)
     },
-    [errors, calculateAge]
+    [errors, calculateAge],
   )
 
   // Check if profile is 100% complete
@@ -743,7 +1184,7 @@ export default function ProfilePage() {
           "Erro",
           error.message === "too_many_requests"
             ? "Muitas tentativas. Tente novamente em alguns minutos."
-            : "Não foi possível sair da sua conta. Tente novamente."
+            : "Não foi possível sair da sua conta. Tente novamente.",
         )
         setSaving(false)
       }
@@ -761,11 +1202,7 @@ export default function ProfilePage() {
           return
         }
         console.log("[fetchProfileId] Fetching profile for user_id:", user.id)
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", user.id)
-          .single()
+        const { data, error } = await supabase.from("profiles").select("id").eq("user_id", user.id).single()
         if (error && error.code !== "PGRST116") {
           console.log("[fetchProfileId] Error:", error.message)
           throw error
@@ -780,7 +1217,7 @@ export default function ProfilePage() {
             "Erro",
             error.message === "too_many_requests"
               ? "Muitas tentativas. Tente novamente em alguns minutos."
-              : "Não foi possível carregar o perfil. Tente novamente."
+              : "Não foi possível carregar o perfil. Tente novamente.",
           )
         }
       }
@@ -804,6 +1241,8 @@ export default function ProfilePage() {
         city: profile.city || "",
         profession: profile.profession || "",
         interests: profile.interests || [],
+        latitude: profile.latitude || null,
+        longitude: profile.longitude || null,
       })
       setPreferences({
         genderPreference: profile.gender_preference || "TODOS",
@@ -894,7 +1333,7 @@ export default function ProfilePage() {
             publicUrl: url,
             isPrimary: photo.is_primary,
           }
-        })
+        }),
       )
       setPhotos(photoUrls)
     } catch (error: any) {
@@ -904,7 +1343,7 @@ export default function ProfilePage() {
         "Erro",
         error.message === "too_many_requests"
           ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível carregar suas fotos. Tente novamente."
+          : "Não foi possível carregar suas fotos. Tente novamente.",
       )
       setPhotos([])
     }
@@ -943,7 +1382,7 @@ export default function ProfilePage() {
             }
           },
           file.type,
-          0.8
+          0.8,
         )
       })
     } catch (error: any) {
@@ -956,11 +1395,7 @@ export default function ProfilePage() {
   const handlePhotoUpload = useCallback(
     async (file: File, uploadId: string) => {
       if (!user || !file) {
-        await showAlert(
-          "error",
-          "Erro",
-          !user ? "Usuário não autenticado." : "Nenhum arquivo selecionado."
-        )
+        await showAlert("error", "Erro", !user ? "Usuário não autenticado." : "Nenhum arquivo selecionado.")
         return
       }
       const validTypes = ["image/jpeg", "image/png", "image/webp"]
@@ -973,7 +1408,7 @@ export default function ProfilePage() {
         await showAlert(
           "error",
           "Erro",
-          file.size > maxSize ? "A imagem deve ter no máximo 5MB." : "O arquivo está vazio ou corrompido."
+          file.size > maxSize ? "A imagem deve ter no máximo 5MB." : "O arquivo está vazio ou corrompido.",
         )
         return
       }
@@ -1073,14 +1508,14 @@ export default function ProfilePage() {
           error.message === "too_many_requests"
             ? "Muitas tentativas. Tente novamente em alguns minutos."
             : error.message.includes("compress")
-            ? "Falha ao comprimir a imagem. Tente outro arquivo."
-            : "Não foi possível enviar sua foto. Tente novamente."
+              ? "Falha ao comprimir a imagem. Tente outro arquivo."
+              : "Não foi possível enviar sua foto. Tente novamente.",
         )
       } finally {
         setUploading(false)
       }
     },
-    [user, photos, profileId]
+    [user, photos, profileId],
   )
 
   // Handle file input change
@@ -1165,7 +1600,7 @@ export default function ProfilePage() {
           }
         }
       }
-      await showAlert("success", "Sucesso", "Foto excluída com sucesso.")
+      await showAlert("success", "Sucesso", "Foto excluída com suc esso.")
       await loadPhotos()
     } catch (error: any) {
       console.log("[handleDeletePhoto] Error:", error.message)
@@ -1174,7 +1609,7 @@ export default function ProfilePage() {
         "Erro",
         error.message === "too_many_requests"
           ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível remover sua foto. Tente novamente."
+          : "Não foi possível remover sua foto. Tente novamente.",
       )
     }
   }
@@ -1216,22 +1651,18 @@ export default function ProfilePage() {
         "Erro",
         error.message === "too_many_requests"
           ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível definir esta foto como principal. Tente novamente."
+          : "Não foi possível definir esta foto como principal. Tente novamente.",
       )
     }
   }
 
   // Generate unique username
   const generateUsername = async (name: string): Promise<string> => {
-    let baseUsername = "@" + name.toLowerCase().replace(/\s+/g, "")
+    const baseUsername = "@" + name.toLowerCase().replace(/\s+/g, "")
     let username = baseUsername
     let counter = 1
     while (true) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("username")
-        .eq("username", username)
-        .single()
+      const { data, error } = await supabase.from("profiles").select("username").eq("username", username).single()
       if (error || !data) break
       username = `${baseUsername}${counter}`
       counter++
@@ -1245,7 +1676,7 @@ export default function ProfilePage() {
       await showAlert(
         "error",
         "Erro",
-        !user ? "Usuário não autenticado." : "Por favor, corrija os erros nos campos antes de salvar."
+        !user ? "Usuário não autenticado." : "Por favor, corrija os erros nos campos antes de salvar.",
       )
       return
     }
@@ -1259,6 +1690,8 @@ export default function ProfilePage() {
         city: profileData.city,
         profession: profileData.profession,
         interests: profileData.interests,
+        latitude: profileData.latitude,
+        longitude: profileData.longitude,
         gender_preference: preferences.genderPreference,
         min_age: preferences.minAge,
         max_age: preferences.maxAge,
@@ -1297,11 +1730,7 @@ export default function ProfilePage() {
         console.log("[handleUpdateProfile] Save error:", error.message)
         throw error
       }
-      await showAlert(
-        "success",
-        "Sucesso",
-        profileId ? "Perfil atualizado com sucesso!" : "Perfil criado com sucesso!"
-      )
+      await showAlert("success", "Sucesso", profileId ? "Perfil atualizado com sucesso!" : "Perfil criado com sucesso!")
       if (!profileId) {
         await loadPhotos()
         router.push("/dashboard")
@@ -1313,7 +1742,7 @@ export default function ProfilePage() {
         "Erro",
         error.message === "too_many_requests"
           ? "Muitas tentativas. Tente novamente em alguns minutos."
-          : "Não foi possível salvar seu perfil. Tente novamente."
+          : "Não foi possível salvar seu perfil. Tente novamente.",
       )
     } finally {
       setSaving(false)
@@ -1328,7 +1757,7 @@ export default function ProfilePage() {
   // Check if initial requirements (photo and birth_date) are met
   const initialRequirementsMet = useMemo(
     () => photos.length > 0 && profileData.birth_date && !errors.birth_date,
-    [photos, profileData.birth_date, errors.birth_date]
+    [photos, profileData.birth_date, errors.birth_date],
   )
 
   // Loading state
@@ -1357,9 +1786,8 @@ export default function ProfilePage() {
         )}
       </AnimatePresence>
 
-      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
 
-     
       <motion.main
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -1426,6 +1854,7 @@ export default function ProfilePage() {
               photos={photos}
               handleFileChange={handleFileChange}
               calculateAge={calculateAge}
+              onLocationUpdate={handleLocationUpdate}
             />
           </TabsContent>
 

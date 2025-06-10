@@ -24,12 +24,17 @@ interface LikedMeProfile {
   gender: string | null;
   isMatch: boolean;
 }
-
+/*
 interface LikeItemWithProfile {
   profile_id: string;
   profiles: { name: string; avatar_url: string | null; gender: string | null }[] | null;
 }
+*/
 
+interface LikeItemWithProfile {
+  profile_id: string;
+  profiles: { name: string; avatar_url: string | null; gender: string | null } | null;
+}
 const showAlert = async (type: "success" | "error", title: string, text: string) => {
   return MySwal.fire({
     icon: type,
@@ -111,17 +116,25 @@ export default function LikedMePage() {
 
       
 
-        const profilesData: LikedMeProfile[] = likesData.map((item: LikeItemWithProfile) => {
-          const profile = item.profiles?.[0];
-          if (!item.profile_id || !profile) {
-            console.warn("Incomplete profile data:", item);
-          }
+      
 
+        const profilesData: LikedMeProfile[] = likesData.map((item: LikeItemWithProfile) => {
+          if (!item.profile_id || !item.profiles) {
+            console.warn("Incomplete profile data:", item);
+            return {
+              profile_id: item.profile_id || "unknown",
+              name: "Usuário Sem Nome",
+              avatar_url: null,
+              gender: null,
+              isMatch: matchedProfileIds.has(item.profile_id),
+            };
+          }
+        
           return {
-            profile_id: item.profile_id || "unknown",
-            name: item!.profiles!.name || "Usuário Sem Nome",
-            avatar_url: item!.profiles!.avatar_url || null,
-            gender: item!.profiles!.gender || null,
+            profile_id: item.profile_id,
+            name: item.profiles.name,
+            avatar_url: item.profiles.avatar_url,
+            gender: item.profiles.gender,
             isMatch: matchedProfileIds.has(item.profile_id),
           };
         });
