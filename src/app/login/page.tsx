@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
 import styles from "@/styles/Home.module.css"
+import { v4 as uuidv4 } from "uuid"
 
 const MySwal = withReactContent(Swal)
 
@@ -94,7 +95,7 @@ export default function LoginPage() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const showAlert = async (type: "success" | "error", title: string, text: string) => {
+  const showAlert = async (type: "success" | "error" | "info", title: string, text: string) => {
     return MySwal.fire({
       icon: type,
       title,
@@ -122,6 +123,49 @@ export default function LoginPage() {
     return true
   }
 
+  const generateUniqueUsername = async (base: string): Promise<string> => {
+    const randomStr = Math.random().toString(36).substring(2, 8) // 6 chars
+    let username = `${base}_${randomStr}`
+    let attempts = 0
+    const maxAttempts = 5
+
+    while (attempts < maxAttempts) {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("username", username)
+        .single()
+
+      if (error && error.code !== "PGRST116") { // Not found is OK
+        throw new Error("Erro ao verificar username: " + error.message)
+      }
+      if (!data) {
+        return username
+      }
+      username = `${base}_${Math.random().toString(36).substring(2, 8)}`
+      attempts++
+    }
+    throw new Error("Não foi possível gerar um username único após várias tentativas.")
+  }
+
+  const createProfile = async (userId: string, email: string, name?: string) => {
+    const baseName = name || email.split("@")[0] || "user"
+    const username = await generateUniqueUsername(baseName)
+    const profileId = uuidv4()
+
+    const { error } = await supabase.from("profiles").insert({
+      id: profileId,
+      user_id: userId,
+      name: name || baseName,
+      username,
+    })
+
+    if (error) {
+      throw new Error("Erro ao criar perfil: " + error.message)
+    }
+    return profileId
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validateForm()) return
@@ -139,11 +183,52 @@ export default function LoginPage() {
           "too_many_requests": "Muitas tentativas. Tente novamente em alguns minutos.",
           default: "Algo deu errado. Tente novamente.",
         }
-        throw new Error(error.message)
+        throw new Error(errorMessages[error.message] || error.message)
       }
 
-      await showAlert("success", "Login realizado!", "Redirecionando para sua conta...")
-      router.push("/profile")
+      if (!data.user) {
+        throw new Error("Usuário não encontrado após login.")
+      }
+
+      // Check if profile exists
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .single()
+
+      let profileId: string
+
+      if (profileError && profileError.code === "PGRST116") {
+        // First login: Create profile
+        profileId = await createProfile(
+          data.user.id,
+          formData.email,
+          data.user.user_metadata?.name
+        )
+      } else if (profileError) {
+        throw new Error("Erro ao verificar perfil: " + profileError.message)
+      } else {
+        profileId = profile.id
+      }
+
+      // Check profile interests
+      const { data: interests, error: interestsError } = await supabase
+        .from("profile_interests")
+        .select("id")
+        .eq("profile_id", profileId)
+
+      if (interestsError) {
+        throw new Error("Erro ao verificar interesses: " + interestsError.message)
+      }
+
+      await showAlert("success", "Login realizado!", "Redirecionando...")
+
+      if (interests.length === 0) {
+        router.push("/interests")
+      } else {
+        router.push("/profile")
+      }
     } catch (error: any) {
       console.error("Login error:", error)
       await showAlert(
