@@ -1,421 +1,541 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, ChevronLeft, Heart, X, User, AlertCircle } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
-import { motion, AnimatePresence } from "framer-motion";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Loader2, Heart, User2Icon, MapPin, ArrowRight, MessageSquare, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
 
-// Tipos
-type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
+const MySwal = withReactContent(Swal);
+
+// Types
 interface Profile {
   id: string;
-  username: string;
   name: string;
-  birth_date: string;
-  gender: Gender;
-  bio: string;
-  city: string;
   avatar_url: string | null;
-  photo: { storage_path: string; publicUrl: string } | null;
+  gender: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distance?: number;
+  isLiked: boolean;
+  isMatch: boolean;
+  whatsapp_number?: string | null; // Added for WhatsApp
+  share_whatsapp?: boolean; // Added for consent
 }
 
-// Componente Dinâmico para Mensagem de Nenhum Perfil
-const NoProfilesMessage = ({ profile }: { profile: any }) => {
-  const router = useRouter();
-  const today = new Date();
-  const birthDate = new Date(profile?.birth_date);
-  const age = today.getFullYear() - birthDate.getFullYear();
+interface UserPreferences {
+  genderPreference: "HOMEM" | "MULHER" | "TODOS";
+  minAge: number;
+  maxAge: number;
+  maxDistance: number;
+}
 
-  const minAge = parseInt(profile.min_age) || 18;
-  const maxAge = parseInt(profile.max_age) || 99;
-
-  const isAgeFilterTooRestrictive = maxAge - minAge < 5;
-  const needsQuiz = !profile.quizCompleted; // Supondo que isso venha do backend ou estado
-
-  return (
-    <Card className="mb-6 shadow-md">
-      <CardContent className="flex flex-col items-center justify-center py-10 px-6 text-center">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mb-4" />
-        <h3 className="text-xl font-semibold mb-3">Nenhum perfil disponível</h3>
-        <p className="text-gray-600 mb-4">
-          Não encontramos perfis compatíveis com suas preferências atuais. Isso pode acontecer por:
-        </p>
-
-        <ul className="text-left text-sm text-gray-500 list-disc pl-5 space-y-1 mb-6">
-          {isAgeFilterTooRestrictive && (
-            <li>Seus filtros de idade estão muito restritos (menos de 5 anos de diferença).</li>
-          )}
-          {!needsQuiz && (
-            <li>Você ainda não respondeu ao Quiz de Africanidades (11 perguntas).</li>
-          )}
-          <li>Não há perfis ativos dentro do seu raio de busca.</li>
-        </ul>
-
-        <div className="space-y-3 w-full max-w-xs">
-          {isAgeFilterTooRestrictive && (
-            <Button
-              onClick={() => router.push("/profile")}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              Ajustar Faixa Etária
-            </Button>
-          )}
-
-          {needsQuiz && (
-            <Button
-              onClick={() => router.push("/quiz/africanidades")}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              Responder Quiz de Africanidades
-            </Button>
-          )}
-
-          <Button
-            onClick={() => router.push("/profile")}
-            variant="outline"
-            className="w-full border-gray-300 text-gray-700"
-          >
-            Verificar Preferências Gerais
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+// Haversine formula to calculate distance between two points (in kilometers)
+const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 };
 
-export default function DiscoverPage() {
+const showAlert = async (type: "success" | "error" | "info", title: string, text: string) => {
+  return MySwal.fire({
+    icon: type,
+    title,
+    text,
+    customClass: {
+      popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
+      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+      confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+    },
+    willOpen: (popup) => {
+      popup.setAttribute("aria-live", "assertive");
+    },
+  });
+};
+
+// Helper to manage viewed matches in localStorage
+const getViewedMatches = (userId: string): Set<string> => {
+  const viewed = localStorage.getItem(`viewed_matches_${userId}`);
+  return viewed ? new Set(JSON.parse(viewed)) : new Set();
+};
+
+const markMatchAsViewed = (userId: string, profileId: string) => {
+  const viewed = getViewedMatches(userId);
+  viewed.add(profileId);
+  localStorage.setItem(`viewed_matches_${userId}`, JSON.stringify([...viewed]));
+};
+
+export default function ProximityPage() {
   const router = useRouter();
-  const { toast } = useToast();
-  const { user, profile, isLoading } = useUser();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [fetching, setFetching] = useState(false);
+  const { user, profile, isLoading: userLoading } = useUser();
+  const [nearbyProfiles, setNearbyProfiles] = useState<Profile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    genderPreference: "TODOS",
+    minAge: 18,
+    maxAge: 50,
+    maxDistance: 50,
+  });
 
-  useEffect(() => {
-    if (!user || !profile || isLoading) return;
-    const fetchProfiles = async () => {
-      setFetching(true);
-      try {
-        console.log("Fetching profiles for user:", user.id);
-
-        const today = new Date();
-        const minAge = parseInt(profile.min_age) || 18;
-        const maxAge = parseInt(profile.max_age) || 99;
-        const minBirthDate = new Date(today.getFullYear() - maxAge, today.getMonth(), today.getDate())
-          .toISOString()
-          .split("T")[0];
-        const maxBirthDate = new Date(today.getFullYear() - minAge, today.getMonth(), today.getDate())
-          .toISOString()
-          .split("T")[0];
-
-        const { data: viewedData } = await supabase
-          .from("profile_views")
-          .select("viewed_id")
-          .eq("viewer_id", profile.id);
-
-        const { data: likedData } = await supabase
-          .from("matches")
-          .select("liked_id")
-          .eq("liker_id", profile.id);
-
-        const excludedIds = [
-          ...(viewedData?.map((v) => v.viewed_id) || []),
-          ...(likedData?.map((l) => l.liked_id) || []),
-        ];
-
-        let query = supabase
-          .from("profiles")
-          .select(`
-            id,
-            username,
-            name,
-            birth_date,
-            gender,
-            bio,
-            city,
-            avatar_url,
-            profile_photos!left (storage_path)
-          `)
-          .eq("show_profile", true)
-          .neq("user_id", user.id)
-          .gte("birth_date", minBirthDate)
-          .lte("birth_date", maxBirthDate);
-
-        if (excludedIds.length > 0) {
-          query = query.not("id", "in", `(${excludedIds.join(",")})`);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
-
-        const processedProfiles = data.map((p) => {
-          const firstPhoto = p.profile_photos?.[0];
-          return {
-            id: p.id,
-            username: p.username,
-            name: p.name,
-            birth_date: p.birth_date,
-            gender: p.gender,
-            bio: p.bio || "Sem biografia",
-            city: p.city || "Cidade não informada",
-            avatar_url: p.avatar_url,
-            photo: firstPhoto
-              ? {
-                  storage_path: firstPhoto.storage_path,
-                  publicUrl: supabase.storage
-                    .from("imagens")
-                    .getPublicUrl(firstPhoto.storage_path).data.publicUrl,
-                }
-              : null,
-          };
-        });
-
-        setProfiles(processedProfiles);
-        console.log("Profiles loaded:", processedProfiles);
-
-        if (processedProfiles.length > 0) {
-          await supabase.from("profile_views").insert({
-            viewer_id: profile.id,
-            viewed_id: processedProfiles[0].id,
-          });
-        }
-      } catch (error: any) {
-        console.error("Error fetching profiles:", error.message);
-        toast({
-          title: "Erro",
-          description: "Não foi possível carregar os perfis.",
-          variant: "destructive",
-        });
-      } finally {
-        setFetching(false);
-      }
-    };
-
-    fetchProfiles();
-  }, [user, profile, isLoading, toast]);
-
-  const calculateAge = (birthDate: string) => {
-    const today = new Date();
+  // Calculate age from birth_date
+  const calculateAge = useCallback((birthDate: string): number | null => {
+    if (!birthDate) return null;
     const birth = new Date(birthDate);
+    const today = new Date();
+    if (isNaN(birth.getTime()) || birth > today) return null;
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
-    return age;
-  };
+    return age >= 18 ? age : null;
+  }, []);
 
-  const handleLike = async (profileId: string) => {
-    if (!user || !profile) {
-      toast({ title: "Erro", description: "Usuário não autenticado.", variant: "destructive" });
-      return;
-    }
-    try {
-      const { error: insertError } = await supabase
-        .from("matches")
-        .insert({ liker_id: profile.id, liked_id: profileId, status: "pending" });
+  // Mock premium user check (replace with actual logic)
+  const isPremiumUser = true; // TODO: Fetch from useUser or Supabase subscriptions
 
-      if (insertError?.code === "23505") {
-        toast({ title: "Info", description: "Você já curtiu este perfil." });
+  // Fetch nearby profiles
+  const fetchNearbyProfiles = useCallback(async () => {
+    if (!user || !profile || userLoading || !profile.latitude || !profile.longitude) {
+      if (!userLoading) {
+        setIsLoading(false);
+        if (!profile?.latitude || !profile?.longitude) {
+          await showAlert(
+            "error",
+            "Localização Não Configurada",
+            "Por favor, configure sua localização no perfil para encontrar pessoas próximas."
+          );
+          router.push("/profile");
+        }
         return;
       }
+      return;
+    }
 
-      await supabase.from("profile_views").insert({
-        viewer_id: profile.id,
-        viewed_id: profileId,
-      });
-
-      const { data: mutualLike } = await supabase
-        .from("matches")
-        .select("id")
-        .eq("liker_id", profileId)
-        .eq("liked_id", profile.id)
+    setIsLoading(true);
+    try {
+      // Fetch user preferences
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("gender_preference, min_age, max_age, max_distance")
+        .eq("id", profile.id)
         .single();
 
-      if (mutualLike) {
-        await supabase
-          .from("matches")
-          .update({ status: "matched" })
-          .eq("liker_id", profile.id)
-          .eq("liked_id", profileId);
-        await supabase
-          .from("matches")
-          .update({ status: "matched" })
-          .eq("liker_id", profileId)
-          .eq("liked_id", profile.id);
-
-        toast({ title: "Match!", description: `Você deu match com ${profiles[currentIndex].name}!` });
-      } else {
-        toast({ title: "Sucesso", description: "Perfil curtido!" });
+      if (profileError) {
+        console.log("Error fetching preferences:", profileError.message);
+        throw profileError;
       }
 
-      setCurrentIndex((prev) => {
-        const nextIndex = Math.min(prev + 1, profiles.length - 1);
-        if (nextIndex < profiles.length) {
-          supabase.from("profile_views").insert({
-            viewer_id: profile.id,
-            viewed_id: profiles[nextIndex].id,
-          });
-        }
-        return nextIndex;
-      });
+      const userPrefs: UserPreferences = {
+        genderPreference: profileData.gender_preference || "TODOS",
+        minAge: profileData.min_age || 18,
+        maxAge: profileData.max_age || 50,
+        maxDistance: profileData.max_distance || 50,
+      };
+      setPreferences(userPrefs);
+
+      // Fetch profiles with location and WhatsApp data
+      let query = supabase
+        .from("profiles")
+        .select("id, name, avatar_url, gender, latitude, longitude, birth_date, whatsapp_number, share_whatsapp")
+        .neq("id", profile.id)
+        .not("latitude", "is", null)
+        .not("longitude", "is", null);
+
+      if (userPrefs.genderPreference !== "TODOS") {
+        query = query.eq("gender", userPrefs.genderPreference);
+      }
+
+      const { data: profilesData, error: profilesError } = await query;
+
+      if (profilesError) {
+        console.log("Error fetching profiles:", profilesError.message);
+        throw profilesError;
+      }
+
+      // Fetch user's existing likes
+      const { data: userLikes, error: likesError } = await supabase
+        .from("likes")
+        .select("liked_profile_id")
+        .eq("profile_id", profile.id);
+
+      if (likesError) {
+        console.log("Error fetching user likes:", likesError.message);
+        throw likesError;
+      }
+
+      const likedProfileIds = new Set(userLikes.map((like) => like.liked_profile_id));
+
+      // Fetch mutual matches
+      const { data: matchesData, error: matchesError } = await supabase
+        .from("matches")
+        .select("profile1_id, profile2_id")
+        .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`);
+
+      if (matchesError) {
+        console.log("Error fetching matches:", matchesError.message);
+        throw matchesError;
+      }
+
+      const matchedProfileIds = new Set(
+        matchesData.flatMap((match) =>
+          match.profile1_id === profile.id ? match.profile2_id : match.profile1_id
+        )
+      );
+
+      // Get viewed matches
+      const viewedMatches = getViewedMatches(profile.id);
+
+      // Filter profiles by age, distance, and add like/match status
+      const filteredProfiles = profilesData
+        .filter((p) => {
+          const age = calculateAge(p.birth_date);
+          const isMatch = matchedProfileIds.has(p.id);
+          return (
+            age !== null &&
+            age >= userPrefs.minAge &&
+            age <= userPrefs.maxAge &&
+            p.latitude !== null &&
+            p.longitude !== null &&
+            (!isMatch || (isMatch && !viewedMatches.has(p.id)))
+          );
+        })
+        .map((p) => ({
+          ...p,
+          distance: calculateDistance(
+            profile.latitude!,
+            profile.longitude!,
+            p.latitude!,
+            p.longitude!
+          ),
+          isLiked: likedProfileIds.has(p.id),
+          isMatch: matchedProfileIds.has(p.id),
+        }))
+        .filter((p) => p.distance! <= userPrefs.maxDistance)
+        .sort((a, b) => a.distance! - b.distance!)
+        .slice(0, 3);
+
+      setNearbyProfiles(filteredProfiles);
+      console.log("Nearby profiles loaded:", filteredProfiles);
+
+      if (filteredProfiles.length === 0) {
+        await showAlert(
+          "info",
+          "Nenhum Perfil Encontrado",
+          "Não encontramos pessoas dentro do raio especificado. Tente aumentar a distância máxima ou ajustar suas preferências."
+        );
+      }
     } catch (error: any) {
-      console.error("Error liking profile:", error.message);
-      toast({
-        title: "Erro",
-        description: `Não foi possível curtir o perfil: ${error.message}`,
-        variant: "destructive",
-      });
+      console.log("Error fetching nearby profiles:", error.message);
+      await showAlert(
+        "error",
+        "Ooops!",
+        "Não foi possível carregar os perfis próximos. Tente novamente."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, profile, userLoading, calculateAge, router]);
+
+  // Handle like action
+  const handleLike = async (targetProfileId: string) => {
+    if (!user || !profile) {
+      await showAlert("error", "Erro", "Usuário não autenticado.");
+      return;
+    }
+
+    try {
+      // Insert like
+      const { error: likeError } = await supabase
+        .from("likes")
+        .insert({ profile_id: profile.id, liked_profile_id: targetProfileId });
+
+      if (likeError) {
+        console.log("Error liking profile:", likeError.message);
+        throw likeError;
+      }
+
+      // Check for mutual like (match)
+      const { data: mutualLike, error: mutualLikeError } = await supabase
+        .from("likes")
+        .select("id")
+        .eq("profile_id", targetProfileId)
+        .eq("liked_profile_id", profile.id)
+        .single();
+
+      if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
+        console.log("Error checking mutual like:", mutualLikeError.message);
+        throw mutualLikeError;
+      }
+
+      if (mutualLike) {
+        // Create match
+        const { error: matchError } = await supabase.from("matches").insert({
+          profile1_id: profile.id < targetProfileId ? profile.id : targetProfileId,
+          profile2_id: profile.id < targetProfileId ? targetProfileId : profile.id,
+        });
+
+        if (matchError) {
+          console.log("Error creating match:", matchError.message);
+          throw matchError;
+        }
+
+        await showAlert(
+          "success",
+          "Match!",
+          "Parabéns! Você deu match com este perfil!"
+        );
+      } else {
+        await showAlert("success", "Sucesso", "Você curtiu este perfil!");
+      }
+
+      // Refresh profiles
+      await fetchNearbyProfiles();
+    } catch (error: any) {
+      await showAlert(
+        "error",
+        "Ooops!",
+        "Não foi possível curtir o perfil. Tente novamente."
+      );
     }
   };
 
-  const handleSkip = async () => {
-    if (!user || !profile) return;
-
-    await supabase.from("profile_views").insert({
-      viewer_id: profile.id,
-      viewed_id: profiles[currentIndex].id,
-    });
-
-    setCurrentIndex((prev) => {
-      const nextIndex = Math.min(prev + 1, profiles.length - 1);
-      if (nextIndex < profiles.length) {
-        supabase.from("profile_views").insert({
-          viewer_id: profile.id,
-          viewed_id: profiles[nextIndex].id,
-        });
-      }
-      return nextIndex;
-    });
+  // Handle profile view or WhatsApp click to mark match as viewed
+  const handleProfileInteraction = (profileId: string, isMatch: boolean) => {
+    if (isMatch && profile?.id) {
+      markMatchAsViewed(profile.id, profileId);
+    }
   };
 
-  if (isLoading || fetching) {
+  useEffect(() => {
+    fetchNearbyProfiles();
+  }, [fetchNearbyProfiles]);
+
+  if (userLoading || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <p className="text-oraculo-muted mt-3 text-base font-medium">Carregando perfis...</p>
       </div>
     );
   }
 
   if (!user || !profile) {
-    router.push("/login");
+    if (!userLoading && !user) {
+      router.push("/login");
+      return null;
+    }
     return null;
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
-      {/* Cabeçalho */}
-      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url}/>
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 px-4 py-6">
+      <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-md mx-auto w-full"
-      >
-        <h2 className="text-2xl font-bold gradient-text text-center mb-6">Descobrir Perfis</h2>
+      <div className="w-full max-w-md mx-auto">
+        <h2 className="text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan mb-8 text-center font-bold">
+          Pessoas Próximas
+        </h2>
 
-        {profiles.length === 0 || currentIndex >= profiles.length ? (
-          <NoProfilesMessage profile={profile} />
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -100 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Card>
-                <CardContent className="p-0">
-                  <div className="relative">
-                    {profiles[currentIndex].photo?.publicUrl ||
-                    profiles[currentIndex].avatar_url ? (
-                      <img
-                        src={
-                          profiles[currentIndex].photo?.publicUrl ||
-                          profiles[currentIndex].avatar_url!
-                        }
-                        alt={profiles[currentIndex].name}
-                        className="w-full h-screen object-cover rounded-t-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-screen bg-gray-200 flex items-center justify-center rounded-t-lg">
-                        <Avatar className="w-32 h-32">
-                          <AvatarFallback>
-                            {profiles[currentIndex].name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <div>
-                        <Link href={`/profile/${profiles[currentIndex].id}`}>
-                          <h3 className="text-xl font-semibold hover:underline">
-                            {profiles[currentIndex].name},{" "}
-                            {calculateAge(profiles[currentIndex].birth_date)}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-gray-500">{profiles[currentIndex].username}</p>
-                      </div>
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/profile/${profiles[currentIndex].id}`}>
-                          <User className="h-5 w-5" />
-                          Ver Perfil
-                        </Link>
-                      </Button>
+        {nearbyProfiles.length > 0 ? (
+          <div className="space-y-6">
+            {nearbyProfiles.map((nearbyProfile, index) => (
+              <motion.div
+                key={nearbyProfile.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: index * 0.1 }}
+                className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="p-4 sm:p-5">
+                  <div className="flex flex-row items-start gap-4 w-full relative">
+                    {/* Avatar */}
+                    <div
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 transition-transform hover:scale-105 focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                      tabIndex={0}
+                      aria-label={`Foto de perfil de ${nearbyProfile.name}`}
+                    >
+                      {nearbyProfile.avatar_url ? (
+                        <Image
+                          src={nearbyProfile.avatar_url}
+                          alt={`Foto de perfil de ${nearbyProfile.name}`}
+                          width={150}
+                          height={150}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6ZAAAAABJRU5ErkJggg=="
+                        />
+                      ) : (
+                        <Image
+                          src={
+                            nearbyProfile.gender === "MULHER"
+                              ? index % 2 === 0
+                                ? "/images/female-profile-1.png"
+                                : "/images/female-profile.png"
+                              : "/images/male-profile-1.png"
+                          }
+                          alt={`Foto de perfil padrão para ${nearbyProfile.name}`}
+                          width={150}
+                          height={150}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6ZAAAAABJRU5ErkJggg=="
+                        />
+                      )}
                     </div>
-                    <Label className="text-sm text-gray-600">Cidade</Label>
-                    <p className="mb-2">{profiles[currentIndex].city}</p>
-                    <Label className="text-sm text-gray-600">Biografia</Label>
-                    <p className="text-gray-700">
-                      {profiles[currentIndex].bio.length > 150 
-                        ? `${profiles[currentIndex].bio.slice(0, 150)}...`
-                        : profiles[currentIndex].bio}
-                    </p>
+
+                    {/* Content */}
+                    <div className="flex flex-col flex-1">
+                      {/* Name and Badges */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <h3
+                            className="text-oraculo-dark text-lg sm:text-xl font-bold line-clamp-1"
+                            aria-describedby={`profile-status-${nearbyProfile.id}`}
+                          >
+                            {nearbyProfile.name}
+                          </h3>
+                          <Badge
+                            className="absolute top-0 right-0 bg-oraculo-purple/10 text-oraculo-purple text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                            tabIndex={-1}
+                          >
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {nearbyProfile.distance?.toFixed(1)} km
+                          </Badge>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex gap-1">
+                          {nearbyProfile.isMatch ? (
+                            <Badge
+                              className="bg-oraculo-purple text-white text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                              tabIndex={-1}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Match!
+                            </Badge>
+                          ) : nearbyProfile.isLiked ? (
+                            <Badge
+                              className="bg-oraculo-cyan/20 text-oraculo-cyan text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                              tabIndex={-1}
+                            >
+                              Já Curtido
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Buttons */}
+                      <div className="flex gap-2 mt-3">
+                        <Link
+                          href={`/profile/${nearbyProfile.id}`}
+                          className="flex-1"
+                          onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full text-oraculo-purple border-oraculo-purple hover:bg-oraculo-purple/10 rounded-lg py-5 text-xs sm:text-sm font-medium"
+                            aria-label={`Ver perfil de ${nearbyProfile.name}`}
+                          >
+                            <User2Icon className="h-4 w-4 mr-1 sm:mr-2" />
+                            Ver Perfil
+                          </Button>
+                        </Link>
+                        {nearbyProfile.isMatch && isPremiumUser && nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? (
+                          <a
+                            href={`https://wa.me/${nearbyProfile.whatsapp_number.replace(/\D/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1"
+                            onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
+                          >
+                            <Button
+                              className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
+                              aria-label={`Enviar mensagem no WhatsApp para ${nearbyProfile.name}`}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                              WhatsApp
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => handleLike(nearbyProfile.id)}
+                            disabled={nearbyProfile.isLiked || nearbyProfile.isMatch}
+                            aria-label={
+                              nearbyProfile.isLiked
+                                ? `Já curtiu ${nearbyProfile.name}`
+                                : `Curtir ${nearbyProfile.name}`
+                            }
+                          >
+                            <Heart className="h-4 w-4 mr-1 sm:mr-2" />
+                            {nearbyProfile.isLiked ? "Já Curtido" : "Curtir"}
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Hidden Accessibility Description */}
+                      <span
+                        id={`profile-status-${nearbyProfile.id}`}
+                        className="sr-only"
+                      >
+                        {nearbyProfile.isMatch
+                          ? "Você deu match com este perfil"
+                          : nearbyProfile.isLiked
+                          ? "Você já curtiu este perfil"
+                          : "Perfil disponível para curtir"}
+                      </span>
+                    </div>
                   </div>
-                </CardContent>
-                <CardContent className="flex justify-center gap-4 pt-0">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleSkip}
-                    className="rounded-full w-12 h-12"
-                  >
-                    <X className="h-6 w-6 text-red-500" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleLike(profiles[currentIndex].id)}
-                    className="rounded-full w-12 h-12"
-                  >
-                    <Heart className="h-6 w-6 text-green-500" />
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </AnimatePresence>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="p-6 text-center bg-white rounded-xl shadow-md"
+          >
+            <h3 className="text-lg sm:text-xl font-bold text-oraculo-dark mb-3">
+              Ninguém por Perto
+            </h3>
+            <p className="text-oraculo-muted mb-4 text-sm sm:text-base">
+              Não encontramos pessoas próximas no momento. Tente aumentar a distância máxima nas suas preferências.
+            </p>
+            <Link href="/profile">
+              <Button className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90">
+                Ajustar Preferências
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </motion.div>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }

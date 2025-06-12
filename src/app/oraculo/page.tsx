@@ -37,6 +37,7 @@ type Profile = {
 
 export default function MatchesPage() {
   const router = useRouter()
+  router.push("/discover")
   const { user, profile, isLoading: userLoading } = useUser()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -385,6 +386,9 @@ export default function MatchesPage() {
       return
     }
 
+
+
+   
     if (!userLoading && profile) {
       fetchCompatibleProfiles()
       fetchInterests()

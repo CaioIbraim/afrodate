@@ -7,7 +7,7 @@ import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, User2Icon, MapPin, ArrowRight, MessageCircle, Sparkles } from "lucide-react";
+import { Loader2, Heart, User2Icon, MapPin, ArrowRight, MessageSquare, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,9 +24,11 @@ interface Profile {
   gender: string | null;
   latitude: number | null;
   longitude: number | null;
-  distance?: number; // Calculated distance in kilometers
-  isLiked: boolean; // Whether the user has liked this profile
-  isMatch: boolean; // Whether this is a mutual match
+  distance?: number;
+  isLiked: boolean;
+  isMatch: boolean;
+  whatsapp_number?: string | null;
+  share_whatsapp?: boolean;
 }
 
 interface UserPreferences {
@@ -43,7 +45,7 @@ const calculateDistance = (
   lat2: number,
   lon2: number
 ): number => {
-  const R = 6371; // Earth's radius in kilometers
+  const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
   const a =
@@ -84,6 +86,14 @@ const markMatchAsViewed = (userId: string, profileId: string) => {
   localStorage.setItem(`viewed_matches_${userId}`, JSON.stringify([...viewed]));
 };
 
+// Helper to ensure full Supabase storage URL
+const getFullAvatarUrl = (path: string | null): string | null => {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  // Prepend Supabase storage base URL
+  return `https://wthyagnvodxbvmxkjhzb.supabase.co/storage/v1/object/public/imagens/${path}`;
+};
+
 export default function ProximityPage() {
   const router = useRouter();
   const { user, profile, isLoading: userLoading } = useUser();
@@ -109,6 +119,47 @@ export default function ProximityPage() {
     }
     return age >= 18 ? age : null;
   }, []);
+
+  // Mock premium user check (replace with actual logic)
+  const isPremiumUser = true; // TODO: Fetch from useUser or Supabase subscriptions
+
+  // Handle WhatsApp button click with premium check
+  const handleWhatsAppClick = async (profileId: string, name: string, whatsappNumber: string, isMatch: boolean) => {
+    if (!user || !profile) {
+      await showAlert("error", "Erro", "Usuário não autenticado.");
+      return;
+    }
+
+    if (!isPremiumUser) {
+      const result = await MySwal.fire({
+        icon: "info",
+        title: "Conta Premium Necessária",
+        text: "Para enviar mensagens via WhatsApp, você precisa de uma conta premium.",
+        showCancelButton: true,
+        confirmButtonText: "Fazer Upgrade",
+        cancelButtonText: "Cancelar",
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+          cancelButton: "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300",
+        },
+      });
+
+      if (result.isConfirmed) {
+        router.push("/subscription");
+      }
+      return;
+    }
+
+    // Mark match as viewed
+    if (isMatch && profile?.id) {
+      markMatchAsViewed(profile.id, profileId);
+    }
+
+    // Open WhatsApp
+    window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer');
+  };
 
   // Fetch nearby profiles
   const fetchNearbyProfiles = useCallback(async () => {
@@ -146,19 +197,18 @@ export default function ProximityPage() {
         genderPreference: profileData.gender_preference || "TODOS",
         minAge: profileData.min_age || 18,
         maxAge: profileData.max_age || 50,
-        maxDistance: profileData.max_distance || 50,
+        maxDistance: profileData.max_distance || 18,
       };
       setPreferences(userPrefs);
 
-      // Fetch profiles with location data
+      // Fetch profiles with location and WhatsApp data
       let query = supabase
         .from("profiles")
-        .select("id, name, avatar_url, gender, latitude, longitude, birth_date")
-        .neq("id", profile.id) // Exclude current user
+        .select("id, name, avatar_url, gender, latitude, longitude, birth_date, whatsapp_number, share_whatsapp")
+        .neq("id", profile.id)
         .not("latitude", "is", null)
         .not("longitude", "is", null);
 
-      // Apply gender preference filter
       if (userPrefs.genderPreference !== "TODOS") {
         query = query.eq("gender", userPrefs.genderPreference);
       }
@@ -208,7 +258,6 @@ export default function ProximityPage() {
         .filter((p) => {
           const age = calculateAge(p.birth_date);
           const isMatch = matchedProfileIds.has(p.id);
-          // Exclude matched profiles that have been viewed
           return (
             age !== null &&
             age >= userPrefs.minAge &&
@@ -220,6 +269,7 @@ export default function ProximityPage() {
         })
         .map((p) => ({
           ...p,
+          avatar_url: getFullAvatarUrl(p.avatar_url), // Ensure full URL
           distance: calculateDistance(
             profile.latitude!,
             profile.longitude!,
@@ -230,8 +280,8 @@ export default function ProximityPage() {
           isMatch: matchedProfileIds.has(p.id),
         }))
         .filter((p) => p.distance! <= userPrefs.maxDistance)
-        .sort((a, b) => a.distance! - b.distance!) // Sort by distance (ascending)
-        .slice(0, 3); // Limit to 3 profiles
+        .sort((a, b) => a.distance! - b.distance!)
+        .slice(0, 3);
 
       setNearbyProfiles(filteredProfiles);
       console.log("Nearby profiles loaded:", filteredProfiles);
@@ -240,7 +290,7 @@ export default function ProximityPage() {
         await showAlert(
           "info",
           "Nenhum Perfil Encontrado",
-          "Não encontramos pessoas dentro do raio especificado. Tente aumentar a distância máxima ou ajustar suas preferências."
+          "Não encontramos pessoas dentro do raio especificado. Tente aumentar a distância ou ajustar suas preferências."
         );
       }
     } catch (error: any) {
@@ -307,7 +357,7 @@ export default function ProximityPage() {
         await showAlert("success", "Sucesso", "Você curtiu este perfil!");
       }
 
-      // Refresh profiles to reflect new like/match status
+      // Refresh profiles
       await fetchNearbyProfiles();
     } catch (error: any) {
       await showAlert(
@@ -318,7 +368,7 @@ export default function ProximityPage() {
     }
   };
 
-  // Handle profile view or message click to mark match as viewed
+  // Handle profile view to mark match as viewed
   const handleProfileInteraction = (profileId: string, isMatch: boolean) => {
     if (isMatch && profile?.id) {
       markMatchAsViewed(profile.id, profileId);
@@ -366,71 +416,90 @@ export default function ProximityPage() {
                 className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
               >
                 <div className="p-4 sm:p-5">
-                  <div className="flex flex-col sm:flex-row items-start gap-4">
-
-
-                    <div className="flex flex-row justify-between gap-2 w-full sm:w-auto">
-                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
-                        {nearbyProfile.avatar_url ? (
-                            <Image
-                            src={nearbyProfile.avatar_url}
-                            alt={`Foto de ${nearbyProfile.name}`}
-                            width={150}
-                            height={150}
-                            className="object-cover w-full h-full"
-                            loading="lazy"
-                            />
-                        ) : (
-                            <Image
-                            src={
-                                nearbyProfile.gender === "MULHER"
-                                ? index % 2 === 0
-                                    ? "/images/female-profile-1.png"
-                                    : "/images/female-profile.png"
-                                : "/images/male-profile-1.png"
-                            }
-                            alt={`Foto de ${nearbyProfile.name}`}
-                            width={150}
-                            height={150}
-                            className="object-cover w-full h-full"
-                            loading="lazy"
-                            />
-                        )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between mb-3">
-                            <h3 className="text-oraculo-dark text-lg sm:text-xl font-bold truncate max-w-[80%]">
-                            {nearbyProfile.name}
-                            </h3>
-
-                            <div className="flex gap-2 mt-2 sm:mt-0">
-                            <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs font-medium flex items-center px-2 py-1 rounded-full">
-                                <MapPin className="h-3 w-3 mr-1" />
-                                {nearbyProfile.distance?.toFixed(1)} km
-                            </Badge>
-                            {nearbyProfile.isMatch ? (
-                                <Badge className="bg-oraculo-purple text-white text-xs font-medium flex items-center px-2 py-1 rounded-full">
-                                <Sparkles className="h-3 w-3 mr-1" />
-                                Match!
-                                </Badge>
-                            ) : nearbyProfile.isLiked ? (
-                                <Badge className="bg-oraculo-cyan/20 text-oraculo-cyan text-xs font-medium flex items-center px-2 py-1 rounded-full">
-                                Já Curtido
-                                </Badge>
-                            ) : null}
-                            </div>
-
-                        
-                        </div>
+                  <div className="flex flex-row items-start gap-4 w-full relative">
+                    {/* Avatar */}
+                    <div
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 transition-transform hover:scale-105 focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                      tabIndex={0}
+                      aria-label={`Foto de perfil de ${nearbyProfile.name}`}
+                    >
+                      {nearbyProfile.avatar_url ? (
+                        <Image
+                          src={nearbyProfile.avatar_url}
+                          alt={`Foto de perfil de ${nearbyProfile.name}`}
+                          width={150}
+                          height={150}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6ZAAAAABJRU5ErkJggg=="
+                        />
+                      ) : (
+                        <Image
+                          src={
+                            nearbyProfile.gender === "MULHER"
+                              ? index % 2 === 0
+                                ? "/images/female-profile-1.png"
+                                : "/images/female-profile.png"
+                              : "/images/male-profile-1.png"
+                          }
+                          alt={`Foto de perfil padrão para ${nearbyProfile.name}`}
+                          width={150}
+                          height={150}
+                          className="object-cover w-full h-full"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6ZAAAAABJRU5ErkJggg=="
+                        />
+                      )}
                     </div>
 
+                    {/* Content */}
+                    <div className="flex flex-col flex-1">
+                      {/* Name and Badges */}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <h3
+                            className="text-oraculo-dark text-lg sm:text-xl font-bold line-clamp-1"
+                            aria-describedby={`profile-status-${nearbyProfile.id}`}
+                          >
+                            {nearbyProfile.name}
+                          </h3>
+                          <Badge
+                            className="absolute top-0 right-0 bg-oraculo-purple/10 text-oraculo-purple text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                            tabIndex={-1}
+                          >
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {nearbyProfile.distance?.toFixed(1)} km
+                          </Badge>
+                        </div>
 
-                    <div className="flex-1 w-full">
-                      
-                      
+                        {/* Status Badges */}
+                        <div className="flex gap-1">
+                          {nearbyProfile.isMatch ? (
+                            <Badge
+                              className="bg-oraculo-purple text-white text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                              tabIndex={-1}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              Match!
+                            </Badge>
+                          ) : nearbyProfile.isLiked ? (
+                            <Badge
+                              className="bg-oraculo-cyan/20 text-oraculo-cyan text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                              tabIndex={-1}
+                            >
+                              Já Curtido
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {/* Buttons */}
                       <div className="flex gap-2 mt-3">
                         <Link
                           href={`/profile/${nearbyProfile.id}`}
-                          className="flex-1"
+                          className={nearbyProfile.isMatch && nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? "flex-1" : "w-full"}
                           onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
                         >
                           <Button
@@ -442,21 +511,7 @@ export default function ProximityPage() {
                             Ver Perfil
                           </Button>
                         </Link>
-                        {nearbyProfile.isMatch ? (
-                          <Link
-                            href={`/chat/${nearbyProfile.id}`}
-                            className="flex-1"
-                            onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
-                          >
-                            <Button
-                              className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
-                              aria-label={`Enviar mensagem para ${nearbyProfile.name}`}
-                            >
-                              <MessageCircle className="h-4 w-4 mr-1 sm:mr-2" />
-                              Mensagem
-                            </Button>
-                          </Link>
-                        ) : (
+                        {!nearbyProfile.isMatch ? (
                           <Button
                             className="flex-1 w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => handleLike(nearbyProfile.id)}
@@ -470,8 +525,29 @@ export default function ProximityPage() {
                             <Heart className="h-4 w-4 mr-1 sm:mr-2" />
                             {nearbyProfile.isLiked ? "Já Curtido" : "Curtir"}
                           </Button>
-                        )}
+                        ) : nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? (
+                          <Button
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
+                            onClick={() => handleWhatsAppClick(nearbyProfile.id, nearbyProfile.name, nearbyProfile.whatsapp_number!, nearbyProfile.isMatch)}
+                            aria-label={`Enviar mensagem no WhatsApp para ${nearbyProfile.name}${!isPremiumUser ? " (requer conta premium)" : ""}`}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-1 sm:mr-2" />
+                            WhatsApp
+                          </Button>
+                        ) : null}
                       </div>
+
+                      {/* Hidden Accessibility Description */}
+                      <span
+                        id={`profile-status-${nearbyProfile.id}`}
+                        className="sr-only"
+                      >
+                        {nearbyProfile.isMatch
+                          ? "Você deu match com este perfil"
+                          : nearbyProfile.isLiked
+                          ? "Você já curtiu este perfil"
+                          : "Perfil disponível para curtir"}
+                      </span>
                     </div>
                   </div>
                 </div>

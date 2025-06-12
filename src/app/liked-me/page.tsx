@@ -444,9 +444,11 @@ export default function MatchesPage() {
   );
 
   return (
+
+    <>
+      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
     <div className="max-w-3xl mx-auto w-full py-8 px-3">
       
-      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
 
 
       <TabGroup>
@@ -510,5 +512,6 @@ export default function MatchesPage() {
         </TabPanels>
       </TabGroup>
     </div>
+    </>
   );
 }

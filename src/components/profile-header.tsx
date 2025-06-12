@@ -67,7 +67,7 @@ export function ProfileHeader({
 
   // Navegação para a página de discover
   const navigateToDiscover = () => {
-    router.push("/oraculo")
+    router.push("/discover/v2")
   }
 
   // Navegação para a página de discover
