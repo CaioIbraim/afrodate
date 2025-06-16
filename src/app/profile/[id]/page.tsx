@@ -342,7 +342,7 @@ export default function ProfileView() {
       setHasMatch(!!matchData)
       if (matchData && !matchAlertShown) showMatchAlert()
     } catch (error: any) {
-      if(!isLoading)  handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
+     // if(!isLoading)  handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
     } finally {
       setIsLoading(false)
     }
