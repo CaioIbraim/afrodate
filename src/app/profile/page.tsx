@@ -47,6 +47,8 @@ type ProfileData = {
   interests: string[]
   latitude?: number | null
   longitude?: number | null
+  whatsapp_number?: string         // Novo campo
+  share_whatsapp?: boolean         // Novo campo
 }
 type Preferences = {
   genderPreference: GenderPreference
@@ -634,6 +636,39 @@ const ProfileInfo = ({
               )}
             </div>
 
+
+             {/* Campo WhatsApp */}
+      <div>
+        <Label htmlFor="whatsapp_number">WhatsApp</Label>
+        <Input
+          id="whatsapp_number"
+          type="text"
+          placeholder="(11) 91234-5678"
+          value={profileData.whatsapp_number || ""}
+          onChange={e => {
+            setProfileData({ ...profileData, whatsapp_number: e.target.value })
+            validateField("whatsapp_number", e.target.value)
+          }}
+          disabled={saving || uploading}
+          maxLength={20}
+        />
+        {errors.whatsapp_number && (
+          <p className="text-red-500 text-xs mt-1">{errors.whatsapp_number}</p>
+        )}
+      </div>
+
+      {/* Switch para compartilhar WhatsApp */}
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="share_whatsapp"
+          checked={!!profileData.share_whatsapp}
+          onCheckedChange={checked => setProfileData({ ...profileData, share_whatsapp: checked })}
+          disabled={saving || uploading}
+        />
+        <Label htmlFor="share_whatsapp">Quero compartilhar meu WhatsApp</Label>
+      </div>
+
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">Cidade</Label>
@@ -1119,6 +1154,8 @@ export default function ProfilePage() {
             delete newErrors.profession
           }
           break
+
+          
       }
       setErrors(newErrors)
     },
@@ -1243,6 +1280,8 @@ export default function ProfilePage() {
         interests: profile.interests || [],
         latitude: profile.latitude || null,
         longitude: profile.longitude || null,
+        whatsapp_number: profile.whatsapp_number || null,
+        share_whatsapp: profile.share_whatsapp || null,
       })
       setPreferences({
         genderPreference: profile.gender_preference || "TODOS",
@@ -1701,6 +1740,8 @@ export default function ProfilePage() {
         message_notifications: preferences.messageNotifications,
         updated_at: new Date().toISOString(),
         avatar_url: photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || null,
+        whatsapp_number: profileData.whatsapp_number || null,
+        share_whatsapp: profileData.share_whatsapp ?? false,
       }
       console.log("[handleUpdateProfile] Saving profile:", profilePayload)
       let error

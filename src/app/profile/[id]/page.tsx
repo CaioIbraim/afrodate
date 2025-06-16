@@ -1,3 +1,4 @@
+// Suggested code may be subject to a license. Learn more: ~LicenseLog:2490082326.
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -26,6 +27,7 @@ import { motion } from "framer-motion"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ProfileHeader } from "@/components/profile-header"
 import { Badge } from "@/components/ui/badge"
+import { FaWhatsapp } from "react-icons/fa"
 
 // Constants
 const MySwal = withReactContent(Swal)
@@ -41,8 +43,9 @@ const ROUTES = {
   MESSAGES: (id: string) => `/messages/${id}`,
 }
 const PLACEHOLDER_IMAGE = "/placeholder-image.png"
-
 // Types
+// types.ts (or similar file)
+// Assume you have this file with necessary types
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
 type Photo = { name: string; storage_path: string; publicUrl: string; isPrimary: boolean }
 type ProfileData = {
@@ -56,8 +59,12 @@ type ProfileData = {
   interests: string[]
   avatar_url: string | null
   user_id: string
+  latitude?: number | null
+  longitude?: number | null
+  whatsapp_number?: string         // Novo campo
+  share_whatsapp?: boolean   
 }
-type Profile = { id: string; name: string; avatar_url: string | null; subscription: number }
+// type Profile = { id: string; name: string; avatar_url: string | null; subscription: number } // This type is defined in use-user hook
 
 // Utility Functions
 const handleError = (error: any, title: string, router: any, redirectRoute: string) => {
@@ -220,8 +227,8 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
 
 export default function ProfileView() {
   const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser()
-  const { id: profileId } = useParams() as { id: string }
+  const { user, isLoading: userLoading, profile } = useUser(); // Use useUser hook
+  const { id: profileId } = useParams() as { id: string };
   const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -257,32 +264,7 @@ export default function ProfileView() {
   }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
 
   const loadProfile = useCallback(async () => {
-    /*
-    
-    if (!user || !isLoading) {
-      MySwal.fire({
-        icon: "error",
-        title: "Acesso Negado",
-        html: '<p class="text-lg text-gray-700">Você precisa estar logado.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Ir para Login",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.LOGIN))
-      return
-    }
-    */
-
-
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !session) {
-      MySwal.fire({
-        icon: "error",
-        title: "Sessão Expirada",
-        html: '<p class="text-lg text-gray-700">Faça login novamente.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Ir para Login",
-      }).then(() => router.push(ROUTES.LOGIN))
-      return
-    }
+   
 
     if (!profileId) {
       MySwal.fire({
@@ -304,11 +286,7 @@ export default function ProfileView() {
         { data: likeData, error: likeError },
         { data: matchData, error: matchError },
       ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, name, birth_date, gender, bio, city, profession, interests, avatar_url, user_id")
-          .eq("id", profileId)
-          .single(),
+        supabase.from("profiles").select("*, profile_photos(storage_path, is_primary)").eq("id", profileId).single(),
         supabase
           .from("profile_photos")
           .select("storage_path, is_primary")
@@ -316,15 +294,16 @@ export default function ProfileView() {
           .order("created_at", { ascending: true }),
         supabase
           .from("likes")
-          .select("id")
+          .select("id") // Assuming profile!.id is the current user's profile ID
           .eq("profile_id", profile!.id)
           .eq("liked_profile_id", profileId)
+          .eq("profile_id", profile!.id)
           .gte("created_at", `${today}T00:00:00.000Z`)
           .lte("created_at", `${today}T23:59:59.999Z`)
           .single(),
         supabase
           .from("matches")
-          .select("id")
+          .select('id')
           .or(`profile1_id.eq.${profile!.id},profile2_id.eq.${profile!.id}`)
           .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
           .single(),
@@ -340,13 +319,14 @@ export default function ProfileView() {
       setHasLiked(!!likeData)
       setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
-      if (matchData && !matchAlertShown) showMatchAlert()
+      // Only show match alert if it's a new match discovered during this load and not already shown
+      if (matchData && !hasMatch && !matchAlertShown) showMatchAlert();
     } catch (error: any) {
-     // if(!isLoading)  handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
+      // if (!isLoading) handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER);
     } finally {
       setIsLoading(false)
     }
-  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert])
+  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert, supabase.auth, supabase.from])
 
   const handleLike = useCallback(async () => {
     if (!user || !profile || !profileId) {
@@ -415,67 +395,43 @@ export default function ProfileView() {
     }
   }, [user, profile, profileId, canLikeToday, showMatchAlert])
 
-  const handleSendMessage = useCallback(async () => {
-    if (!user || !profileId || !message.trim() || !hasPremiumSubscription) {
+  const handleSendMessage = useCallback(() => {
+    if (!user || !profileId || !message.trim()) {
       MySwal.fire({
         icon: "error",
         title: "Erro",
         html: `<p class="text-sm text-gray-400">${
           !user
             ? "Usuário não autenticado."
-            : !profileId // Corrected ternary
+            : !profileId
             ? "Perfil inválido."
-            : !message.trim()
-            ? "Digite uma mensagem."
-            : "Assinatura Premium necessária." // Corrected ternary
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: !hasPremiumSubscription ? "Fazer Upgrade" : "OK",
-      }).then((result) => result.isConfirmed && !hasPremiumSubscription && router.push(ROUTES.SUBSCRIPTION))
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const { data: receiver, error: profileError } = await supabase
-        .from("profiles")
-        .select("user_id")
-        .eq("id", profileId)
-        .single()
-      if (profileError) throw profileError
-
-      const { error } = await supabase.from("messages").insert({
-        sender_id: user.id,
-        receiver_id: receiver.user_id,
-        content: message.trim(),
-        created_at: new Date().toISOString(),
-      })
-      if (error) throw error
-
-      setMessage("")
-      MySwal.fire({
-        icon: "success",
-        title: "Mensagem Enviada!",
-        html: '<p className="text-lg text-success">Mensagem enviada com sucesso!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Ir para Mensagens",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.MESSAGES(profileId)))
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro ao Enviar",
-        html: `<p className="text-lg text-gray-400">${
-          error.message === "too_many_requests"
-            ? "Muitas tentativas. Tente novamente em alguns minutos."
-            : "Não foi possível enviar a mensagem."
+            : "Digite uma mensagem."
         }</p>`,
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
-    } finally {
-      setIsSending(false)
+      return
     }
-  }, [user, profileId, message, hasPremiumSubscription, router])
+  
+    if (!hasMatch || !profileData?.whatsapp_number || !profileData?.share_whatsapp) {
+      MySwal.fire({
+        icon: "error",
+        title: "Contato indisponível",
+        html: `<p class="text-sm text-gray-400">Este usuário não compartilhou o número de WhatsApp.</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+  
+    const cleanedNumber = profileData.whatsapp_number.replace(/\D/g, "")
+    const encodedMessage = encodeURIComponent(message.trim())
+    const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
+  
+    window.open(whatsappUrl, "_blank")
+    setMessage("")
+  }, [user, profileId, message, hasMatch, profileData])
+  
 
   useEffect(() => {
     loadProfile()
@@ -504,6 +460,8 @@ export default function ProfileView() {
             Perfil de {profileData?.name || "Usuário"}
           </h2>
 
+
+      
           <div className="flex justify-between mb-6">
             {!hasLiked && !hasMatch && (
               <Button
@@ -516,16 +474,7 @@ export default function ProfileView() {
                 {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
               </Button>
             )}
-            {hasMatch && hasPremiumSubscription && (
-              <Button
-                onClick={() => setActiveTab("informacoes")}
-                className="flex-1 gradient-button"
-                aria-label="Enviar mensagem"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
-                Mensagem
-              </Button>
-            )}
+            
           </div>
           {hasMatch && (
             <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center justify-center mb-6">
@@ -580,7 +529,7 @@ export default function ProfileView() {
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={isSending || !message.trim()}
+                    disabled={isSending || !message.trim() || !profileData?.whatsapp_number || !profileData?.share_whatsapp}
                     className="w-full gradient-button"
                     aria-label="Enviar mensagem"
                   >
@@ -589,7 +538,10 @@ export default function ProfileView() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                         Enviando...
                       </>
-                    ) : (
+                    ) : profileData?.whatsapp_number && profileData?.share_whatsapp ? (
+                      <> {/* Utilize o ícone do WhatsApp */}
+                        <FaWhatsapp className="mr-2 h-5 w-5" /> Enviar por WhatsApp
+                      </> ) : (
                       "Enviar"
                     )}
                   </Button>
