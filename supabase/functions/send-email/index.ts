@@ -12,7 +12,7 @@ serve(async (req) => {
     
     const { data: user } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('name')
       .eq('email', to)
       .single()
 
