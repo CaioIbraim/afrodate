@@ -8,7 +8,7 @@ import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Bell, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import Swal from "sweetalert2";
 import { FaWhatsapp } from "react-icons/fa";
 import type { MessagePayload } from "firebase/messaging";
 
@@ -33,23 +33,19 @@ export default function NotificationsPage() {
   // Request notification permission and get FCM token
   const handleEnableNotifications = async () => {
     if (!isNotificationSupported) {
-      toast({
-        title: "Erro",
-        description: "Notificações não são suportadas neste navegador.",
-        variant: "destructive",
-      });
+     
+      Swal.fire("Erro", "Notificações não são suportadas neste navegador.", "error");
+
       return;
     }
 
     if (!user || !profile) {
-      toast({
-        title: "Erro",
-        description: "Faça login para ativar notificações.",
-        variant: "destructive",
-      });
+      Swal.fire("Erro", "Faça login para ativar notificações.", "error");
+
       router.push(ROUTES.LOGIN);
       return;
     }
+
 
     setIsSubscribing(true);
     try {
@@ -58,10 +54,12 @@ export default function NotificationsPage() {
         throw new Error("Permissão de notificação negada.");
       }
 
-      const currentToken = await getToken(messaging!, { vapidKey: VAPID_KEY });
+      const currentToken = await getToken(messaging!, { vapidKey: VAPID_KEY }); // Added non-null assertion
       if (!currentToken) {
         throw new Error("Não foi possível obter o token FCM.");
       }
+
+      console.log("FCM Token:", currentToken); // Log the token
 
       // Store token in Supabase
       const { error } = await supabase.from("tokens").upsert({
@@ -69,38 +67,35 @@ export default function NotificationsPage() {
         profile_id: profile.id,
         fcm_token: currentToken,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(), // Add updated_at for upsert
       });
 
       if (error) throw error;
+      console.log("Supabase upsert result:", { error }); // Log the upsert result
 
       setToken(currentToken);
-      toast({
-        title: "Sucesso",
-        description: "Notificações ativadas com sucesso!",
-      });
+    
+      Swal.fire("Sucesso", "Notificações ativadas com sucesso!", "success");
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message || "Falha ao ativar notificações.",
-        variant: "destructive",
-      });
+     
+      Swal.fire("Erro", error.message || "Falha ao ativar notificações.", "error");
     } finally {
       setIsSubscribing(false);
     }
   };
 
-  // Handle foreground notifications
   useEffect(() => {
-    if (!messaging) return;
-
     const unsubscribe = onMessage(messaging, (payload: MessagePayload) => {
       if (payload.notification) {
         setNotification(payload);
-        toast({
+        
+        Swal.fire({
           title: payload.notification.title || "Nova Notificação",
-          description: payload.notification.body || "Você recebeu uma mensagem.",
-        });
-      }
+          text: payload.notification.body || "Você recebeu uma mensagem.",
+          icon: "info",
+
+      })
+    }
     });
 
     return () => unsubscribe();
