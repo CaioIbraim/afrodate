@@ -6,6 +6,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { cn } from "@/lib/utils"
 import { Providers } from "./providers"
+import PushNotificationsProvider from "@/components/notifications/PushNotificationsProvider";
+import { UserProvider } from "@/utils/useCurrentUser";
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,7 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <Providers>
-          {children}
+        <UserProvider>
+          <PushNotificationsProvider>{children}</PushNotificationsProvider>
+        </UserProvider>
         </Providers>
       </body>
     </html>
