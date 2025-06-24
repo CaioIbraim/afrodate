@@ -33,7 +33,7 @@
 
 
 
-# Correções de Erros de Tipagem no Projeto Afrodate
+# Correções de Erros de Tipagem no Projeto oraculo
 Todos os erros de tipagem foram corrigidos com sucesso e o build está funcionando corretamente. Vamos resumir as alterações que foram feitas:
 
 ## 1. Correção do tipo subscriptionPlans

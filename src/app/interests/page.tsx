@@ -236,7 +236,7 @@ export default function InterestsPage() {
       if (!profileComplete) {
         router.push("/profile")
       } else {
-        router.push("/discover")
+        router.push("/discover/v3")
       }
     } catch (error: any) {
       console.error("Submit interests error:", error)

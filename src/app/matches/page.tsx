@@ -38,7 +38,7 @@ export default function MatchesPage() {
         description: "Complete seu perfil para ver matches",
         variant: "destructive",
       })
-      router.push("/discover")
+      router.push("/discover/v3")
     }
   }, [user, profile, userLoading, router])
 
@@ -52,7 +52,7 @@ export default function MatchesPage() {
           description: "Complete suas preferências para ver matches",
           variant: "destructive",
         })
-        router.push("/discover")
+        router.push("/discover/v3")
         return
       }
 
@@ -185,7 +185,7 @@ export default function MatchesPage() {
               <span className="absolute top-0 right-0 w-2 h-2 bg-oraculo-purple rounded-full"></span>
             </Button>
           </Link>
-          <Link href="/discover">
+          <Link href="/discover/v3">
             <Button variant="ghost" size="icon" className="text-oraculo-muted">
               <Grid3X3 className="h-6 w-6" />
             </Button>

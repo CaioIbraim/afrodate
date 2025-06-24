@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const message = {
       notification: {
         title: "Teste de Notificação",
-        body: "Você recebeu uma notificação push do Afrodate!",
+        body: "Você recebeu uma notificação push do oraculo!",
       },
       token: tokenData.fcm_token,
     };

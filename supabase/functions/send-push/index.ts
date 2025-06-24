@@ -47,7 +47,7 @@ serve(async (req) => {
     await webPush.sendNotification(
       subscriptionData.subscription,
       JSON.stringify({
-        title: "Afrodate",
+        title: "oraculo",
         message: payload.record.message,
       })
     );

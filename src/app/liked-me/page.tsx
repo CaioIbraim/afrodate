@@ -420,12 +420,7 @@ export default function MatchesPage() {
                   className="flex-1"
                   onClick={() => handleProfileInteraction(nearbyProfile.id, true)}
                 >
-                  <Button                    
-                    className="w-full flex items-center"
-                  >
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Conversar
-                  </Button>
+                 
                 </Link>
               ) : tab === "Quem me curtiu" ? (
                 <Button

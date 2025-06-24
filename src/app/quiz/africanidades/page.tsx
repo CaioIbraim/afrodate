@@ -191,7 +191,7 @@ export default function QuizPage() {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/discover")}>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/discover/v3")}>
             <ChevronLeft className="h-6 w-6 text-gray-700" />
           </Button>
           <Logo size="sm" />
@@ -212,7 +212,7 @@ export default function QuizPage() {
                 Parabéns por completar o Quiz de Africanidades! Suas respostas foram registradas e seus interesses foram atualizados para melhorar suas conexões.
               </p>
               <Button
-                onClick={() => router.push("/discover")}
+                onClick={() => router.push("/discover/v3")}
                 className="gradient-button"
               >
                 Voltar para Descobrir Perfis
@@ -228,7 +228,7 @@ export default function QuizPage() {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
         <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/discover")}>
+          <Button variant="ghost" size="icon" onClick={() => router.push("/discover/v3")}>
             <ChevronLeft className="h-6 w-6 text-gray-700" />
           </Button>
           <Logo size="sm" />
@@ -238,7 +238,7 @@ export default function QuizPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <p className="text-gray-500 text-center">Nenhuma pergunta disponível no momento.</p>
             <Button
-              onClick={() => router.push("/discover")}
+              onClick={() => router.push("/discover/v3")}
               className="mt-4 gradient-button"
             >
               Voltar
@@ -253,7 +253,7 @@ export default function QuizPage() {
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 py-6">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between mb-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push("/discover")}>
+        <Button variant="ghost" size="icon" onClick={() => router.push("/discover/v3")}>
           <ChevronLeft className="h-6 w-6 text-gray-700" />
         </Button>
         <Logo size="sm" />
