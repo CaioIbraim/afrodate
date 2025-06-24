@@ -63,6 +63,7 @@ type ProfileData = {
   longitude?: number | null
   whatsapp_number?: string         // Novo campo
   share_whatsapp?: boolean   
+  email?: string
 }
 // type Profile = { id: string; name: string; avatar_url: string | null; subscription: number } // This type is defined in use-user hook
 
@@ -298,8 +299,6 @@ export default function ProfileView() {
           .eq("profile_id", profile!.id)
           .eq("liked_profile_id", profileId)
           .eq("profile_id", profile!.id)
-          .gte("created_at", `${today}T00:00:00.000Z`)
-          .lte("created_at", `${today}T23:59:59.999Z`)
           .single(),
         supabase
           .from("matches")
@@ -308,6 +307,14 @@ export default function ProfileView() {
           .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
           .single(),
       ])
+
+        console.log("Profile Data:", profileData);
+        console.log("Photos Data:", photosData);
+        console.log("Like Data:", likeData);
+        console.log("Match Data:", matchData)
+        setHasLiked(!!likeData)
+        console.log("has Like Data:", hasLiked)
+        
 
       if (profileError) throw profileError
       if (photosError) throw photosError
@@ -319,6 +326,8 @@ export default function ProfileView() {
       setHasLiked(!!likeData)
       setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
+
+      console.log("Verifica se já curtiu ",hasLiked)
       // Only show match alert if it's a new match discovered during this load and not already shown
       if (matchData && !hasMatch && !matchAlertShown) showMatchAlert();
     } catch (error: any) {
@@ -463,6 +472,9 @@ export default function ProfileView() {
 
       
           <div className="flex justify-between mb-6">
+          
+          {hasLiked}
+
             {!hasLiked && !hasMatch && (
               <Button
                 onClick={handleLike}
@@ -513,15 +525,6 @@ export default function ProfileView() {
           {!profileData?.share_whatsapp && (
             <div className="text-center text-oraculo-muted">
               Este usuário não compartilhou o número de WhatsApp. 
-              Mas não se preocupe, você pode enviar uma mensagem por email.
-              <br/>
-              <div className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
-                  <rect width="20" height="16" x="2" y="4" rx="2"/>
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-                {user?.email}
-              </div>
             </div>
           )}
      
