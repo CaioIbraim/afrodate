@@ -148,15 +148,15 @@ export function SignupForm() {
               id="acceptTerms"
               checked={field.value}
               onCheckedChange={field.onChange}
-              className="data-[state=checked]:bg-oraculo-purple data-[state=checked]:border-oraculo-purple"
+              className="data-[state=checked]:bg-[#00FFD1] data-[state=checked]:border-[#00FFD1]"
             />
             <label htmlFor="acceptTerms" className="text-sm text-neutral-600 leading-tight">
               Eu concordo com os{" "}
-              <Link href="/terms" className="text-oraculo-purple hover:text-oraculo-cyan font-semibold">
+              <Link href="/terms" className="text-[#00FFD1] hover:text-oraculo-cyan font-semibold">
                 Termos de Uso
               </Link>{" "}
               e{" "}
-              <Link href="/privacy" className="text-oraculo-purple hover:text-oraculo-cyan font-semibold">
+              <Link href="/privacy" className="text-[#00FFD1] hover:text-oraculo-cyan font-semibold">
                 Política de Privacidade
               </Link>
             </label>
@@ -167,7 +167,7 @@ export function SignupForm() {
 
       <Button
         type="submit"
-        className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90"
+        className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90"
         disabled={isLoading}
       >
         {isLoading ? "Criando conta..." : "Criar conta"}

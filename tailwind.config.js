@@ -45,7 +45,7 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        'oraculo-purple': '#8B5CF6',
+        '[#00FFD1]': '#8B5CF6',
         'oraculo-cyan': '#06B6D4',
         'oraculo-pink': '#EC4899',
         'oraculo-dark': '#1F2937',

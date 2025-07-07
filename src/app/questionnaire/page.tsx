@@ -174,7 +174,7 @@ export default function QuestionnairePage() {
   if (userLoading) {
     return (
       <div className="app-container justify-center items-center">
-        <Hourglass className="text-oraculo-purple w-32 h-32 mx-auto animate-pulse" />
+        <Hourglass className="text-[#00FFD1] w-32 h-32 mx-auto animate-pulse" />
         <p className="text-xl text-oraculo-dark mt-8">Carregando informações do usuário...</p>
       </div>
     );
@@ -200,7 +200,7 @@ export default function QuestionnairePage() {
               para encontrar suas almas gêmeas.
             </p>
 
-            <Hourglass className="text-oraculo-purple w-32 h-32 mx-auto animate-pulse" />
+            <Hourglass className="text-[#00FFD1] w-32 h-32 mx-auto animate-pulse" />
           </motion.div>
         </div>
       </>
@@ -278,10 +278,10 @@ export default function QuestionnairePage() {
               <Button
                 key={option}
                 variant="outline"
-                className="w-full justify-start text-oraculo-dark hover:text-oraculo-purple hover:bg-oraculo-purple/10 h-auto py-4 px-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
+                className="w-full justify-start text-oraculo-dark hover:text-[#00FFD1] hover:bg-[#00FFD1]/10 h-auto py-4 px-4 rounded-xl transition-all duration-200 hover:scale-[1.02]"
                 onClick={() => handleAnswer(option)}
               >
-                <span className="mr-3 bg-oraculo-purple/10 w-8 h-8 rounded-full flex items-center justify-center text-oraculo-purple font-semibold">
+                <span className="mr-3 bg-[#00FFD1]/10 w-8 h-8 rounded-full flex items-center justify-center text-[#00FFD1] font-semibold">
                   {index + 1}
                 </span>
                 <span className="text-left">{option}</span>

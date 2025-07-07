@@ -63,8 +63,8 @@ const showAlert = async (type: "success" | "error" | "info", title: string, text
     text,
     customClass: {
       popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-      confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+      confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
     },
     willOpen: (popup) => {
       popup.setAttribute("aria-live", "assertive");
@@ -327,7 +327,7 @@ export default function MatchesPage() {
   if (userLoading || isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
         <p className="text-oraculo-muted mt-3 text-base font-medium">Carregando dados...</p>
       </div>
     );
@@ -384,12 +384,12 @@ export default function MatchesPage() {
                 {nearbyProfile.name}
               </h3>
               <div className="flex gap-2 mt-2 sm:mt-0">
-                <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs font-medium flex items-center px-2 py-1 rounded-full">
+                <Badge className="bg-[#00FFD1]/10 text-[#00FFD1] text-xs font-medium flex items-center px-2 py-1 rounded-full">
                   <MapPin className="h-3 w-3 mr-1" />
                   {nearbyProfile.distance?.toFixed(1)} km
                 </Badge>
                 {nearbyProfile.isMatch ? (
-                  <Badge className="bg-oraculo-purple text-white text-xs font-medium flex items-center px-2 py-1 rounded-full">
+                  <Badge className="bg-[#00FFD1] text-white text-xs font-medium flex items-center px-2 py-1 rounded-full">
                     <Sparkles className="h-3 w-3 mr-1" />
                     Match!
                   </Badge>
@@ -408,7 +408,7 @@ export default function MatchesPage() {
               >
                 <Button
                   variant="outline"
-                  className="w-full text-oraculo-purple border-oraculo-purple"
+                  className="w-full text-[#00FFD1] border-[#00FFD1]"
                 >
                   <User2Icon className="h-4 w-4 mr-2" />
                   Ver Perfil
@@ -451,7 +451,7 @@ export default function MatchesPage() {
           <Tab className={({ selected }) =>
             `px-4 py-2 rounded-lg font-semibold transition ${
               selected
-                ? "bg-oraculo-purple text-white"
+                ? "bg-[#00FFD1] text-white"
                 : "bg-gray-100 text-oraculo-dark hover:bg-gray-200"
             }`
           }>
@@ -469,7 +469,7 @@ export default function MatchesPage() {
           <Tab className={({ selected }) =>
             `px-4 py-2 rounded-lg font-semibold transition ${
               selected
-                ? "bg-oraculo-purple bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white"
+                ? "bg-[#00FFD1] bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white"
                 : "bg-gray-100 text-oraculo-dark hover:bg-gray-200"
             }`
           }>

@@ -133,7 +133,7 @@ export default function SubscriptionPage() {
             <button
               onClick={generatePixPayment}
               disabled={loadingPix}
-              className="px-4 py-2 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg"
+              className="px-4 py-2 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg"
             >
               {loadingPix ? "Gerando..." : "Gerar Pix"}
             </button>
@@ -198,13 +198,13 @@ export default function SubscriptionPage() {
                 key={plan.id}
                 className={`profile-card p-4 cursor-pointer transition-all ${
                   selectedPlan?.id === plan.id
-                    ? "border-2 border-oraculo-purple"
-                    : "hover:border-oraculo-purple/50"
+                    ? "border-2 border-[#00FFD1]"
+                    : "hover:border-[#00FFD1]/50"
                 } ${plan?.popular ? "relative overflow-visible" : ""}`}
                 onClick={() => handleSelectPlan(plan)}
               >
                 {plan?.popular && (
-                  <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white text-xs py-1 px-3 rounded-full">
+                  <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white text-xs py-1 px-3 rounded-full">
                     Mais Popular
                   </div>
                 )}
@@ -214,7 +214,7 @@ export default function SubscriptionPage() {
                       {plan.tier === "VIP" ? (
                         <Crown className="h-5 w-5 text-amber-500 mr-1" />
                       ) : plan.tier === "PREMIUM" ? (
-                        <Star className="h-5 w-5 text-oraculo-purple mr-1" />
+                        <Star className="h-5 w-5 text-[#00FFD1] mr-1" />
                       ) : null}
                       {plan.name}
                     </h3>
@@ -250,12 +250,12 @@ export default function SubscriptionPage() {
                 <div
                   className={`w-6 h-6 rounded-full border-2 mt-3 flex items-center justify-center ${
                     selectedPlan?.id === plan.id
-                      ? "border-oraculo-purple bg-oraculo-purple/10"
+                      ? "border-[#00FFD1] bg-[#00FFD1]/10"
                       : "border-oraculo-muted"
                   }`}
                 >
                   {selectedPlan?.id === plan.id && (
-                    <div className="w-3 h-3 rounded-full bg-oraculo-purple" />
+                    <div className="w-3 h-3 rounded-full bg-[#00FFD1]" />
                   )}
                 </div>
               </div>

@@ -44,17 +44,17 @@ export default function GenderPreferencePage() {
         <div className="space-y-4">
           <div
             className={`profile-card p-4 cursor-pointer transition-all ${
-              genderPreference === "HOMEM" ? "border-2 border-oraculo-purple" : "hover:border-oraculo-purple/50"
+              genderPreference === "HOMEM" ? "border-2 border-[#00FFD1]" : "hover:border-[#00FFD1]/50"
             }`}
             onClick={() => setGenderPreference("HOMEM")}
           >
             <div className="flex items-center">
               <div
                 className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
-                  genderPreference === "HOMEM" ? "border-oraculo-purple bg-oraculo-purple/10" : "border-oraculo-muted"
+                  genderPreference === "HOMEM" ? "border-[#00FFD1] bg-[#00FFD1]/10" : "border-oraculo-muted"
                 }`}
               >
-                {genderPreference === "HOMEM" && <div className="w-3 h-3 rounded-full bg-oraculo-purple" />}
+                {genderPreference === "HOMEM" && <div className="w-3 h-3 rounded-full bg-[#00FFD1]" />}
               </div>
               <h4 className="text-oraculo-dark text-lg">Homens</h4>
             </div>
@@ -62,17 +62,17 @@ export default function GenderPreferencePage() {
 
           <div
             className={`profile-card p-4 cursor-pointer transition-all ${
-              genderPreference === "MULHER" ? "border-2 border-oraculo-purple" : "hover:border-oraculo-purple/50"
+              genderPreference === "MULHER" ? "border-2 border-[#00FFD1]" : "hover:border-[#00FFD1]/50"
             }`}
             onClick={() => setGenderPreference("MULHER")}
           >
             <div className="flex items-center">
               <div
                 className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
-                  genderPreference === "MULHER" ? "border-oraculo-purple bg-oraculo-purple/10" : "border-oraculo-muted"
+                  genderPreference === "MULHER" ? "border-[#00FFD1] bg-[#00FFD1]/10" : "border-oraculo-muted"
                 }`}
               >
-                {genderPreference === "MULHER" && <div className="w-3 h-3 rounded-full bg-oraculo-purple" />}
+                {genderPreference === "MULHER" && <div className="w-3 h-3 rounded-full bg-[#00FFD1]" />}
               </div>
               <h4 className="text-oraculo-dark text-lg">Mulheres</h4>
             </div>
@@ -80,17 +80,17 @@ export default function GenderPreferencePage() {
 
           <div
             className={`profile-card p-4 cursor-pointer transition-all ${
-              genderPreference === "TODOS" ? "border-2 border-oraculo-purple" : "hover:border-oraculo-purple/50"
+              genderPreference === "TODOS" ? "border-2 border-[#00FFD1]" : "hover:border-[#00FFD1]/50"
             }`}
             onClick={() => setGenderPreference("TODOS")}
           >
             <div className="flex items-center">
               <div
                 className={`w-6 h-6 rounded-full border-2 mr-3 flex items-center justify-center ${
-                  genderPreference === "TODOS" ? "border-oraculo-purple bg-oraculo-purple/10" : "border-oraculo-muted"
+                  genderPreference === "TODOS" ? "border-[#00FFD1] bg-[#00FFD1]/10" : "border-oraculo-muted"
                 }`}
               >
-                {genderPreference === "TODOS" && <div className="w-3 h-3 rounded-full bg-oraculo-purple" />}
+                {genderPreference === "TODOS" && <div className="w-3 h-3 rounded-full bg-[#00FFD1]" />}
               </div>
               <h4 className="text-oraculo-dark text-lg">Todos</h4>
             </div>

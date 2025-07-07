@@ -133,7 +133,7 @@ const CreatePushSubscription = () => {
       <ToastContainer />
       <Card className="max-w-md w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-transparent bg-clip-text">
+          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-transparent bg-clip-text">
             Criar Subscrição Push
           </CardTitle>
         </CardHeader>
@@ -141,7 +141,7 @@ const CreatePushSubscription = () => {
           <Button
             onClick={generatePushSubscription}
             disabled={isSubscribing || isSubscribed}
-            className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 rounded-full"
+            className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 rounded-full"
             aria-label="Criar subscrição push"
           >
             {isSubscribing ? (
@@ -166,7 +166,7 @@ const CreatePushSubscription = () => {
           </Button>
           {subscription && (
             <div className="mt-4">
-              <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan">
+              <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
                 Subscrição JSONB
               </h3>
               <pre className="p-3 bg-gray-50 border rounded-md text-sm overflow-auto">

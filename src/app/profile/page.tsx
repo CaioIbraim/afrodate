@@ -198,7 +198,7 @@ const LocationCapture = ({
           customClass: {
             popup: "border-2 border-transparent bg-white rounded-xl",
             title:
-              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
           },
         })
       },
@@ -240,8 +240,8 @@ const LocationCapture = ({
           customClass: {
             popup: "border-2 border-transparent bg-white rounded-xl",
             title:
-              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-            confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+              "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+            confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
           },
         })
       },
@@ -258,8 +258,8 @@ const LocationCapture = ({
         text: "Seu dispositivo não suporta geolocalização",
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
         },
       })
       return
@@ -285,8 +285,8 @@ const LocationCapture = ({
       cancelButtonText: "Agora Não",
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
         cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
       },
     })
@@ -307,7 +307,7 @@ const LocationCapture = ({
       cancelButtonText: "Cancelar",
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
         confirmButton: "bg-red-500 text-white px-4 py-2 rounded shadow",
         cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
       },
@@ -726,7 +726,7 @@ const ProfileInfo = ({
         <Button
           onClick={handleUpdateProfile}
           disabled={saving || uploading || Object.keys(errors).length > 0}
-          className="w-full mt-4 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+          className="w-full mt-4 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1]"
           aria-label={isNewProfile ? "Criar perfil" : "Salvar informações"}
         >
           {saving ? (
@@ -815,7 +815,7 @@ const ProfilePhotos = ({
               <img
                 src={photo.publicUrl || "/placeholder.svg"}
                 alt={`Foto ${index + 1}`}
-                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-[#00FFD1]" : ""}`}
                 loading="lazy"
                 onError={(e) => {
                   e.currentTarget.src = "/placeholder-image.png"
@@ -844,7 +844,7 @@ const ProfilePhotos = ({
                 </Button>
               </div>
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-oraculo-purple text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-[#00FFD1] text-white text-xs px-2 py-1 rounded">
                   Principal
                 </div>
               )}
@@ -993,7 +993,7 @@ const ProfilePreferences = ({
         <Button
           onClick={handleUpdateProfile}
           disabled={saving || uploading}
-          className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+          className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1]"
           aria-label="Salvar preferências"
         >
           {saving ? (
@@ -1048,8 +1048,8 @@ export default function ProfilePage() {
       text,
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
       },
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive")
@@ -1195,8 +1195,8 @@ export default function ProfilePage() {
       cancelButtonText: "Cancelar",
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
         cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
       },
       willOpen: (popup) => {
@@ -1835,7 +1835,7 @@ export default function ProfilePage() {
         transition={{ duration: 0.3 }}
         className="max-w-md mx-auto w-full"
       >
-        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-center mb-6">
+        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-center mb-6">
           Meu Perfil
         </h2>
 
@@ -1852,7 +1852,7 @@ export default function ProfilePage() {
             </p>
             <Button
               onClick={handleRedirectToQuestionnaire}
-              className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+              className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1]"
               aria-label="Ir para o questionário"
             >
               Ir para o Questionário

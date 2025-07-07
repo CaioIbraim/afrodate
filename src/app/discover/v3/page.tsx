@@ -66,8 +66,8 @@ const showAlert = async (type: "success" | "error" | "info", title: string, text
     text,
     customClass: {
       popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-      confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+      confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
     },
     willOpen: (popup) => {
       popup.setAttribute("aria-live", "assertive");
@@ -140,8 +140,8 @@ export default function ProximityPage() {
         cancelButtonText: "Cancelar",
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
           cancelButton: "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300",
         },
       });
@@ -387,7 +387,7 @@ export default function ProximityPage() {
   if (userLoading || isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
         <p className="text-oraculo-muted mt-3 text-base font-medium">Carregando perfis...</p>
       </div>
     );
@@ -406,7 +406,7 @@ export default function ProximityPage() {
       <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
 
       <div className="w-full max-w-md mx-auto">
-        <h2 className="text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan mb-8 text-center font-bold">
+        <h2 className="text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-8 text-center font-bold">
           Pessoas Próximas
         </h2>
 
@@ -424,7 +424,7 @@ export default function ProximityPage() {
                   <div className="flex flex-row items-start gap-4 w-full relative">
                     {/* Avatar */}
                     <div
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 transition-transform hover:scale-105 focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 transition-transform hover:scale-105 focus:ring-2 focus:ring-[#00FFD1] focus:outline-none"
                       tabIndex={0}
                       aria-label={`Foto de perfil de ${nearbyProfile.name}`}
                     >
@@ -470,7 +470,7 @@ export default function ProximityPage() {
                           >
                             {nearbyProfile.name}
                             <Badge
-                              className="bg-oraculo-purple/10 text-oraculo-purple text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px] ml-2"
+                              className="bg-[#00FFD1]/10 text-[#00FFD1] text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px] ml-2"
                               tabIndex={0}
                             >
                               {calculateAge(nearbyProfile.birth_date)} anos
@@ -478,7 +478,7 @@ export default function ProximityPage() {
                           </h3>
 
                           <Badge
-                            className="absolute top-0 right-0 bg-oraculo-purple/10 text-oraculo-purple text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                            className="absolute top-0 right-0 bg-[#00FFD1]/10 text-[#00FFD1] text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
                             tabIndex={-1}
                           >
                             <MapPin className="h-3 w-3 mr-1" />
@@ -490,7 +490,7 @@ export default function ProximityPage() {
                         <div className="flex gap-1">
                           {nearbyProfile.isMatch ? (
                             <Badge
-                              className="bg-oraculo-purple text-white text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                              className="bg-[#00FFD1] text-white text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
                               tabIndex={-1}
                             >
                               <Sparkles className="h-3 w-3 mr-1" />
@@ -509,7 +509,7 @@ export default function ProximityPage() {
                         >
                           <Button
                             variant="outline"
-                            className="w-full text-oraculo-purple border-oraculo-purple hover:bg-oraculo-purple/10 rounded-lg py-5 text-xs sm:text-sm font-medium"
+                            className="w-full text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg py-5 text-xs sm:text-sm font-medium"
                             aria-label={`Ver perfil de ${nearbyProfile.name}`}
                           >
                             <User2Icon className="h-4 w-4 mr-1 sm:mr-2" />
@@ -518,7 +518,7 @@ export default function ProximityPage() {
                         </Link>
                         {!nearbyProfile.isMatch ? (
                           <Button
-                            className="flex-1 w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
                             onClick={() => handleLike(nearbyProfile.id)}
                             aria-label={`Curtir ${nearbyProfile.name}`}
                           >
@@ -527,7 +527,7 @@ export default function ProximityPage() {
                           </Button>
                         ) : nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? (
                           <Button
-                            className="flex-1 w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
                             onClick={() => handleWhatsAppClick(nearbyProfile.id, nearbyProfile.name, nearbyProfile.whatsapp_number!, nearbyProfile.isMatch)}
                             aria-label={`Enviar mensagem no WhatsApp para ${nearbyProfile.name}${!isPremiumUser ? " (requer conta premium)" : ""}`}
                           >
@@ -566,7 +566,7 @@ export default function ProximityPage() {
               Não encontramos pessoas próximas no momento. Tente aumentar a distância ou ajustar suas preferências.
             </p>
             <Link href="/profile">
-              <Button className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90">
+              <Button className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90">
                 Ajustar Preferências
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

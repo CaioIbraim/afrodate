@@ -11,7 +11,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Linha roxa no topo */}
-      <div className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan h-2" />
+      <div className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] h-2" />
 
       <div className="flex-1 flex flex-col md:flex-row">
         {/* Lado esquerdo com vídeo */}
@@ -19,13 +19,13 @@ export default function SignupPage() {
           <div className={styles.videoDocker}>
             <video
               className={styles.video}
-              src="https://videos.pexels.com/video-files/8079132/8079132-uhd_2732_1440_25fps.mp4"
+              src="/video/video.mp4"
               autoPlay
               muted
               loop
             ></video>
           </div>
-          <div className="absolute inset-0 bg-gradient-to-br from-oraculo-purple/90 via-oraculo-purple/80 to-oraculo-cyan/90" />
+          <div className="absolute inset-0 bg-gradient-to-br from-oraculo-cyan/80 from-oraculo-cyan/70  to-[#00FFD1]/80" />
 
           <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
             <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mb-8" />
@@ -43,7 +43,7 @@ export default function SignupPage() {
               <Image alt="Logo" src="/logo.png" height={150} width={150} className="mb-8" />
             </div>
 
-            <h2 className="text-oraculo-purple hover:text-oraculo-cyan text-2xl font-bold mb-6 text-center">
+            <h2 className="text-[#00FFD1] hover:text-oraculo-cyan text-2xl font-bold mb-6 text-center">
               Criar uma conta
             </h2>
 
@@ -64,7 +64,7 @@ export default function SignupPage() {
 
             <p className="mt-8 text-center text-neutral-600">
               Já tem uma conta?{" "}
-              <a href="/login" className="text-oraculo-purple hover:text-oraculo-cyan font-semibold">
+              <a href="/login" className="text-[#00FFD1] hover:text-oraculo-cyan font-semibold">
                 Entrar
               </a>
             </p>

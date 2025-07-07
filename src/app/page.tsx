@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header with gradient */}
-      <div className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan h-2" />
+      <div className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] h-2" />
 
       <div className="flex-1 flex flex-col">
         {/* Seção Hero */}
@@ -23,9 +23,9 @@ export default function Home() {
 
              <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mx-auto mb-8" />
             
-            <h1 className="text-4xl font-black tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan animate-gradient">Conheça o Oráculo!</h1>
+            <h1 className="text-4xl font-black tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] animate-gradient">Conheça o Oráculo!</h1>
             <h3 className="font-light text-3xl mt-6">
-              Um lugar pra se conectar com sua alma gêmea e celebrar suas raízes
+              Um lugar pra se conectar com sua alma gêmea
             </h3>
 
 

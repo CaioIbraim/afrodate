@@ -105,7 +105,7 @@ export default function InterestsPage() {
           {selectedInterests.map((interest) => (
             <Badge
               key={interest}
-              className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan hover:from-oraculo-purple hover:to-oraculo-cyan text-white"
+              className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] hover:from-[#00FFD1] hover:to-oraculo-cyan text-white"
               onClick={() => handleToggleInterest(interest)}
             >
               {interest}
@@ -124,8 +124,8 @@ export default function InterestsPage() {
                     variant={selectedInterests.includes(option) ? "default" : "outline"}
                     className={
                       selectedInterests.includes(option)
-                        ? "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white cursor-pointer"
-                        : "border-oraculo-purple/50 text-oraculo-purple hover:bg-oraculo-purple/20 cursor-pointer"
+                        ? "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white cursor-pointer"
+                        : "border-[#00FFD1]/50 text-[#00FFD1] hover:bg-[#00FFD1]/20 cursor-pointer"
                     }
                     onClick={() => handleToggleInterest(option)}
                   >

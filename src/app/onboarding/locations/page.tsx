@@ -71,7 +71,7 @@ export default function LocationsPage() {
                 const locationData = popularLocations.find((l) => l.value === location)
                 return (
                   <li key={location} className="text-oraculo-muted flex items-center">
-                    <span className="w-2 h-2 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan rounded-full mr-2"></span>
+                    <span className="w-2 h-2 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] rounded-full mr-2"></span>
                     {locationData?.label}
                   </li>
                 )

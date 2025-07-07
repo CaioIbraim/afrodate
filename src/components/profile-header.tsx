@@ -118,7 +118,7 @@ export function ProfileHeader({
               {isProfileComplete && (
                 <>
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                     onClick={navigateToLikes}
                   >
                     <Heart className="h-4 w-4 mr-2" />
@@ -126,7 +126,7 @@ export function ProfileHeader({
                   </button>
                  
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                     onClick={navigateToDiscover}
                   >
                     <Search className="h-4 w-4 mr-2" />
@@ -139,7 +139,7 @@ export function ProfileHeader({
               {hasPremiumSubscription && (
                 <>
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                     onClick={onVoiceCall}
                   >
                     <Phone className="h-4 w-4 mr-2" />
@@ -147,7 +147,7 @@ export function ProfileHeader({
                   </button>
                   
                   <button
-                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                    className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                     onClick={onVideoCall}
                   >
                     <Video className="h-4 w-4 mr-2" />
@@ -157,7 +157,7 @@ export function ProfileHeader({
               )}
               
               <button
-                className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                 onClick={navigateToProfile}
               >
                 <User className="h-4 w-4 mr-2" />
@@ -165,7 +165,7 @@ export function ProfileHeader({
               </button>
 
               <button
-                      className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center text-yellow-600 hover:bg-yellow-50"
+                      className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center text-yellow-600 hover:bg-yellow-50"
                       onClick={() => router.push("/subscription")} // Link para a página de subscriptions
                     >
                   <Star className="h-4 w-4 mr-2" />    
@@ -178,7 +178,7 @@ export function ProfileHeader({
               </button> */}
               
               <button 
-                className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-oraculo-purple/10 flex items-center"
+                className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#00FFD1]/10 flex items-center"
                 onClick={navigateToLogout}
                 disabled={isLoggingOut}
               >

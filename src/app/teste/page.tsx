@@ -62,7 +62,7 @@ const NotificationCenter = () => {
 
   return (
     <div className="mt-6 space-y-3" aria-live="polite">
-      <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan">
+      <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
         Notificações Recebidas
       </h3>
       {notifications.length === 0 ? (
@@ -207,7 +207,7 @@ const TestPushNotifications = () => {
       <ToastContainer />
       <Card className="max-w-md w-full">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-transparent bg-clip-text">
+          <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-transparent bg-clip-text">
             Testar Notificações Push
           </CardTitle>
         </CardHeader>
@@ -215,7 +215,7 @@ const TestPushNotifications = () => {
           <Button
             onClick={registerPushSubscription}
             disabled={loading || isSubscribed}
-            className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 rounded-full"
+            className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 rounded-full"
             aria-label="Ativar notificações push"
           >
             {loading ? (
@@ -238,7 +238,7 @@ const TestPushNotifications = () => {
           <Button
             onClick={sendTestNotification}
             disabled={sending || !isSubscribed}
-            className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 rounded-full"
+            className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 rounded-full"
             aria-label="Enviar notificação de teste"
           >
             {sending ? (

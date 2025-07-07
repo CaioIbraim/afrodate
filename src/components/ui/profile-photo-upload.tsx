@@ -89,7 +89,7 @@ export function ProfilePhotoUpload({
   return (
     <div className={cn("flex flex-col items-center", className)}>
       <div className={cn(
-        "relative rounded-full overflow-hidden border-2 border-oraculo-purple/50 flex items-center justify-center bg-white",
+        "relative rounded-full overflow-hidden border-2 border-[#00FFD1]/50 flex items-center justify-center bg-white",
         sizes[size]
       )}>
         {preview ? (
@@ -111,11 +111,11 @@ export function ProfilePhotoUpload({
             </Button>
           </>
         ) : (
-          <UserCircle className={cn("text-oraculo-purple/70", sizes[size])} />
+          <UserCircle className={cn("text-[#00FFD1]/70", sizes[size])} />
         )}
 
         <label className={cn(
-          "absolute bottom-0 right-0 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan",
+          "absolute bottom-0 right-0 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]",
           "text-white rounded-full p-1.5 cursor-pointer",
           isUploading && "opacity-50 cursor-not-allowed"
         )}>

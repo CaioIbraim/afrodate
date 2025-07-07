@@ -33,8 +33,8 @@ import { FaWhatsapp } from "react-icons/fa"
 const MySwal = withReactContent(Swal)
 const SWAL_CONFIG = {
   popup: "border-2 border-transparent bg-white rounded-xl",
-  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-  confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+  confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-4 py-2 rounded shadow",
 }
 const ROUTES = {
   LOGIN: "/login",
@@ -175,7 +175,7 @@ const ProfileInfo = ({
                 {profileData.interests.map((interest, index) => (
                   <span
                     key={index}
-                    className="bg-oraculo-purple/10 text-oraculo-purple text-xs px-2 py-1 rounded"
+                    className="bg-[#00FFD1]/10 text-[#00FFD1] text-xs px-2 py-1 rounded"
                   >
                     {interest}
                   </span>
@@ -209,12 +209,12 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
               <img
                 src={photo.publicUrl}
                 alt={`Foto ${index + 1}`}
-                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-[#00FFD1]" : ""}`}
                 loading="lazy"
                 onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
               />
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-oraculo-purple text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-[#00FFD1] text-white text-xs px-2 py-1 rounded">
                   Principal
                 </div>
               )}
@@ -449,7 +449,7 @@ export default function ProfileView() {
   if (isLoading || userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" aria-hidden="true" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" aria-hidden="true" />
         <span className="sr-only">Carregando perfil...</span>
       </div>
     )
@@ -489,7 +489,7 @@ export default function ProfileView() {
             
           </div>
           {hasMatch && (
-            <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center justify-center mb-6">
+            <Badge className="bg-[#00FFD1]/10 text-[#00FFD1] text-xs flex items-center justify-center mb-6">
               <Sparkles className="h-3 w-3 mr-1" />
               Match!
             </Badge>
