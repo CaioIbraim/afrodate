@@ -28,24 +28,26 @@ export default function Home() {
               Um lugar pra se conectar com sua alma gêmea e celebrar suas raízes
             </h3>
 
-            <div className="rounded-md shadow mt-6 px-6">
-              <a
-                href="/signup"
-                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-oraculo-purple to-oraculo-cyan hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300"
-              >
-                Cadastre-se agora e esteja mais próximo a quem você ama
-              </a>
-            </div>
-
 
             <div className="rounded-md shadow mt-6  px-6">
               <a
                 href="/login"
-                className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-oraculo-purple to-oraculo-cyan hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300"
+                className="w-full flex items-center justify-center px-8 py-3 text-base font-medium rounded-md text-white border-2 bg-transparent hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300 border-gradient"
               >
-                Entrar agora 
+                Entrar
               </a>
             </div>
+
+
+            <div className="rounded-md shadow mt-6 px-6">
+              <a
+                href="/signup"
+                className="w-full flex items-center justify-center px-8 py-3 text-base font-medium rounded-lg text-white border-2 bg-transparent hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300 border-gradient"
+              >
+                Cadastre-se
+              </a>
+            </div>
+
 
             
           </div>

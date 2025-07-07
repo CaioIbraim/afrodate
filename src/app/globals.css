@@ -124,3 +124,8 @@
   }
 }
 
+.border-gradient {
+  border-image-source: linear-gradient(to right, #667EEA, #764BA2); /* Substitua pelas suas cores */
+  border-image-slice: 1;
+  border-radius: 0.5rem; /* Ajuste conforme o tamanho do arredondamento */
+}
