@@ -11,6 +11,7 @@ import type { SubscriptionPlan } from "@/lib/types"
 import { useToast } from "@/components/ui/use-toast"
 import { ProfileHeader } from "@/components/profile-header"
 import { useUser } from "@/hooks/use-user"
+import PixPayment from '@/components/PixPayment';
 
 export default function SubscriptionPage() {
   const router = useRouter()
@@ -74,48 +75,16 @@ export default function SubscriptionPage() {
             Plano selecionado: <span className="font-semibold">{selectedPlan?.name}</span>
           </p>
 
+
+
+
           <div className="profile-card p-6 mb-6">
             <h3 className="text-xl font-semibold text-oraculo-dark mb-4">Informações de Pagamento</h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-oraculo-muted">Número do Cartão</label>
-                <input
-                  type="text"
-                  placeholder="0000 0000 0000 0000"
-                  className="w-full p-3 rounded-lg border border-[#00FFD1]/30 focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1]/30 outline-none"
-                />
-              </div>
-
-              <div className="flex gap-4">
-                <div className="space-y-2 flex-1">
-                  <label className="text-sm text-oraculo-muted">Validade</label>
-                  <input
-                    type="text"
-                    placeholder="MM/AA"
-                    className="w-full p-3 rounded-lg border border-[#00FFD1]/30 focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1]/30 outline-none"
-                  />
-                </div>
-
-                <div className="space-y-2 flex-1">
-                  <label className="text-sm text-oraculo-muted">CVV</label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    className="w-full p-3 rounded-lg border border-[#00FFD1]/30 focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1]/30 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-oraculo-muted">Nome no Cartão</label>
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  className="w-full p-3 rounded-lg border border-[#00FFD1]/30 focus:border-[#00FFD1] focus:ring-1 focus:ring-[#00FFD1]/30 outline-none"
-                />
-              </div>
-            </div>
+            <PixPayment />
           </div>
+
+
+
 
           <div className="profile-card p-4 mb-6">
             <div className="flex justify-between items-center">

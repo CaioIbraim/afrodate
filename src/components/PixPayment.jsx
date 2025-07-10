@@ -137,6 +137,9 @@ export default function PixPayment() {
         {loading ? 'Gerando cobrança...' : 'Pagar R$29,90'}
       </button>
 
+
+     
+
       {showPix && (
         <>
           <p className="mt-6 mb-2 font-medium">Escaneie ou copie a chave para pagar:</p>
