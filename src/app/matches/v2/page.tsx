@@ -7,7 +7,7 @@ import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, User2Icon, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { Loader2, Heart, User2Icon, MapPin, MessageCircle, Sparkles, Coins } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -19,7 +19,7 @@ const MySwal = withReactContent(Swal);
 
 interface Profile {
   id: string;
-  name: string;
+  username: string;
   avatar_url: string | null;
   gender: string | null;
   latitude: number | null;
@@ -90,6 +90,8 @@ export default function MatchesPage() {
   const [whoILiked, setWhoILiked] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [coinBalance, setCoinBalance] = useState<number | null>(null);
+
   const [preferences, setPreferences] = useState<UserPreferences>({
     genderPreference: "TODOS",
     minAge: 18,
@@ -109,6 +111,57 @@ export default function MatchesPage() {
     }
     return age >= 18 ? age : null;
   }, []);
+
+  const fetchCoinBalance = useCallback(async () => {
+    if (!profile) return;
+    try {
+      const { data, error } = await supabase
+        .from("coins")
+        .select("balance")
+        .eq("id", profile.id)
+        .single();
+      if (error && error.code !== "PGRST116") throw error;
+      const balance = data?.balance || 0;
+      setCoinBalance(balance);
+      if (balance === 0) {
+        await showAlert(
+          "info",
+          "Sem Moedas",
+          "Você não possui moedas. Compre moedas para continuar usando os recursos premium."
+        );
+        router.push("/buy-coins");
+      }
+    } catch (error) {
+      console.error("Error fetching coin balance:", error);
+      setCoinBalance(0);
+      await showAlert(
+        "info",
+        "Sem Moedas",
+        "Você não possui moedas. Compre moedas para continuar usando os recursos premium."
+      );
+      router.push("/buy-coins");
+    }
+  }, [profile, router]);
+
+  const handleBoostProfile = async () => {
+    if (!profile) return;
+    try {
+      const { data, error } = await supabase.rpc("spend_coins", {
+        p_user_id: profile.id,
+        p_amount: 10,
+        p_reason: "Profile boost",
+      });
+      if (error) throw error;
+      if (!data) {
+        await showAlert("error", "Saldo Insuficiente", "Você não tem moedas suficientes para impulsionar seu perfil.");
+        return;
+      }
+      await showAlert("success", "Perfil Impulsionado!", "Seu perfil agora aparece com prioridade por 24 horas!");
+      await fetchCoinBalance();
+    } catch (error) {
+      await showAlert("error", "Ooops!", "Não foi possível impulsionar o perfil. Tente novamente.");
+    }
+  };
 
   const fetchLikeAndMatchData = useCallback(async () => {
     if (!user || !profile || userLoading || !profile.latitude || !profile.longitude) {
@@ -130,7 +183,7 @@ export default function MatchesPage() {
     setIsLoading(true);
     try {
       const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
+        .from("perfis")
         .select("gender_preference, min_age, max_age, max_distance")
         .eq("id", profile.id)
         .single();
@@ -182,8 +235,8 @@ export default function MatchesPage() {
       ]);
 
       let query = supabase
-        .from("profiles")
-        .select("id, name, avatar_url, gender, latitude, longitude, birth_date")
+        .from("perfis")
+        .select("id, username, avatar_url, gender, latitude, longitude, birth_date")
         .in("id", [...profileIdsToFetch])
         .not("latitude", "is", null)
         .not("longitude", "is", null);
@@ -227,6 +280,7 @@ export default function MatchesPage() {
 
           const profileEntry: Profile = {
             ...p,
+            username: p.username || "Usuário",
             distance,
             isLiked: isLikedByMe,
             isMatch,
@@ -280,6 +334,13 @@ export default function MatchesPage() {
 
       if (likeError) throw likeError;
 
+      // Award 5 coins for liking a profile
+      await supabase.rpc("add_coins", {
+        p_user_id: profile.id,
+        p_amount: 5,
+        p_reason: "Liked a profile",
+      });
+
       const { data: mutualLike, error: mutualLikeError } = await supabase
         .from("likes")
         .select("id")
@@ -295,11 +356,20 @@ export default function MatchesPage() {
           profile2_id: profile.id < targetProfileId ? targetProfileId : profile.id,
         });
         if (matchError) throw matchError;
+
+        // Award 20 coins for a match
+        await supabase.rpc("add_coins", {
+          p_user_id: profile.id,
+          p_amount: 20,
+          p_reason: "Achieved a match",
+        });
+
         await showAlert("success", "Match!", "Parabéns! Você deu match com este perfil!");
       } else {
         await showAlert("success", "Sucesso", "Você curtiu este perfil!");
       }
       await fetchLikeAndMatchData();
+      await fetchCoinBalance();
     } catch (error: any) {
       await showAlert(
         "error",
@@ -316,8 +386,11 @@ export default function MatchesPage() {
   };
 
   useEffect(() => {
-    fetchLikeAndMatchData();
-  }, [fetchLikeAndMatchData]);
+    if (user && profile && !userLoading) {
+      fetchLikeAndMatchData();
+      fetchCoinBalance();
+    }
+  }, [user, profile, userLoading, fetchLikeAndMatchData, fetchCoinBalance]);
 
   if (userLoading || isLoading) {
     return (
@@ -349,7 +422,7 @@ export default function MatchesPage() {
           {nearbyProfile.avatar_url ? (
             <Image
               src={nearbyProfile.avatar_url}
-              alt={`Foto de ${nearbyProfile.name}`}
+              alt={`Foto de ${nearbyProfile.username}`}
               width={150}
               height={150}
               className="object-cover w-full h-full"
@@ -364,7 +437,7 @@ export default function MatchesPage() {
                     : "/images/female-profile.png"
                   : "/images/male-profile-1.png"
               }
-              alt={`Foto de ${nearbyProfile.name}`}
+              alt={`Foto de ${nearbyProfile.username}`}
               width={150}
               height={150}
               className="object-cover w-full h-full"
@@ -374,7 +447,7 @@ export default function MatchesPage() {
         </div>
         <div className="flex-1">
           <h3 className="text-xl font-semibold text-gray-800 mb-3 truncate">
-            {nearbyProfile.name}
+            {nearbyProfile.username}
           </h3>
           <div className="flex flex-wrap gap-2 mb-4">
             <Badge className="bg-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1 rounded-full flex items-center">
@@ -392,7 +465,7 @@ export default function MatchesPage() {
               </Badge>
             ) : null}
           </div>
-          <div className="flex gap-3 w-full">
+          <div className="flex gap-3">
             <Link
               href={`/profile/${nearbyProfile.id}`}
               className="flex-1"
@@ -400,7 +473,7 @@ export default function MatchesPage() {
             >
               <Button
                 variant="outline"
-                className="w-full border-cyan-500 text-cyan-500 rounded-lg"
+                className="w-full border-cyan-500 text-cyan-500 hover:bg-cyan-50 transition-colors rounded-lg"
               >
                 <User2Icon className="h-4 w-4 mr-2" />
                 Ver Perfil
@@ -421,7 +494,7 @@ export default function MatchesPage() {
               </Link>
             ) : tab === "Quem me curtiu" ? (
               <Button
-                className="w-1/2 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
+                className="w-full bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
                 onClick={() => handleLike(nearbyProfile.id)}
               >
                 <Heart className="h-4 w-4 mr-2" />
@@ -436,8 +509,25 @@ export default function MatchesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200">
-      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
+      <ProfileHeader name={profile!.username} avatarUrl={profile!.avatar_url} />
       <div className="max-w-4xl mx-auto w-full py-10 px-4 sm:px-6">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Matches</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Coins className="h-6 w-6 text-yellow-500" />
+              <span className="text-lg font-semibold text-gray-800">
+                {coinBalance !== null ? `${coinBalance} Moedas` : "Carregando..."}
+              </span>
+            </div>
+            <Button
+              className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:opacity-90 transition-opacity rounded-lg"
+              onClick={handleBoostProfile}
+            >
+              Impulsionar Perfil (10 Moedas)
+            </Button>
+          </div>
+        </div>
         <TabGroup>
           <TabList className="flex gap-4 mb-8 bg-white p-2 rounded-xl shadow-sm">
             <Tab className={({ selected }) =>
