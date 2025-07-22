@@ -52,7 +52,7 @@ export function useSupabaseAuth() {
       // Integrate with existing auth service
       if (data.session) {
         await authService.login(email, password)
-        router.push('/discover')
+        router.push('/discover/v3')
       }
     } catch (err) {
       console.log("Sign-in error:", err)

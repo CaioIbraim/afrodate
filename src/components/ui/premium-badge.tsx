@@ -38,7 +38,7 @@ export function PremiumBadge({ type = "premium", size = "md", className }: Premi
   return (
     <div
       className={cn(
-        "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white font-semibold rounded-full flex items-center",
+        "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white font-semibold rounded-full flex items-center",
         sizes[size],
         className,
       )}

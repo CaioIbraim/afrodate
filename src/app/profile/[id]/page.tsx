@@ -33,8 +33,8 @@ import { FaWhatsapp } from "react-icons/fa"
 const MySwal = withReactContent(Swal)
 const SWAL_CONFIG = {
   popup: "border-2 border-transparent bg-white rounded-xl",
-  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-  confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+  confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
 }
 const ROUTES = {
   LOGIN: "/login",
@@ -63,6 +63,7 @@ type ProfileData = {
   longitude?: number | null
   whatsapp_number?: string         // Novo campo
   share_whatsapp?: boolean   
+  email?: string
 }
 // type Profile = { id: string; name: string; avatar_url: string | null; subscription: number } // This type is defined in use-user hook
 
@@ -174,7 +175,7 @@ const ProfileInfo = ({
                 {profileData.interests.map((interest, index) => (
                   <span
                     key={index}
-                    className="bg-oraculo-purple/10 text-oraculo-purple text-xs px-2 py-1 rounded"
+                    className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs px-2 py-1 rounded"
                   >
                     {interest}
                   </span>
@@ -208,12 +209,12 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
               <img
                 src={photo.publicUrl}
                 alt={`Foto ${index + 1}`}
-                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-oraculo-purple" : ""}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-[#1E1E1E]" : ""}`}
                 loading="lazy"
                 onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
               />
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-oraculo-purple text-white text-xs px-2 py-1 rounded">
+                <div className="absolute top-2 left-2 bg-[#1E1E1E] text-white text-xs px-2 py-1 rounded">
                   Principal
                 </div>
               )}
@@ -298,8 +299,6 @@ export default function ProfileView() {
           .eq("profile_id", profile!.id)
           .eq("liked_profile_id", profileId)
           .eq("profile_id", profile!.id)
-          .gte("created_at", `${today}T00:00:00.000Z`)
-          .lte("created_at", `${today}T23:59:59.999Z`)
           .single(),
         supabase
           .from("matches")
@@ -308,6 +307,14 @@ export default function ProfileView() {
           .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
           .single(),
       ])
+
+        console.log("Profile Data:", profileData);
+        console.log("Photos Data:", photosData);
+        console.log("Like Data:", likeData);
+        console.log("Match Data:", matchData)
+        setHasLiked(!!likeData)
+        console.log("has Like Data:", hasLiked)
+        
 
       if (profileError) throw profileError
       if (photosError) throw photosError
@@ -319,6 +326,8 @@ export default function ProfileView() {
       setHasLiked(!!likeData)
       setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
+
+      console.log("Verifica se já curtiu ",hasLiked)
       // Only show match alert if it's a new match discovered during this load and not already shown
       if (matchData && !hasMatch && !matchAlertShown) showMatchAlert();
     } catch (error: any) {
@@ -440,7 +449,7 @@ export default function ProfileView() {
   if (isLoading || userLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" aria-hidden="true" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" aria-hidden="true" />
         <span className="sr-only">Carregando perfil...</span>
       </div>
     )
@@ -463,6 +472,9 @@ export default function ProfileView() {
 
       
           <div className="flex justify-between mb-6">
+          
+          {hasLiked}
+
             {!hasLiked && !hasMatch && (
               <Button
                 onClick={handleLike}
@@ -477,7 +489,7 @@ export default function ProfileView() {
             
           </div>
           {hasMatch && (
-            <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center justify-center mb-6">
+            <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center justify-center mb-6">
               <Sparkles className="h-3 w-3 mr-1" />
               Match!
             </Badge>
@@ -513,15 +525,6 @@ export default function ProfileView() {
           {!profileData?.share_whatsapp && (
             <div className="text-center text-oraculo-muted">
               Este usuário não compartilhou o número de WhatsApp. 
-              Mas não se preocupe, você pode enviar uma mensagem por email.
-              <br/>
-              <div className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
-                  <rect width="20" height="16" x="2" y="4" rx="2"/>
-                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-                </svg>
-                {user?.email}
-              </div>
             </div>
           )}
      

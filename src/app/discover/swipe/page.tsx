@@ -214,7 +214,7 @@ useEffect(() => {
           <Button
             variant="outline"
             size="icon"
-            className="h-16 w-16 rounded-full bg-white border-oraculo-purple text-oraculo-purple"
+            className="h-16 w-16 rounded-full bg-white border-[#1E1E1E] text-[#1E1E1E]"
             onClick={() => handleSwipe("right")}
             disabled={isLoading}
           >

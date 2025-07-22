@@ -111,10 +111,10 @@ export function GalleryPhotoUpload({
         <label className="
           aspect-square border-2 border-dashed rounded-lg
           flex items-center justify-center cursor-pointer
-          hover:border-oraculo-purple transition-colors
+          hover:border-[#1E1E1E] transition-colors
           disabled:opacity-50 disabled:cursor-not-allowed
         ">
-          <Plus className="h-8 w-8 text-oraculo-purple/70" />
+          <Plus className="h-8 w-8 text-[#1E1E1E]/70" />
           <input
             type="file"
             className="sr-only"

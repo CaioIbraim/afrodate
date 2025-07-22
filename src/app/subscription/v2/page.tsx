@@ -1,10 +1,8 @@
 "use client"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Check, Crown, Star } from "lucide-react"
-
 import { motion } from "framer-motion"
 import { subscriptionPlans } from "@/lib/match-utils"
 import type { SubscriptionPlan } from "@/lib/types"
@@ -12,12 +10,21 @@ import { useToast } from "@/components/ui/use-toast"
 import { ProfileHeader } from "@/components/profile-header"
 import { useUser } from "@/hooks/use-user"
 
+// Definindo a interface para os dados do Pix
+interface PixData {
+  payload: string
+  qrCodeUrl: string
+}
+
 export default function SubscriptionPage() {
   const router = useRouter()
   const { toast } = useToast()
+  const { user, profile, isLoading: userLoading } = useUser()
+
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
   const [paymentStep, setPaymentStep] = useState(false)
-  const { user, profile, isLoading: userLoading } = useUser()
+  const [pixData, setPixData] = useState<PixData | null>(null)
+  const [loadingPix, setLoadingPix] = useState(false)
 
   const handleBack = () => {
     if (paymentStep) {
@@ -40,22 +47,70 @@ export default function SubscriptionPage() {
       })
       return
     }
-
     setPaymentStep(true)
   }
 
-  const handleCompletePayment = () => {
-    toast({
-      title: "Assinatura ativada!",
-      description: `Você agora é um usuário ${selectedPlan?.tier === "VIP" ? "VIP" : "Premium"} do ORÁCULO.`,
-    })
+  const generatePixPayment = async () => {
+    if (!selectedPlan || !profile?.customerId) {
+      toast({
+        title: "Erro",
+        description: "Plano ou ID do cliente não encontrado.",
+        variant: "destructive",
+      })
+      return
+    }
 
+    setLoadingPix(true)
+    try {
+      const response = await fetch('/api/asaas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          valor: selectedPlan.price,
+          descricao: `${selectedPlan.name} - ${selectedPlan.interval}`,
+          customerId: profile.customerId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao gerar Pix')
+      }
+
+      // Verifique se os dados retornados têm as propriedades esperadas
+      if (!data.payload || !data.qrCodeUrl) {
+        throw new Error('Resposta da API incompleta: payload ou qrCodeUrl ausentes')
+      }
+
+      setPixData({ payload: data.payload, qrCodeUrl: data.qrCodeUrl })
+      toast({
+        title: "Pix gerado!",
+        description: "Você pode copiar ou escanear o código para pagar.",
+      })
+    } catch (err: any) {
+      toast({
+        title: "Erro",
+        description: err.message || "Erro desconhecido ao gerar Pix",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingPix(false)
+    }
+  }
+
+  const handleConfirmPayment = () => {
+    toast({
+      title: "Pagamento confirmado!",
+      description: "Seu plano foi ativado com sucesso.",
+    })
     setTimeout(() => {
       router.push("/profile")
     }, 1500)
   }
 
-  // Exibe estado de carregamento enquanto os dados do usuário não estão prontos
   if (userLoading || !profile) {
     return (
       <div className="app-container flex items-center justify-center h-screen">
@@ -67,77 +122,61 @@ export default function SubscriptionPage() {
   if (paymentStep) {
     return (
       <div className="app-container">
-        
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-          <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Finalizar Pagamento</h2>
+          <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Pagar com Pix</h2>
           <p className="text-oraculo-muted text-center mb-6">
             Plano selecionado: <span className="font-semibold">{selectedPlan?.name}</span>
           </p>
 
-          <div className="profile-card p-6 mb-6">
-            <h3 className="text-xl font-semibold text-oraculo-dark mb-4">Informações de Pagamento</h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm text-oraculo-muted">Número do Cartão</label>
-                <input
-                  type="text"
-                  placeholder="0000 0000 0000 0000"
-                  className="w-full p-3 rounded-lg border border-[#1E1E1E]/30 focus:border-[#1E1E1E] focus:ring-1 focus:ring-[#1E1E1E]/30 outline-none"
+          <div className="profile-card p-6 mb-6 text-center">
+            <p className="mb-4">Escaneie o QR Code abaixo para realizar o pagamento:</p>
+            <button
+              onClick={generatePixPayment}
+              disabled={loadingPix}
+              className="px-4 py-2 bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white rounded-lg"
+            >
+              {loadingPix ? "Gerando..." : "Gerar Pix"}
+            </button>
+
+            {pixData && (
+              <>
+                <img src={pixData.qrCodeUrl} alt="QR Code Pix" className="mx-auto my-4 max-w-xs" />
+                <textarea
+                  readOnly
+                  value={pixData.payload}
+                  className="w-full p-2 border border-gray-300 rounded mt-2 text-sm"
+                  onClick={(e) => e.currentTarget.select()}
                 />
-              </div>
+                <Button
+                  className="mt-2 w-full gradient-button"
+                  onClick={() => navigator.clipboard.writeText(pixData.payload)}
+                >
+                  Copiar Código Pix
+                </Button>
+              </>
+            )}
 
-              <div className="flex gap-4">
-                <div className="space-y-2 flex-1">
-                  <label className="text-sm text-oraculo-muted">Validade</label>
-                  <input
-                    type="text"
-                    placeholder="MM/AA"
-                    className="w-full p-3 rounded-lg border border-[#1E1E1E]/30 focus:border-[#1E1E1E] focus:ring-1 focus:ring-[#1E1E1E]/30 outline-none"
-                  />
+            <div className="profile-card p-4 mt-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-oraculo-dark font-semibold">Total</h4>
+                  <p className="text-oraculo-muted text-sm">
+                    {selectedPlan?.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
+                  </p>
                 </div>
-
-                <div className="space-y-2 flex-1">
-                  <label className="text-sm text-oraculo-muted">CVV</label>
-                  <input
-                    type="text"
-                    placeholder="123"
-                    className="w-full p-3 rounded-lg border border-[#1E1E1E]/30 focus:border-[#1E1E1E] focus:ring-1 focus:ring-[#1E1E1E]/30 outline-none"
-                  />
+                <div className="text-xl font-bold gradient-text">
+                  R$ {selectedPlan?.price.toFixed(2).replace(".", ",")}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-oraculo-muted">Nome no Cartão</label>
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  className="w-full p-3 rounded-lg border border-[#1E1E1E]/30 focus:border-[#1E1E1E] focus:ring-1 focus:ring-[#1E1E1E]/30 outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="profile-card p-4 mb-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-oraculo-dark font-semibold">Total</h4>
-                <p className="text-oraculo-muted text-sm">
-                  {selectedPlan?.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
-                </p>
-              </div>
-              <div className="text-xl font-bold gradient-text">
-                R$ {selectedPlan?.price.toFixed(2).replace(".", ",")}
               </div>
             </div>
           </div>
 
           <p className="text-xs text-oraculo-muted text-center mb-6">
-            Ao confirmar, você concorda com os Termos de Serviço e Política de Privacidade do ORÁCULO. Você pode
-            cancelar sua assinatura a qualquer momento.
+            Após escanear, finalize o pagamento no app do seu banco.
           </p>
         </motion.div>
 
-        <Button className="w-full gradient-button h-14" onClick={handleCompletePayment}>
+        <Button className="w-full gradient-button h-14" onClick={handleConfirmPayment}>
           Confirmar Pagamento
         </Button>
       </div>
@@ -148,14 +187,11 @@ export default function SubscriptionPage() {
     <>
       <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
       <div className="app-container">
-        
-
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
           <h2 className="text-2xl font-semibold gradient-text text-center mb-2">Desbloqueie Todo o Potencial</h2>
           <p className="text-oraculo-muted text-center mb-6">
             Escolha o plano ideal para você e aumente suas chances de encontrar sua alma gêmea
           </p>
-
           <div className="space-y-4 mb-6">
             {subscriptionPlans.map((plan) => (
               <div
@@ -172,7 +208,6 @@ export default function SubscriptionPage() {
                     Mais Popular
                   </div>
                 )}
-
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h3 className="text-lg font-semibold text-oraculo-dark flex items-center">
@@ -187,7 +222,6 @@ export default function SubscriptionPage() {
                       {plan.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
                     </p>
                   </div>
-
                   <div className="flex items-center">
                     {plan.price > 0 ? (
                       <div className="text-right">
@@ -205,16 +239,14 @@ export default function SubscriptionPage() {
                     )}
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   {plan.features.map((feature, index) => (
                     <div key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-green-500 mr-2" />
                       <span className="text-oraculo-dark text-sm">{feature}</span>
                     </div>
                   ))}
                 </div>
-
                 <div
                   className={`w-6 h-6 rounded-full border-2 mt-3 flex items-center justify-center ${
                     selectedPlan?.id === plan.id
@@ -229,7 +261,6 @@ export default function SubscriptionPage() {
               </div>
             ))}
           </div>
-
           <div className="profile-card p-4 mb-6">
             <h3 className="text-lg font-semibold gradient-text mb-3">Por que fazer upgrade?</h3>
             <div className="space-y-2">
@@ -254,7 +285,6 @@ export default function SubscriptionPage() {
             </div>
           </div>
         </motion.div>
-
         <Button
           className="w-full gradient-button h-14"
           onClick={handleContinue}

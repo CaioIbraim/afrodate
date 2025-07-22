@@ -80,7 +80,7 @@ export default function ProfilePage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-full border-oraculo-purple/50 bg-white text-oraculo-purple h-8 w-8"
+                    className="rounded-full border-[#1E1E1E]/50 bg-white text-[#1E1E1E] h-8 w-8"
                     onClick={() => setGender(gender === "HOMEM" ? "MULHER" : "HOMEM")}
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -88,7 +88,7 @@ export default function ProfilePage() {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-full border-oraculo-purple/50 bg-white text-oraculo-purple h-8 w-8"
+                    className="rounded-full border-[#1E1E1E]/50 bg-white text-[#1E1E1E] h-8 w-8"
                     onClick={() => setGender(gender === "HOMEM" ? "MULHER" : "HOMEM")}
                   >
                     <ChevronRight className="h-4 w-4" />

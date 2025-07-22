@@ -29,6 +29,9 @@ interface Profile {
   isMatch: boolean;
   whatsapp_number?: string | null;
   share_whatsapp?: boolean;
+  birth_date?: string;
+  interests?: string[]; // Array of interest IDs
+  compatibilityScore: number; // Number of shared interests
 }
 
 interface UserPreferences {
@@ -90,7 +93,6 @@ const markMatchAsViewed = (userId: string, profileId: string) => {
 const getFullAvatarUrl = (path: string | null): string | null => {
   if (!path) return null;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  // Prepend Supabase storage base URL
   return `https://wthyagnvodxbvmxkjhzb.supabase.co/storage/v1/object/public/imagens/${path}`;
 };
 
@@ -107,7 +109,7 @@ export default function ProximityPage() {
   });
 
   // Calculate age from birth_date
-  const calculateAge = useCallback((birthDate: string): number | null => {
+  const calculateAge = useCallback((birthDate: string | undefined): number | null => {
     if (!birthDate) return null;
     const birth = new Date(birthDate);
     const today = new Date();
@@ -120,8 +122,8 @@ export default function ProximityPage() {
     return age >= 18 ? age : null;
   }, []);
 
-  // Mock premium user check (replace with actual logic)
-  const isPremiumUser = true; // TODO: Fetch from useUser or Supabase subscriptions
+  // Mock premium user check
+  const isPremiumUser = true;
 
   // Handle WhatsApp button click with premium check
   const handleWhatsAppClick = async (profileId: string, name: string, whatsappNumber: string, isMatch: boolean) => {
@@ -152,12 +154,10 @@ export default function ProximityPage() {
       return;
     }
 
-    // Mark match as viewed
     if (isMatch && profile?.id) {
       markMatchAsViewed(profile.id, profileId);
     }
 
-    // Open WhatsApp
     window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -184,7 +184,7 @@ export default function ProximityPage() {
       // Fetch user preferences
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
-        .select("gender_preference, min_age, max_age, max_distance")
+        .select("gender_preference, min_age, max_age, max_distance, birth_date")
         .eq("id", profile.id)
         .single();
 
@@ -197,14 +197,38 @@ export default function ProximityPage() {
         genderPreference: profileData.gender_preference || "TODOS",
         minAge: profileData.min_age || 18,
         maxAge: profileData.max_age || 50,
-        maxDistance: profileData.max_distance || 18,
+        maxDistance: profileData.max_distance || 50,
       };
       setPreferences(userPrefs);
 
-      // Fetch profiles with location and WhatsApp data
+      // Fetch user's interests
+      const { data: userInterestsData, error: userInterestsError } = await supabase
+        .from("profile_interests")
+        .select("interest_id")
+        .eq("profile_id", profile.id);
+
+      if (userInterestsError) {
+        console.log("Error fetching user interests:", userInterestsError.message);
+        throw userInterestsError;
+      }
+
+      const userInterestIds = new Set(userInterestsData?.map((item) => item.interest_id) || []);
+
+      // Fetch profiles with location, WhatsApp data, and interests
       let query = supabase
         .from("profiles")
-        .select("id, name, avatar_url, gender, latitude, longitude, birth_date, whatsapp_number, share_whatsapp")
+        .select(`
+          id,
+          name,
+          avatar_url,
+          gender,
+          latitude,
+          longitude,
+          birth_date,
+          whatsapp_number,
+          share_whatsapp,
+          profile_interests!left(interest_id)
+        `)
         .neq("id", profile.id)
         .not("latitude", "is", null)
         .not("longitude", "is", null);
@@ -220,6 +244,12 @@ export default function ProximityPage() {
         throw profilesError;
       }
 
+      if (!profilesData || profilesData.length === 0) {
+        console.warn("No profiles found in initial query");
+        setNearbyProfiles([]);
+        throw new Error("No profiles found");
+      }
+
       // Fetch user's existing likes
       const { data: userLikes, error: likesError } = await supabase
         .from("likes")
@@ -231,7 +261,7 @@ export default function ProximityPage() {
         throw likesError;
       }
 
-      const likedProfileIds = new Set(userLikes.map((like) => like.liked_profile_id));
+      const likedProfileIds = new Set(userLikes?.map((like) => like.liked_profile_id) || []);
 
       // Fetch mutual matches
       const { data: matchesData, error: matchesError } = await supabase
@@ -245,52 +275,86 @@ export default function ProximityPage() {
       }
 
       const matchedProfileIds = new Set(
-        matchesData.flatMap((match) =>
+        matchesData?.flatMap((match) =>
           match.profile1_id === profile.id ? match.profile2_id : match.profile1_id
-        )
+        ) || []
       );
 
       // Get viewed matches
       const viewedMatches = getViewedMatches(profile.id);
 
-      // Filter profiles by age, distance, and add like/match status
-      const filteredProfiles = profilesData
+      // Map profiles with distance and compatibility, then sort by distance
+      const mappedProfiles = profilesData
+        .map((p) => {
+          const profileInterestIds = new Set(
+            p.profile_interests?.map((pi: { interest_id: string }) => pi.interest_id) || []
+          );
+          const sharedInterests = [...userInterestIds].filter((id) => profileInterestIds.has(id));
+          const distance = calculateDistance(
+            profile.latitude!,
+            profile.longitude!,
+            p.latitude!,
+            p.longitude!
+          );
+          return {
+            ...p,
+            avatar_url: getFullAvatarUrl(p.avatar_url),
+            distance,
+            interests: [...profileInterestIds],
+            compatibilityScore: sharedInterests.length,
+            isLiked: false, // All profiles will be filtered for not liked
+            isMatch: matchedProfileIds.has(p.id),
+          };
+        })
+        .sort((a, b) => a.distance! - b.distance!); // Sort by distance first
+
+      // Filter profiles by age, distance, not liked, and match status
+      const filteredProfiles = mappedProfiles
         .filter((p) => {
           const age = calculateAge(p.birth_date);
           const isMatch = matchedProfileIds.has(p.id);
-          return (
+          const passesFilters =
             age !== null &&
             age >= userPrefs.minAge &&
             age <= userPrefs.maxAge &&
             p.latitude !== null &&
             p.longitude !== null &&
-            (!isMatch || (isMatch && !viewedMatches.has(p.id)))
-          );
+            p.distance! <= userPrefs.maxDistance &&
+            !likedProfileIds.has(p.id) && // Exclude profiles already liked
+            (!isMatch || (isMatch && !viewedMatches.has(p.id)));
+          
+          if (!passesFilters) {
+            console.debug(`Profile ${p.id} filtered out: `, {
+              ageValid: age !== null && age >= userPrefs.minAge && age <= userPrefs.maxAge,
+              distanceValid: p.distance! <= userPrefs.maxDistance,
+              notLiked: !likedProfileIds.has(p.id),
+              matchStatus: isMatch ? !viewedMatches.has(p.id) : true,
+            });
+          }
+          return passesFilters;
         })
-        .map((p) => ({
-          ...p,
-          avatar_url: getFullAvatarUrl(p.avatar_url), // Ensure full URL
-          distance: calculateDistance(
-            profile.latitude!,
-            profile.longitude!,
-            p.latitude!,
-            p.longitude!
-          ),
-          isLiked: likedProfileIds.has(p.id),
-          isMatch: matchedProfileIds.has(p.id),
-        }))
-        .filter((p) => p.distance! <= userPrefs.maxDistance)
-        .sort((a, b) => a.distance! - b.distance!)
+        .sort((a, b) => {
+          // Secondary sort by compatibility score (descending), then distance (ascending)
+          if (a.compatibilityScore !== b.compatibilityScore) {
+            return b.compatibilityScore - a.compatibilityScore;
+          }
+          return a.distance! - b.distance!;
+        })
         .slice(0, 3);
 
       setNearbyProfiles(filteredProfiles);
       console.log("Nearby profiles loaded:", filteredProfiles);
 
       if (filteredProfiles.length === 0) {
+        console.warn("No profiles after filtering", {
+          totalProfiles: profilesData.length,
+          mappedProfiles: mappedProfiles.length,
+          filteredProfiles: filteredProfiles.length,
+        });
         await showAlert(
           "info",
           "Nenhum Perfil Encontrado",
-          "Não encontramos pessoas dentro do raio especificado. Tente aumentar a distância ou ajustar suas preferências."
+          "Não encontramos pessoas dentro do raio especificado ou com interesses compatíveis. Tente aumentar a distância ou ajustar suas preferências."
         );
       }
     } catch (error: any) {
@@ -300,6 +364,7 @@ export default function ProximityPage() {
         "Ooops!",
         "Não foi possível carregar os perfis próximos. Tente novamente."
       );
+      setNearbyProfiles([]);
     } finally {
       setIsLoading(false);
     }
@@ -464,7 +529,14 @@ export default function ProximityPage() {
                             aria-describedby={`profile-status-${nearbyProfile.id}`}
                           >
                             {nearbyProfile.name}
+                            <Badge
+                              className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px] ml-2"
+                              tabIndex={0}
+                            >
+                              {calculateAge(nearbyProfile.birth_date)} anos
+                            </Badge>
                           </h3>
+
                           <Badge
                             className="absolute top-0 right-0 bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
                             tabIndex={-1}
@@ -474,7 +546,7 @@ export default function ProximityPage() {
                           </Badge>
                         </div>
 
-                        {/* Status Badges */}
+                        {/* Status and Compatibility Badges */}
                         <div className="flex gap-1">
                           {nearbyProfile.isMatch ? (
                             <Badge
@@ -484,14 +556,13 @@ export default function ProximityPage() {
                               <Sparkles className="h-3 w-3 mr-1" />
                               Match!
                             </Badge>
-                          ) : nearbyProfile.isLiked ? (
-                            <Badge
-                              className="bg-oraculo-cyan/20 text-oraculo-cyan text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
-                              tabIndex={-1}
-                            >
-                              Já Curtido
-                            </Badge>
                           ) : null}
+                          <Badge
+                            className="bg-oraculo-cyan/20 text-oraculo-cyan text-xs font-semibold flex items-center px-2 py-1 rounded-full min-w-[60px]"
+                            tabIndex={-1}
+                          >
+                            {nearbyProfile.compatibilityScore} interesse{nearbyProfile.compatibilityScore !== 1 ? "s" : ""} em comum
+                          </Badge>
                         </div>
                       </div>
 
@@ -513,17 +584,12 @@ export default function ProximityPage() {
                         </Link>
                         {!nearbyProfile.isMatch ? (
                           <Button
-                            className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white rounded-lg py-5 text-xs sm:text-sm font-medium hover:opacity-90"
                             onClick={() => handleLike(nearbyProfile.id)}
-                            disabled={nearbyProfile.isLiked || nearbyProfile.isMatch}
-                            aria-label={
-                              nearbyProfile.isLiked
-                                ? `Já curtiu ${nearbyProfile.name}`
-                                : `Curtir ${nearbyProfile.name}`
-                            }
+                            aria-label={`Curtir ${nearbyProfile.name}`}
                           >
                             <Heart className="h-4 w-4 mr-1 sm:mr-2" />
-                            {nearbyProfile.isLiked ? "Já Curtido" : "Curtir"}
+                            Curtir
                           </Button>
                         ) : nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? (
                           <Button
@@ -543,10 +609,8 @@ export default function ProximityPage() {
                         className="sr-only"
                       >
                         {nearbyProfile.isMatch
-                          ? "Você deu match com este perfil"
-                          : nearbyProfile.isLiked
-                          ? "Você já curtiu este perfil"
-                          : "Perfil disponível para curtir"}
+                          ? `Você deu match com este perfil, ${nearbyProfile.compatibilityScore} interesses em comum`
+                          : `Perfil disponível para curtir, ${nearbyProfile.compatibilityScore} interesses em comum`}
                       </span>
                     </div>
                   </div>
@@ -565,7 +629,7 @@ export default function ProximityPage() {
               Ninguém por Perto
             </h3>
             <p className="text-oraculo-muted mb-4 text-sm sm:text-base">
-              Não encontramos pessoas próximas no momento. Tente aumentar a distância máxima nas suas preferências.
+              Não encontramos pessoas próximas no momento. Tente aumentar a distância ou ajustar suas preferências.
             </p>
             <Link href="/profile">
               <Button className="bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90">

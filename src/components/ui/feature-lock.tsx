@@ -18,8 +18,8 @@ export function FeatureLock({ message, className }: FeatureLockProps) {
 
   return (
     <div className={`flex flex-col items-center justify-center p-6 text-center ${className}`}>
-      <div className="w-16 h-16 rounded-full bg-oraculo-purple/10 flex items-center justify-center mb-4">
-        <Lock className="h-8 w-8 text-oraculo-purple" />
+      <div className="w-16 h-16 rounded-full bg-[#1E1E1E]/10 flex items-center justify-center mb-4">
+        <Lock className="h-8 w-8 text-[#1E1E1E]" />
       </div>
       <h3 className="text-lg font-semibold text-oraculo-dark mb-2">Recurso Bloqueado</h3>
       <p className="text-oraculo-muted mb-4">{message}</p>

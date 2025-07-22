@@ -65,8 +65,8 @@ export default function InterestsPage() {
       text,
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
       },
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive")
@@ -236,7 +236,7 @@ export default function InterestsPage() {
       if (!profileComplete) {
         router.push("/profile")
       } else {
-        router.push("/discover")
+        router.push("/discover/v3")
       }
     } catch (error: any) {
       console.error("Submit interests error:", error)
@@ -249,7 +249,7 @@ export default function InterestsPage() {
   if (isLoading || userLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" />
       </div>
     )
   }
@@ -267,7 +267,7 @@ export default function InterestsPage() {
           transition={{ duration: 0.4 }}
           className="bg-white rounded-xl shadow-md p-6"
         >
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan mb-4 text-center">
+          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] mb-4 text-center">
             Escolha Seus Interesses
           </h2>
           <p className="text-neutral-600 mb-6 text-center">
@@ -284,7 +284,7 @@ export default function InterestsPage() {
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className={`relative rounded-lg overflow-hidden h-32 cursor-pointer transition-all duration-200 ${
                     selectedInterests.includes(interest.id)
-                      ? "border-4 border-oraculo-purple shadow-lg"
+                      ? "border-4 border-[#1E1E1E] shadow-lg"
                       : "border-2 border-gray-200 hover:border-oraculo-cyan"
                   }`}
                   role="button"
@@ -309,7 +309,7 @@ export default function InterestsPage() {
                     </Label>
                   </div>
                   {selectedInterests.includes(interest.id) && (
-                    <div className="absolute top-2 right-2 bg-oraculo-purple rounded-full p-1">
+                    <div className="absolute top-2 right-2 bg-[#1E1E1E] rounded-full p-1">
                       <CheckCircle2 className="h-4 w-4 text-white" />
                     </div>
                   )}
@@ -319,7 +319,7 @@ export default function InterestsPage() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+              className="w-full bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white hover:opacity-90 focus:ring-2 focus:ring-[#1E1E1E]"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

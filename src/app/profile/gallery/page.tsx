@@ -55,7 +55,7 @@ export default function GalleryPage() {
           <Button
             variant="outline"
             onClick={() => router.back()}
-            className="border-oraculo-purple text-oraculo-purple"
+            className="border-[#1E1E1E] text-[#1E1E1E]"
           >
             Voltar
           </Button>

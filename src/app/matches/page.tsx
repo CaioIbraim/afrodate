@@ -38,7 +38,7 @@ export default function MatchesPage() {
         description: "Complete seu perfil para ver matches",
         variant: "destructive",
       })
-      router.push("/discover")
+      router.push("/discover/v3")
     }
   }, [user, profile, userLoading, router])
 
@@ -52,7 +52,7 @@ export default function MatchesPage() {
           description: "Complete suas preferências para ver matches",
           variant: "destructive",
         })
-        router.push("/discover")
+        router.push("/discover/v3")
         return
       }
 
@@ -168,7 +168,7 @@ export default function MatchesPage() {
   if (userLoading || isLoading) {
     return (
       <div className="app-container justify-center items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" />
         <p className="text-oraculo-muted mt-4">Carregando perfis compatíveis...</p>
       </div>
     )
@@ -182,10 +182,10 @@ export default function MatchesPage() {
           <Link href="/messages">
             <Button variant="ghost" size="icon" className="text-oraculo-muted relative">
               <MessageCircle className="h-6 w-6" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-oraculo-purple rounded-full"></span>
+              <span className="absolute top-0 right-0 w-2 h-2 bg-[#1E1E1E] rounded-full"></span>
             </Button>
           </Link>
-          <Link href="/discover">
+          <Link href="/discover/v3">
             <Button variant="ghost" size="icon" className="text-oraculo-muted">
               <Grid3X3 className="h-6 w-6" />
             </Button>
@@ -236,12 +236,12 @@ export default function MatchesPage() {
 
                   {profile.crossMatches && profile.crossMatches.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center">
+                      <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center">
                         <Sparkles className="h-3 w-3 mr-1" />
                         {profile.crossMatches[0]}
                       </Badge>
                       {profile.crossMatches.length > 1 && (
-                        <Badge className="bg-white text-oraculo-muted text-xs border border-oraculo-purple/20">
+                        <Badge className="bg-white text-oraculo-muted text-xs border border-[#1E1E1E]/20">
                           +{profile.crossMatches.length - 1}
                         </Badge>
                       )}

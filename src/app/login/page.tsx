@@ -55,7 +55,7 @@ const FormInput: React.FC<FormInputProps> = ({
         name={name}
         type={type}
         placeholder={placeholder}
-        className="auth-input pl-10 border-neutral-300 focus:ring-oraculo-purple"
+        className="auth-input pl-10 border-neutral-300 focus:ring-[#1E1E1E]"
         value={value}
         onChange={onChange}
         required={required}
@@ -102,8 +102,8 @@ export default function LoginPage() {
       text,
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
       },
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive")
@@ -244,7 +244,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Gradient topo */}
-      <div className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan h-2" />
+      <div className="bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] h-2" />
 
       {/* Loader fullscreen */}
       <AnimatePresence>
@@ -274,14 +274,14 @@ export default function LoginPage() {
           <div className={styles.videoDocker}>
             <video
               className={styles.video}
-              src="https://videos.pexels.com/video-files/8079132/8079132-uhd_2732_1440_25fps.mp4"
+              src="/video/video.mp4"
               autoPlay
               muted
               loop
               playsInline
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-br from-oraculo-purple/90 via-oraculo-purple/80 to-oraculo-cyan/90" />
+          <div className="absolute inset-0 bg-gradient-to-br from-oraculo-cyan/80 from-oraculo-cyan/70  to-[#1E1E1E]/80" />
           <div className="relative z-10 flex flex-col items-center justify-center w-full p-12 text-white">
             <Image
               alt="Logo"
@@ -312,7 +312,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <h2 className="text-oraculo-purple hover:text-oraculo-cyan text-2xl font-bold mb-6 text-center">
+            <h2 className="text-oraculo-cyan text-2xl font-bold mb-6 text-center">
               Entrar na Plataforma
             </h2>
 
@@ -334,7 +334,7 @@ export default function LoginPage() {
                   <Label htmlFor="password">Senha</Label>
                   <Link
                     href="/reset-password"
-                    className="text-sm text-oraculo-purple hover:text-oraculo-cyan focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                    className="text-sm text-oraculo-cyan focus:ring-2 focus:ring-[#1E1E1E] focus:outline-none"
                   >
                     Esqueceu a senha?
                   </Link>
@@ -346,7 +346,7 @@ export default function LoginPage() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="auth-input pl-10 border-neutral-300 focus:ring-oraculo-purple"
+                    className="auth-input pl-10 border-neutral-300 focus:ring-[#1E1E1E]"
                     value={formData.password}
                     onChange={handleChange}
                     required
@@ -354,7 +354,7 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-3.5 focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                    className="absolute right-3 top-3.5 focus:ring-2 focus:ring-[#1E1E1E] focus:outline-none"
                     onClick={() => setShowPassword(!showPassword)}
                     aria-label={showPassword ? "Esconder senha" : "Mostrar senha"}
                   >
@@ -369,7 +369,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white hover:opacity-90 focus:ring-2 focus:ring-oraculo-purple"
+                className="w-full bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white hover:opacity-90 focus:ring-2 focus:ring-[#4BE5FF]"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -413,7 +413,7 @@ export default function LoginPage() {
               Não tem uma conta?{" "}
               <Link
                 href="/signup"
-                className="text-oraculo-purple hover:text-oraculo-cyan font-semibold focus:ring-2 focus:ring-oraculo-purple focus:outline-none"
+                className="text-oraculo-cyan font-semibold focus:ring-2 focus:ring-[#1E1E1E] focus:outline-none"
               >
                 Cadastre-se
               </Link>

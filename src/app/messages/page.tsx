@@ -243,7 +243,7 @@ export default function MessagesPage() {
           <Button
             variant="outline"
             size="sm"
-            className="text-oraculo-purple border-oraculo-purple/30 hover:bg-oraculo-purple/10"
+            className="text-[#1E1E1E] border-[#1E1E1E]/30 hover:bg-[#1E1E1E]/10"
             onClick={handleUpgrade}
           >
             Upgrade
@@ -269,7 +269,7 @@ export default function MessagesPage() {
                 <div
                   key={match.id}
                   className={`flex items-center p-3 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    activeConversation === match.id ? "bg-oraculo-purple/5 border-l-4 border-oraculo-purple" : ""
+                    activeConversation === match.id ? "bg-[#1E1E1E]/5 border-l-4 border-[#1E1E1E]" : ""
                   }`}
                   onClick={() => handleOpenConversation(match.id)}
                 >
@@ -355,7 +355,7 @@ export default function MessagesPage() {
                       <div
                         className={`max-w-[70%] p-3 rounded-2xl ${
                           msg.sender_id === currentUserId
-                            ? "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white"
+                            ? "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white"
                             : "bg-gray-100 text-oraculo-dark"
                         }`}
                       >
@@ -424,7 +424,7 @@ export default function MessagesPage() {
                       if (e.key === "Enter") handleSendMessage()
                     }}
                   />
-                  <Button variant="ghost" size="icon" className="text-oraculo-purple" onClick={handleSendMessage}>
+                  <Button variant="ghost" size="icon" className="text-[#1E1E1E]" onClick={handleSendMessage}>
                     <Send className="h-5 w-5" />
                   </Button>
                 </div>

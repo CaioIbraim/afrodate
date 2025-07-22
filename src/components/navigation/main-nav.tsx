@@ -11,7 +11,7 @@ export function MainNavigation() {
   const menuItems = [
     {
       label: 'Discover',
-      href: '/discover',
+      href: '/discover/v3',
       icon: '🔍',
       protected: true
     },
@@ -48,7 +48,7 @@ export function MainNavigation() {
               key={item.href}
               whileTap={{ scale: 0.95 }}
               className={`flex flex-col items-center p-2 ${
-                router.pathname === item.href ? 'text-oraculo-purple' : 'text-gray-500'
+                router.pathname === item.href ? 'text-[#1E1E1E]' : 'text-gray-500'
               }`}
               onClick={() => router.push(item.href)}
             >

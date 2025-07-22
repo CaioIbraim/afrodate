@@ -37,7 +37,7 @@ type Profile = {
 
 export default function MatchesPage() {
   const router = useRouter()
-  router.push("/discover")
+  router.push("/discover/v3")
   const { user, profile, isLoading: userLoading } = useUser()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -128,8 +128,8 @@ export default function MatchesPage() {
           html: '<p class="text-lg text-gray-700">Complete suas preferências de gênero para ver matches.</p>',
           customClass: {
             popup: "border-2 border-transparent bg-white rounded-xl",
-            title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-            confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+            title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+            confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
           },
           confirmButtonText: "Ajustar Preferências",
         }).then((result) => {
@@ -237,8 +237,8 @@ export default function MatchesPage() {
         html: `<p class="text-lg text-gray-700">Não foi possível carregar os perfis compatíveis. ${error.message}</p>`,
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "OK",
       })
@@ -256,8 +256,8 @@ export default function MatchesPage() {
         html: '<p class="text-lg text-gray-700">Você precisa estar logado para curtir.</p>',
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "Ir para Login",
       }).then((result) => {
@@ -275,8 +275,8 @@ export default function MatchesPage() {
         html: '<p class="text-lg text-gray-700">Você já deu um like hoje. Volte amanhã!</p>',
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "OK",
       })
@@ -298,8 +298,8 @@ export default function MatchesPage() {
         html: '<p class="text-lg text-gray-700">Você curtiu o perfil! Aguardando um match...</p>',
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "OK",
       })
@@ -319,8 +319,8 @@ export default function MatchesPage() {
           html: '<p class="text-lg text-gray-700">Vocês são uma conexão cósmica! Que tal enviar uma mensagem?</p>',
           customClass: {
             popup: "border-2 border-transparent bg-white rounded-xl",
-            title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-            confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+            title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+            confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
           },
           confirmButtonText: "Enviar Mensagem",
         }).then((result) => {
@@ -343,8 +343,8 @@ export default function MatchesPage() {
         }</p>`,
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "OK",
       })
@@ -374,8 +374,8 @@ export default function MatchesPage() {
         html: '<p class="text-lg text-gray-700">Você precisa estar logado para ver matches.</p>',
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "Ir para Login",
       }).then((result) => {
@@ -400,8 +400,8 @@ export default function MatchesPage() {
         html: '<p class="text-lg text-gray-700">Complete seu perfil para ver matches.</p>',
         customClass: {
           popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
         },
         confirmButtonText: "Completar Perfil",
       }).then((result) => {
@@ -415,7 +415,7 @@ export default function MatchesPage() {
   if (userLoading || isLoading) {
     return (
       <div className="app-container flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" />
         <p className="text-oraculo-muted mt-4">Carregando...</p>
       </div>
     )
@@ -494,12 +494,12 @@ export default function MatchesPage() {
 
                   {profile.crossMatches.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-3">
-                      <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center">
+                      <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center">
                         <Sparkles className="h-3 w-3 mr-1" />
                         {profile.crossMatches[0]}
                       </Badge>
                       {profile.crossMatches.length > 1 && (
-                        <Badge className="bg-white text-oraculo-muted text-xs border border-oraculo-purple/20">
+                        <Badge className="bg-white text-oraculo-muted text-xs border border-[#1E1E1E]/20">
                           +{profile.crossMatches.length - 1}
                         </Badge>
                       )}
@@ -515,7 +515,7 @@ export default function MatchesPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="flex-1 border-oraculo-purple text-oraculo-purple"
+                      className="flex-1 border-[#1E1E1E] text-[#1E1E1E]"
                       onClick={() => handleLike(profile.id)}
                       disabled={hasLikedToday}
                       aria-label="Curtir perfil"

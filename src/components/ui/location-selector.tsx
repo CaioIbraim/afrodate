@@ -64,7 +64,7 @@ export function LocationSelector({ selectedLocations, onChange, maxSelections = 
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between bg-white border-oraculo-purple/30 text-oraculo-dark hover:bg-white hover:text-oraculo-purple"
+            className="w-full justify-between bg-white border-[#1E1E1E]/30 text-oraculo-dark hover:bg-white hover:text-[#1E1E1E]"
           >
             <span className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
@@ -73,7 +73,7 @@ export function LocationSelector({ selectedLocations, onChange, maxSelections = 
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0 bg-white border-oraculo-purple/30">
+        <PopoverContent className="w-full p-0 bg-white border-[#1E1E1E]/30">
           <Command className="bg-transparent">
             <CommandInput placeholder="Buscar local..." className="text-oraculo-dark" />
             <CommandList>
@@ -84,7 +84,7 @@ export function LocationSelector({ selectedLocations, onChange, maxSelections = 
                     key={location.value}
                     value={location.value}
                     onSelect={() => handleSelect(location.value)}
-                    className="text-oraculo-dark hover:bg-oraculo-purple/10"
+                    className="text-oraculo-dark hover:bg-[#1E1E1E]/10"
                   >
                     <Check
                       className={cn(
@@ -108,7 +108,7 @@ export function LocationSelector({ selectedLocations, onChange, maxSelections = 
             return (
               <Badge
                 key={location}
-                className="bg-oraculo-purple/10 hover:bg-oraculo-purple/20 text-oraculo-purple border border-oraculo-purple/30"
+                className="bg-[#1E1E1E]/10 hover:bg-[#1E1E1E]/20 text-[#1E1E1E] border border-[#1E1E1E]/30"
                 onClick={() => handleRemove(location)}
               >
                 <MapPin className="h-3 w-3 mr-1" />

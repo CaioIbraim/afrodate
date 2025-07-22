@@ -62,8 +62,8 @@ const showAlert = async (type: "success" | "error", title: string, text: string)
     text,
     customClass: {
       popup: "border-2 border-transparent bg-white rounded-xl",
-      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
-      confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
+      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+      confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
     },
     willOpen: (popup) => {
       popup.setAttribute("aria-live", "assertive");
@@ -291,7 +291,7 @@ export default function ProximityPage() {
   if (userLoading || isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-oraculo-purple" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" />
         <p className="text-oraculo-muted mt-4">Carregando perfis...</p>
       </div>
     );
@@ -310,7 +310,7 @@ export default function ProximityPage() {
       <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
 
       <div className="max-w-md mx-auto w-full">
-        <h2 className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan mb-8 text-center font-semibold">
+        <h2 className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] mb-8 text-center font-semibold">
           Pessoas Próximas
         </h2>
 
@@ -355,7 +355,7 @@ export default function ProximityPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <h3 className="text-oraculo-dark text-xl">{nearbyProfile.name}</h3>
-                        <Badge className="bg-oraculo-purple/10 text-oraculo-purple text-xs flex items-center">
+                        <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center">
                           <MapPin className="h-3 w-3 mr-1" />
                           {nearbyProfile.distance?.toFixed(1)} km
                         </Badge>
@@ -364,14 +364,14 @@ export default function ProximityPage() {
                         <Link href={`/profile/${nearbyProfile.id}`}>
                           <Button
                             variant="outline"
-                            className="flex-1 text-oraculo-purple border-oraculo-purple"
+                            className="flex-1 text-[#1E1E1E] border-[#1E1E1E]"
                           >
                             <User2Icon className="h-4 w-4 mr-2" />
                             Ver Perfil
                           </Button>
                         </Link>
                         <Button
-                          className="flex-1 bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white"
+                          className="flex-1 bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white"
                           onClick={() => handleLike(nearbyProfile.id)}
                         >
                           <Heart className="h-4 w-4 mr-2" />
@@ -393,7 +393,7 @@ export default function ProximityPage() {
               Não encontramos pessoas próximas no momento. Tente aumentar a distância máxima nas suas preferências.
             </p>
             <Link href="/profile">
-              <Button className="bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white">
+              <Button className="bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white">
                 Ajustar Preferências
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
