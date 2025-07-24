@@ -10,7 +10,7 @@ const headers = {
 };
 
 export async function POST(request) {
-    const { name, cpf } = await request.json();
+    const { name, cpf, email } = await request.json();
     console.log(cpf)
     try {
         // First, try to find existing customer by CPF
@@ -30,6 +30,23 @@ export async function POST(request) {
             }
         }
 
+
+        if (email) {
+            const searchResponse = await axios.get(
+                `${ASAAS_API_URL}/customers`,
+                {
+                    params: { email: email },
+                    headers
+                }
+            );
+
+            // If customer exists, return their ID
+            if (searchResponse.data.data && searchResponse.data.data.length > 0) {
+                const customerId = searchResponse.data.data[0].id;
+                return Response.json({ customerId });
+            }
+        }
+
         // If no CPF provided or customer not found, and we have a CPF, create new customer
         if (cpf) {
             const createCustomerResponse = await axios.post(
@@ -37,6 +54,7 @@ export async function POST(request) {
                 {
                     name: name,
                     cpfCnpj: cpf,
+                    email: email,
                 },
                 { headers }
             );
@@ -54,9 +72,9 @@ export async function POST(request) {
         if (error.response && error.response.data && error.response.data.errors) {
             const cpfError = error.response.data.errors.find(err => err.code === 'invalidValue' && err.field === 'cpfCnpj');
             if (cpfError) {
-                return Response.json({ error: 'CPF inválido ou já cadastrado.' }, { status: 400 });
+                return Response.json({ error: 'Usuário inválido ou já cadastrado.' }, { status: 400 });
             }
         }
-        return Response.json({ error: 'Erro ao processar cliente.' }, { status: 500 });
+        return Response.json({ error: 'Erro ao processar usuário.' }, { status: 500 });
     }
 }

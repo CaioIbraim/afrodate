@@ -181,7 +181,7 @@ export default function MatchesPage() {
              
             </Button>
           </Link>
-          <Link href="/discover/v3">
+          <Link href="/discover/v6">
             <Button variant="ghost" size="icon" className="text-oraculo-muted">
               <Grid3X3 className="h-6 w-6" />
             </Button>

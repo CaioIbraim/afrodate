@@ -25,6 +25,7 @@ export default function BuyCoinsPage() {
         body: JSON.stringify({
           name: profile?.name || 'Usuário',
           cpf: cpfValue,
+          email : user.email
         }),
       });
 
@@ -105,7 +106,7 @@ export default function BuyCoinsPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-50 text-gray-900">
       <h1 className="text-2xl font-bold mb-6">Comprar Coins com PIX</h1>
-      <PixPaymentWithCustomer customerId={asaasCustomerId} />
+      <PixPaymentWithCustomer customerId={asaasCustomerId} userId={user.id} />
     </main>
   );
 }
