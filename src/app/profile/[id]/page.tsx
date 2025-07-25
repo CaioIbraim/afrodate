@@ -1,4 +1,3 @@
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:2490082326.
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
@@ -43,9 +42,8 @@ const ROUTES = {
   MESSAGES: (id: string) => `/messages/${id}`,
 }
 const PLACEHOLDER_IMAGE = "/placeholder-image.png"
+
 // Types
-// types.ts (or similar file)
-// Assume you have this file with necessary types
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
 type Photo = { name: string; storage_path: string; publicUrl: string; isPrimary: boolean }
 type ProfileData = {
@@ -61,11 +59,10 @@ type ProfileData = {
   user_id: string
   latitude?: number | null
   longitude?: number | null
-  whatsapp_number?: string         // Novo campo
-  share_whatsapp?: boolean   
+  whatsapp_number?: string
+  share_whatsapp?: boolean
   email?: string
 }
-// type Profile = { id: string; name: string; avatar_url: string | null; subscription: number } // This type is defined in use-user hook
 
 // Utility Functions
 const handleError = (error: any, title: string, router: any, redirectRoute: string) => {
@@ -78,11 +75,6 @@ const handleError = (error: any, title: string, router: any, redirectRoute: stri
   }).then((result) => result.isConfirmed && router.push(redirectRoute))
 }
 
-/**
- * Calculates age from birth date, ensuring valid range (18-120).
- * @param birthDate ISO date string
- * @returns Age or null if invalid
- */
 const calculateAge = (birthDate: string): number | null => {
   if (!birthDate) return null
   const birth = new Date(birthDate)
@@ -94,11 +86,6 @@ const calculateAge = (birthDate: string): number | null => {
   return age >= 18 && age <= 120 ? age : null
 }
 
-/**
- * Fetches photo URLs, falling back to signed URLs if public access fails.
- * @param photos Photo data from Supabase
- * @returns Array of photo objects with public URLs
- */
 const fetchPhotoUrls = async (photos: any[]): Promise<Photo[]> => {
   return Promise.all(
     photos.map(async (photo) => {
@@ -133,14 +120,8 @@ const ProfileInfo = ({
   calculateAge: (birthDate: string) => number | null
 }) => (
   <Card className="mb-6 border-none shadow-sm">
-    {/* Removed CardHeader for a cleaner look, content is within the main profile block */}
-    {/* <CardHeader>
-      <CardTitle>Informações do Perfil</CardTitle>
-      <CardDescription>Detalhes sobre {profileData?.name || "o usuário"}</CardDescription>
-    </CardHeader>
-    */}
     <CardContent>
-      {profileData ? ( // This whole block is being refactored for better layout
+      {profileData ? (
         <div className="flex flex-col space-y-6">
           <div className="flex flex-col justify-center items-center space-x-4">
             <Avatar className="w-24 h-24">
@@ -183,7 +164,7 @@ const ProfileInfo = ({
               </div>
             </div>
           )}
-        </div> // End of the block being refactored
+        </div>
       ) : (
         <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
       )}
@@ -228,8 +209,8 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
 
 export default function ProfileView() {
   const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser(); // Use useUser hook
-  const { id: profileId } = useParams() as { id: string };
+  const { user, isLoading: userLoading, profile } = useUser()
+  const { id: profileId } = useParams() as { id: string }
   const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -241,7 +222,10 @@ export default function ProfileView() {
   const [isSending, setIsSending] = useState(false)
   const [matchAlertShown, setMatchAlertShown] = useState(false)
 
-  const hasPremiumSubscription = profile?.subscription === 3
+  
+  // Fix: Type-safe check for subscription
+  const hasPremiumSubscription = profile?.subscription;
+
 
   const showMatchAlert = useCallback(() => {
     if (matchAlertShown) return
@@ -265,8 +249,6 @@ export default function ProfileView() {
   }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
 
   const loadProfile = useCallback(async () => {
-   
-
     if (!profileId) {
       MySwal.fire({
         icon: "error",
@@ -295,10 +277,9 @@ export default function ProfileView() {
           .order("created_at", { ascending: true }),
         supabase
           .from("likes")
-          .select("id") // Assuming profile!.id is the current user's profile ID
+          .select("id")
           .eq("profile_id", profile!.id)
           .eq("liked_profile_id", profileId)
-          .eq("profile_id", profile!.id)
           .single(),
         supabase
           .from("matches")
@@ -308,13 +289,12 @@ export default function ProfileView() {
           .single(),
       ])
 
-        console.log("Profile Data:", profileData);
-        console.log("Photos Data:", photosData);
-        console.log("Like Data:", likeData);
-        console.log("Match Data:", matchData)
-        setHasLiked(!!likeData)
-        console.log("has Like Data:", hasLiked)
-        
+      console.log("Profile Data:", profileData)
+      console.log("Photos Data:", photosData)
+      console.log("Like Data:", likeData)
+      console.log("Match Data:", matchData)
+      setHasLiked(!!likeData)
+      console.log("has Like Data:", hasLiked)
 
       if (profileError) throw profileError
       if (photosError) throw photosError
@@ -327,15 +307,14 @@ export default function ProfileView() {
       setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
 
-      console.log("Verifica se já curtiu ",hasLiked)
-      // Only show match alert if it's a new match discovered during this load and not already shown
-      if (matchData && !hasMatch && !matchAlertShown) showMatchAlert();
+      console.log("Verifica se já curtiu ", hasLiked)
+      if (matchData && !hasMatch && !matchAlertShown) showMatchAlert()
     } catch (error: any) {
-      // if (!isLoading) handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER);
+      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
     } finally {
       setIsLoading(false)
     }
-  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert, supabase.auth, supabase.from])
+  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert])
 
   const handleLike = useCallback(async () => {
     if (!user || !profile || !profileId) {
@@ -421,26 +400,31 @@ export default function ProfileView() {
       })
       return
     }
-  
-    if (!hasMatch || !profileData?.whatsapp_number || !profileData?.share_whatsapp) {
+
+    if (!hasMatch || !hasPremiumSubscription || !profileData?.whatsapp_number || !profileData?.share_whatsapp) {
       MySwal.fire({
         icon: "error",
         title: "Contato indisponível",
-        html: `<p class="text-sm text-gray-400">Este usuário não compartilhou o número de WhatsApp.</p>`,
+        html: `<p class="text-sm text-gray-400">${
+          !hasMatch
+            ? "Vocês ainda não deram match."
+            : !hasPremiumSubscription
+            ? "Você precisa de uma assinatura Premium para enviar mensagens."
+            : "Este usuário não compartilhou o número de WhatsApp."
+        }</p>`,
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
       return
     }
-  
+
     const cleanedNumber = profileData.whatsapp_number.replace(/\D/g, "")
     const encodedMessage = encodeURIComponent(message.trim())
     const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
-  
+
     window.open(whatsappUrl, "_blank")
     setMessage("")
-  }, [user, profileId, message, hasMatch, profileData])
-  
+  }, [user, profileId, message, hasMatch, hasPremiumSubscription, profileData])
 
   useEffect(() => {
     loadProfile()
@@ -469,12 +453,7 @@ export default function ProfileView() {
             Perfil de {profileData?.name || "Usuário"}
           </h2>
 
-
-      
           <div className="flex justify-between mb-6">
-          
-          {hasLiked}
-
             {!hasLiked && !hasMatch && (
               <Button
                 onClick={handleLike}
@@ -486,7 +465,6 @@ export default function ProfileView() {
                 {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
               </Button>
             )}
-            
           </div>
           {hasMatch && (
             <Badge className="bg-[#00FFD1]/10 text-[#00FFD1] text-xs flex items-center justify-center mb-6">
@@ -494,8 +472,6 @@ export default function ProfileView() {
               Match!
             </Badge>
           )}
-
-
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
             <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
@@ -521,21 +497,19 @@ export default function ProfileView() {
               <ProfilePhotos photos={photos} />
             </TabsContent>
           </Tabs>
-         
+
           {!profileData?.share_whatsapp && (
             <div className="text-center text-oraculo-muted">
-              Este usuário não compartilhou o número de WhatsApp. 
+              Este usuário não compartilhou o número de WhatsApp.
             </div>
           )}
-     
 
-          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp &&  (
+          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp && (
             <Card className="mb-6 border-none shadow-sm">
               <CardHeader>
                 <CardTitle>Enviar Mensagem</CardTitle>
                 <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
               </CardHeader>
-
               <CardContent>
                 <div className="space-y-4">
                   <Textarea
@@ -547,7 +521,7 @@ export default function ProfileView() {
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={isSending || !message.trim() || !profileData?.whatsapp_number || !profileData?.share_whatsapp}
+                    disabled={isSending || !message.trim()}
                     className="w-full gradient-button"
                     aria-label="Enviar mensagem"
                   >
@@ -556,11 +530,11 @@ export default function ProfileView() {
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                         Enviando...
                       </>
-                    ) : profileData?.whatsapp_number && profileData?.share_whatsapp ? (
-                      <> {/* Utilize o ícone do WhatsApp */}
-                        <FaWhatsapp className="mr-2 h-5 w-5" /> Enviar por WhatsApp
-                      </> ) : (
-                      "Enviar"
+                    ) : (
+                      <>
+                        <FaWhatsapp className="mr-2 h-5 w-5" />
+                        Enviar por WhatsApp
+                      </>
                     )}
                   </Button>
                 </div>
@@ -578,9 +552,6 @@ export default function ProfileView() {
               </CardContent>
             </Card>
           )}
-
-          
-
         </motion.main>
       </div>
     </>

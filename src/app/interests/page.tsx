@@ -1,5 +1,5 @@
 "use client";
-
+import { Suspense } from "react";
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 
 const MySwal = withReactContent(Swal);
 
+// Define interfaces at the top of the file
 type Gender = "HOMEM" | "MULHER" | "OUTRO";
 type GenderPreference = "HOMEM" | "MULHER" | "TODOS";
 
@@ -51,7 +52,7 @@ const getFullImageUrl = (path: string | null): string => {
   return `https://wthyagnvodxbvmxkjhzb.supabase.co/storage/v1/object/public/interests/${path}`;
 };
 
-export default function InterestsPage() {
+function InterestsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, profile, isLoading: userLoading } = useUser();
@@ -356,3 +357,21 @@ export default function InterestsPage() {
     </div>
   );
 }
+
+export default function InterestsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100" aria-live="polite">
+          <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
+          <span className="sr-only">Carregando...</span>
+        </div>
+      }
+    >
+      <InterestsContent />
+    </Suspense>
+  );
+}
+
+// Optional: Force dynamic rendering to avoid static generation issues
+export const dynamic = "force-dynamic";
