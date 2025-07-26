@@ -140,18 +140,6 @@ export function getProfileRecommendations(
 // Dados de planos de assinatura
 export const subscriptionPlans: SubscriptionPlan[] = [
   {
-    id: "basic",
-    name: "Básico",
-    price: 0,
-    interval: "month",
-    features: [
-      "Acesso a perfis básicos",
-      "Um like e um match por dia",
-      "Filtros básicos de busca",
-    ],
-    tier: "FREE",
-  },
-  {
     id: "premium",
     name: "Premium",
     price: 29.90,
