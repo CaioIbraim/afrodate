@@ -1053,7 +1053,7 @@ export default function ProfilePage() {
   })
   const [debouncedPreferences] = useDebounce(preferences, 1000)
 
-  const showAlert = useCallback(async (type: "success" | "error", titlemillisecond) => {
+  const showAlert = useCallback(async (type: "success" | "error", titlemillisecond: number) => {
     return MySwal.fire({
       icon: type,
       title : "Perfil Atualizado",
