@@ -11,15 +11,14 @@ const headers = {
 
 export async function POST(request) {
     const { name, cpf, email } = await request.json();
-    
+    console.log(cpf)
     try {
-
         // First, try to find existing customer by CPF
-        if (email) {
+        if (cpf) {
             const searchResponse = await axios.get(
                 `${ASAAS_API_URL}/customers`,
                 {
-                    params: { email: email },
+                    params: { cpfCnpj: cpf },
                     headers
                 }
             );
@@ -30,12 +29,13 @@ export async function POST(request) {
                 return Response.json({ customerId });
             }
         }
-        // First, try to find existing customer by CPF
-        if (cpf) {
+
+
+        if (email) {
             const searchResponse = await axios.get(
                 `${ASAAS_API_URL}/customers`,
                 {
-                    params: { cpfCnpj: cpf },
+                    params: { email: email },
                     headers
                 }
             );
@@ -72,9 +72,9 @@ export async function POST(request) {
         if (error.response && error.response.data && error.response.data.errors) {
             const cpfError = error.response.data.errors.find(err => err.code === 'invalidValue' && err.field === 'cpfCnpj');
             if (cpfError) {
-                return Response.json({ error: 'CPF inválido ou já cadastrado.' }, { status: 400 });
+                return Response.json({ error: 'Usuário inválido ou já cadastrado.' }, { status: 400 });
             }
         }
-        return Response.json({ error: 'Erro ao processar cliente.' }, { status: 500 });
+        return Response.json({ error: 'Erro ao processar usuário.' }, { status: 500 });
     }
 }

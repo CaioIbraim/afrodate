@@ -406,7 +406,9 @@ export default function MatchesPage() {
                 Ver Perfil
               </Button>
             </Link>
-            {nearbyProfile.isMatch ? (
+
+
+            {/* {nearbyProfile.isMatch ? (
               <Link
                 href={`/chat/${nearbyProfile.id}`}
                 className="flex-1"
@@ -427,7 +429,10 @@ export default function MatchesPage() {
                 <Heart className="h-4 w-4 mr-2" />
                 Curtir
               </Button>
-            ) : null}
+            ) : null} */}
+
+
+
           </div>
         </div>
       </div>

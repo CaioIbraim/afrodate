@@ -11,7 +11,7 @@ export function MainNavigation() {
   const menuItems = [
     {
       label: 'Discover',
-      href: '/discover/v3',
+      href: '/discover/v6',
       icon: '🔍',
       protected: true
     },

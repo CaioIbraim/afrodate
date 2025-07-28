@@ -34,14 +34,14 @@
 //    ```
 
 // 3. **Add File**:
-//    Save the code to `src/app/discover/v3/page.tsx`.
+//    Save the code to `src/app/discover/v6/page.tsx`.
 
 // 4. **Verify Dependencies**:
 //    Ensure all imported components (`Card`, `Button`, etc.) and hooks (`useUser`) are available. The `useUser` hook should return `user` (Supabase auth user) and `profile` (user’s profile from `profiles` table).
 
 // 5. **Test**:
 //    - Run `npm run dev`.
-//    - Log in, create a profile, and navigate to `/discover/v3`.
+//    - Log in, create a profile, and navigate to `/discover/v6`.
 //    - Check the console for logs (`Fetching profiles`, `Profiles loaded`).
 //    - Test liking and skipping profiles, and verify entries in the `matches` table.
 //    - If no profiles appear, create test profiles in Supabase with `show_profile = true` and matching preferences.

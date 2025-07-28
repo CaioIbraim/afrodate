@@ -1,89 +1,95 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { MoreVertical, Video, Phone, LogOut, Heart, Search, User, Star, Coins } from "lucide-react"
-import { PremiumBadge } from "@/components/ui/premium-badge"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { useUser } from "@/hooks/use-user"
-import { useState } from "react"
-import Image from "next/image"
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { MoreVertical, Video, Phone, LogOut, Heart, Search, User, Coins, Star } from "lucide-react";
+import { PremiumBadge } from "@/components/ui/premium-badge";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useUser } from "@/hooks/use-user";
+import { useState } from "react";
+import Image from "next/image";
 
 interface ProfileHeaderProps {
-  name: string
-  avatarUrl?: string
-  isPremium?: boolean
-  online?: boolean
-  lastActive?: string
-  onBack?: () => void
-  onVideoCall?: () => void
-  onVoiceCall?: () => void
-  onOpenProfile?: () => void
+  name: string;
+  avatarUrl?: string;
+  online?: boolean;
+  lastActive?: string;
+  onBack?: () => void;
+  onVideoCall?: () => void;
+  onVoiceCall?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export function ProfileHeader({
   name,
   avatarUrl = "/placeholder.svg",
-  isPremium = false,
   online = false,
   lastActive = "Agora",
   onVideoCall,
   onVoiceCall,
   onOpenProfile,
 }: ProfileHeaderProps) {
-  const router = useRouter()
-  const { profile } = useUser()
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const router = useRouter();
+  const { profile } = useUser();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Verificar se o perfil está completo
   const isProfileComplete = profile && 
     profile.name && 
     profile.bio && 
     profile.gender && 
-    profile.birth_date
+    profile.birth_date;
 
-  // Verificar se a assinatura é nível 3
-  const hasPremiumSubscription = profile?.subscription === 3
+  // Verificar se há uma assinatura ativa
+  const hasActiveSubscription = profile?.subscription && profile.subscription.is_active;
 
   // Função para realizar logout
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true)
-      await supabase.auth.signOut()
-      router.push("/login")
+      setIsLoggingOut(true);
+      await supabase.auth.signOut();
+      router.push("/login");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error)
+      console.error("Erro ao fazer logout:", error);
     } finally {
-      setIsLoggingOut(false)
+      setIsLoggingOut(false);
     }
-  }
+  };
 
   // Navegação para a página de likes
   const navigateToLikes = () => {
-    router.push("/liked-me")
-  }
+    router.push("/liked-me");
+  };
 
   // Navegação para a página de discover
   const navigateToDiscover = () => {
-    router.push("/discover/v3")
-  }
+    router.push("/discover/v6");
+  };
 
-  // Navegação para a página de discover
+  // Navegação para a página de logout
   const navigateToLogout = () => {
-    router.push("/signout")
-  }
+    router.push("/signout");
+  };
 
-  
-  // Navegação para a página de discover
+  // Navegação para a página de perfil
   const navigateToProfile = () => {
-    router.push("/profile")
-  }
+    router.push("/profile");
+  };
+
+  // Formatar a data de expiração da assinatura
+  const formatSubscriptionEndDate = (endsAt: string) => {
+    return new Date(endsAt).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
 
   return (
-    <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-      <div className="flex items-center">
+    <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+      <div className="flex items-center my-3">
         {/* Logo do projeto, posicionado à esquerda */}
         <Image src="/logo.png" height={50} width={50} alt="logo principal" />
       </div>
@@ -107,11 +113,21 @@ export function ProfileHeader({
               <div className="px-4 py-2 border-b border-gray-200">
                 <div className="flex items-center">
                   <span className="font-medium text-oraculo-dark">{name}</span>
-                  {isPremium && <PremiumBadge size="sm" className="ml-1" />}
+                  {hasActiveSubscription && <PremiumBadge size="sm" className="ml-1" />}
                 </div>
                 <p className="text-xs text-oraculo-muted">
                   {online ? "Online" : `Últ. vez ${lastActive}`}
                 </p>
+                {hasActiveSubscription && profile?.subscription?.ends_at && (
+                  <p className="text-xs text-oraculo-muted">
+                    Assinatura ativa até {formatSubscriptionEndDate(profile.subscription.ends_at)}
+                  </p>
+                )}
+                {!hasActiveSubscription && (
+                  <p className="text-xs text-oraculo-muted">
+                    Nenhuma assinatura ativa
+                  </p>
+                )}
               </div>
               
               {/* Menus condicionais baseados na completude do perfil */}
@@ -137,9 +153,8 @@ export function ProfileHeader({
               
               {/* Opções de chamada condicional baseadas na assinatura */}
               {/*
-              {hasPremiumSubscription && (
+              {hasActiveSubscription && (
                 <>
-
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#1E1E1E]/10 flex items-center"
                     onClick={onVoiceCall}
@@ -156,9 +171,8 @@ export function ProfileHeader({
                     Videochamada
                   </button>
                 </>
-
               )}
-                */}
+              */}
               
               <button
                 className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#1E1E1E]/10 flex items-center"
@@ -168,18 +182,15 @@ export function ProfileHeader({
                 Ver perfil
               </button>
 
-              <button
-                      className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#1E1E1E]/10 flex items-center text-yellow-600 hover:bg-yellow-50"
-                      onClick={() => router.push("/buy-coins")} // Link para a página de subscriptions
-                    >
-                  <Coins className="h-4 w-4 mr-2" />    
-                  Seja VIP
-                  </button>
-              {/* <button
-                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-              >
-                Bloquear
-              </button> */}
+              {!hasActiveSubscription && (
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-yellow-600 hover:bg-yellow-50 flex items-center"
+                  onClick={() => router.push("/subscription/v2")}
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Assinar
+                </button>
+              )}
               
               <button 
                 className="w-full text-left px-4 py-2 text-sm text-oraculo-dark hover:bg-[#1E1E1E]/10 flex items-center"
@@ -194,5 +205,5 @@ export function ProfileHeader({
         </Popover>
       </div>
     </div>
-  )
+  );
 }

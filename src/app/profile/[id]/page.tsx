@@ -1,7 +1,6 @@
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:2490082326.
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Swal from "sweetalert2"
 import withReactContent from "sweetalert2-react-content"
@@ -43,9 +42,8 @@ const ROUTES = {
   MESSAGES: (id: string) => `/messages/${id}`,
 }
 const PLACEHOLDER_IMAGE = "/placeholder-image.png"
+
 // Types
-// types.ts (or similar file)
-// Assume you have this file with necessary types
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO"
 type Photo = { name: string; storage_path: string; publicUrl: string; isPrimary: boolean }
 type ProfileData = {
@@ -61,11 +59,10 @@ type ProfileData = {
   user_id: string
   latitude?: number | null
   longitude?: number | null
-  whatsapp_number?: string         // Novo campo
-  share_whatsapp?: boolean   
+  whatsapp_number?: string
+  share_whatsapp?: boolean
   email?: string
 }
-// type Profile = { id: string; name: string; avatar_url: string | null; subscription: number } // This type is defined in use-user hook
 
 // Utility Functions
 const handleError = (error: any, title: string, router: any, redirectRoute: string) => {
@@ -78,11 +75,6 @@ const handleError = (error: any, title: string, router: any, redirectRoute: stri
   }).then((result) => result.isConfirmed && router.push(redirectRoute))
 }
 
-/**
- * Calculates age from birth date, ensuring valid range (18-120).
- * @param birthDate ISO date string
- * @returns Age or null if invalid
- */
 const calculateAge = (birthDate: string): number | null => {
   if (!birthDate) return null
   const birth = new Date(birthDate)
@@ -94,11 +86,27 @@ const calculateAge = (birthDate: string): number | null => {
   return age >= 18 && age <= 120 ? age : null
 }
 
-/**
- * Fetches photo URLs, falling back to signed URLs if public access fails.
- * @param photos Photo data from Supabase
- * @returns Array of photo objects with public URLs
- */
+const getZodiacSign = (birthDate: string): { sign: string; emoji: string } => {
+  if (!birthDate) return { sign: "Desconhecido", emoji: "" }
+  const date = new Date(birthDate)
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+
+  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return { sign: "Áries", emoji: "♈" }
+  if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return { sign: "Touro", emoji: "♉" }
+  if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return { sign: "Gêmeos", emoji: "♊" }
+  if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return { sign: "Câncer", emoji: "♋" }
+  if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return { sign: "Leão", emoji: "♌" }
+  if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return { sign: "Virgem", emoji: "♍" }
+  if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return { sign: "Libra", emoji: "♎" }
+  if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return { sign: "Escorpião", emoji: "♏" }
+  if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return { sign: "Sagitário", emoji: "♐" }
+  if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return { sign: "Capricórnio", emoji: "♑" }
+  if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return { sign: "Aquário", emoji: "♒" }
+  if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return { sign: "Peixes", emoji: "♓" }
+  return { sign: "Desconhecido", emoji: "" }
+}
+
 const fetchPhotoUrls = async (photos: any[]): Promise<Photo[]> => {
   return Promise.all(
     photos.map(async (photo) => {
@@ -131,65 +139,80 @@ const ProfileInfo = ({
 }: {
   profileData: ProfileData | null
   calculateAge: (birthDate: string) => number | null
-}) => (
-  <Card className="mb-6 border-none shadow-sm">
-    {/* Removed CardHeader for a cleaner look, content is within the main profile block */}
-    {/* <CardHeader>
-      <CardTitle>Informações do Perfil</CardTitle>
-      <CardDescription>Detalhes sobre {profileData?.name || "o usuário"}</CardDescription>
-    </CardHeader>
-    */}
-    <CardContent>
-      {profileData ? ( // This whole block is being refactored for better layout
-        <div className="flex flex-col space-y-6">
-          <div className="flex flex-col justify-center items-center space-x-4">
-            <Avatar className="w-24 h-24">
-              <AvatarImage
-                src={profileData.avatar_url || PLACEHOLDER_IMAGE}
-                alt={profileData.name}
-                className="object-cover"
-                onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
-              />
-              <AvatarFallback className="text-2xl">{profileData.name.charAt(0) || "?"}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
-              {calculateAge(profileData.birth_date) && (
-                <p className="text-sm text-oraculo-muted">{calculateAge(profileData.birth_date)} anos</p>
-              )}
-              <p className="text-sm text-oraculo-muted">{profileData.city}</p>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
-            <p className="text-oraculo-muted">{profileData.profession || "Não informado"}</p>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
-            <p className="text-oraculo-muted">{profileData.bio || "Sem biografia"}</p>
-          </div>
-          {profileData.interests.length > 0 && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
-              <div className="flex flex-wrap gap-2">
-                {profileData.interests.map((interest, index) => (
-                  <span
-                    key={index}
-                    className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs px-2 py-1 rounded"
-                  >
-                    {interest}
-                  </span>
-                ))}
+}) => {
+  const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData])
+  
+  return (
+    <Card className="mb-6 border-none shadow-sm">
+      <CardContent className="pt-6">
+        {profileData ? (
+          <div className="flex flex-col space-y-6">
+            <div className="flex flex-col items-center space-y-2">
+              <Avatar className="w-24 h-24">
+                <AvatarImage
+                  src={profileData.avatar_url || PLACEHOLDER_IMAGE}
+                  alt={profileData.name}
+                  className="object-cover"
+                  onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
+                />
+                <AvatarFallback className="text-2xl">{profileData.name.charAt(0) || "?"}</AvatarFallback>
+              </Avatar>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
+                <div className="flex items-center justify-center gap-2">
+                  {calculateAge(profileData.birth_date) && (
+                    <p className="text-sm text-oraculo-muted">
+                      {calculateAge(profileData.birth_date)} anos
+                    </p>
+                  )}
+                  {zodiac.sign !== "Desconhecido" && (
+                    <p className="text-sm text-oraculo-muted">
+                      {zodiac.emoji} {zodiac.sign}
+                    </p>
+                  )}
+                </div>
+                <p className="text-sm text-oraculo-muted">{profileData.city}</p>
               </div>
             </div>
-          )}
-        </div> // End of the block being refactored
-      ) : (
-        <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
-      )}
-    </CardContent>
-  </Card>
-)
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
+              <p className="text-oraculo-muted">{profileData.profession || "Não informado"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
+              <p className="text-oraculo-muted">{profileData.bio || "Sem biografia"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">WhatsApp</h4>
+              <p className="text-oraculo-muted">
+                {profileData.share_whatsapp && profileData.whatsapp_number
+                  ? "WhatsApp compartilhado"
+                  : "WhatsApp não compartilhado"}
+              </p>
+            </div>
+            {profileData.interests.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.interests.map((interest, index) => (
+                    <Badge
+                      key={index}
+                      className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs"
+                    >
+                      {interest}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
 
 const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
   <Card className="mb-6 border-none shadow-sm">
@@ -214,9 +237,9 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
                 onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
               />
               {photo.isPrimary && (
-                <div className="absolute top-2 left-2 bg-[#1E1E1E] text-white text-xs px-2 py-1 rounded">
+                <Badge className="absolute top-2 left-2 bg-[#1E1E1E] text-white text-xs">
                   Principal
-                </div>
+                </Badge>
               )}
             </div>
           ))
@@ -228,8 +251,8 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
 
 export default function ProfileView() {
   const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser(); // Use useUser hook
-  const { id: profileId } = useParams() as { id: string };
+  const { user, isLoading: userLoading, profile } = useUser()
+  const { id: profileId } = useParams() as { id: string }
   const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
   const [profileData, setProfileData] = useState<ProfileData | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -241,7 +264,7 @@ export default function ProfileView() {
   const [isSending, setIsSending] = useState(false)
   const [matchAlertShown, setMatchAlertShown] = useState(false)
 
-  const hasPremiumSubscription = profile?.subscription === 3
+  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile])
 
   const showMatchAlert = useCallback(() => {
     if (matchAlertShown) return
@@ -265,29 +288,29 @@ export default function ProfileView() {
   }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
 
   const loadProfile = useCallback(async () => {
-   
+    if (!profileId || typeof profileId !== "string") {
+      handleError(new Error("ID do perfil inválido"), "Erro", router, ROUTES.DISCOVER)
+      return
+    }
 
-    if (!profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-lg text-gray-700">ID do perfil não fornecido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Voltar",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.DISCOVER))
+    if (!user || !profile) {
+      handleError(new Error("Usuário não autenticado"), "Erro", router, ROUTES.LOGIN)
       return
     }
 
     setIsLoading(true)
     try {
-      const today = new Date().toISOString().split("T")[0]
       const [
         { data: profileData, error: profileError },
         { data: photosData, error: photosError },
         { data: likeData, error: likeError },
         { data: matchData, error: matchError },
       ] = await Promise.all([
-        supabase.from("profiles").select("*, profile_photos(storage_path, is_primary)").eq("id", profileId).single(),
+        supabase
+          .from("profiles")
+          .select("id, user_id, name, birth_date, gender, bio, city, profession, interests, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
+          .eq("id", profileId)
+          .single(),
         supabase
           .from("profile_photos")
           .select("storage_path, is_primary")
@@ -295,31 +318,22 @@ export default function ProfileView() {
           .order("created_at", { ascending: true }),
         supabase
           .from("likes")
-          .select("id") // Assuming profile!.id is the current user's profile ID
-          .eq("profile_id", profile!.id)
+          .select("id")
+          .eq("profile_id", profile.id)
           .eq("liked_profile_id", profileId)
-          .eq("profile_id", profile!.id)
           .single(),
         supabase
           .from("matches")
-          .select('id')
-          .or(`profile1_id.eq.${profile!.id},profile2_id.eq.${profile!.id}`)
+          .select("id")
+          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
           .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
           .single(),
       ])
 
-        console.log("Profile Data:", profileData);
-        console.log("Photos Data:", photosData);
-        console.log("Like Data:", likeData);
-        console.log("Match Data:", matchData)
-        setHasLiked(!!likeData)
-        console.log("has Like Data:", hasLiked)
-        
-
-      if (profileError) throw profileError
-      if (photosError) throw photosError
-      if (likeError && likeError.code !== "PGRST116") throw likeError
-      if (matchError && matchError.code !== "PGRST116") throw matchError
+      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`)
+      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`)
+      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`)
+      if (matchError && matchError.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${matchError.message}`)
 
       setProfileData(profileData)
       setPhotos(photosData ? await fetchPhotoUrls(photosData) : [])
@@ -327,22 +341,20 @@ export default function ProfileView() {
       setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
 
-      console.log("Verifica se já curtiu ",hasLiked)
-      // Only show match alert if it's a new match discovered during this load and not already shown
-      if (matchData && !hasMatch && !matchAlertShown) showMatchAlert();
+      if (matchData && !matchAlertShown) showMatchAlert()
     } catch (error: any) {
-      // if (!isLoading) handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER);
+      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
     } finally {
       setIsLoading(false)
     }
-  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert, supabase.auth, supabase.from])
+  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert])
 
   const handleLike = useCallback(async () => {
     if (!user || !profile || !profileId) {
       MySwal.fire({
         icon: "error",
         title: "Erro",
-        html: '<p class="text-lg text-gray-700">Usuário ou perfil inválido.</p>',
+        html: '<p class="text-sm text-gray-700">Usuário ou perfil inválido.</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
@@ -353,7 +365,7 @@ export default function ProfileView() {
       MySwal.fire({
         icon: "info",
         title: "Limite Diário",
-        html: '<p className="text-lg text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
+        html: '<p class="text-sm text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
@@ -366,14 +378,14 @@ export default function ProfileView() {
         liked_profile_id: profileId,
         created_at: new Date().toISOString(),
       })
-      if (error) throw error
+      if (error) throw new Error(`Erro ao curtir: ${error.message}`)
 
       setHasLiked(true)
       setCanLikeToday(false)
       MySwal.fire({
         icon: "success",
         title: "Perfil Curtido!",
-        html: '<p className="text-lg text-success">Você curtiu este perfil! Aguardando um match...</p>',
+        html: '<p class="text-sm text-success">Você curtiu este perfil! Aguardando um match...</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
@@ -384,7 +396,7 @@ export default function ProfileView() {
         .eq("profile_id", profileId)
         .eq("liked_profile_id", profile.id)
         .single()
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw mutualLikeError
+      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw new Error(`Erro ao verificar match: ${mutualLikeError.message}`)
       if (mutualLike) {
         setHasMatch(true)
         showMatchAlert()
@@ -393,8 +405,8 @@ export default function ProfileView() {
       MySwal.fire({
         icon: "error",
         title: "Erro ao Curtir",
-        html: `<p className="text-lg text-gray-400">${
-          error.message === "too_many_requests"
+        html: `<p class="text-sm text-gray-700">${
+          error.message.includes("too_many_requests")
             ? "Muitas tentativas. Tente novamente em alguns minutos."
             : "Não foi possível curtir o perfil."
         }</p>`,
@@ -405,42 +417,93 @@ export default function ProfileView() {
   }, [user, profile, profileId, canLikeToday, showMatchAlert])
 
   const handleSendMessage = useCallback(() => {
-    if (!user || !profileId || !message.trim()) {
+    if (!user || !profileId) {
       MySwal.fire({
         icon: "error",
         title: "Erro",
-        html: `<p class="text-sm text-gray-400">${
-          !user
-            ? "Usuário não autenticado."
-            : !profileId
-            ? "Perfil inválido."
-            : "Digite uma mensagem."
+        html: `<p class="text-sm text-gray-700">${
+          !user ? "Usuário não autenticado." : "Perfil inválido."
         }</p>`,
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
       return
     }
-  
-    if (!hasMatch || !profileData?.whatsapp_number || !profileData?.share_whatsapp) {
+
+    if (!hasMatch) {
       MySwal.fire({
         icon: "error",
-        title: "Contato indisponível",
-        html: `<p class="text-sm text-gray-400">Este usuário não compartilhou o número de WhatsApp.</p>`,
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Vocês ainda não deram match.</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       })
       return
     }
-  
+
+    if (!hasPremiumSubscription) {
+      MySwal.fire({
+        icon: "info",
+        title: "Assinatura Necessária",
+        html: '<p class="text-sm text-gray-700">Você precisa de uma assinatura Premium para enviar mensagens.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "Fazer Upgrade",
+      }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION))
+      return
+    }
+
+    if (!profileData?.share_whatsapp || !profileData?.whatsapp_number) {
+      MySwal.fire({
+        icon: "info",
+        title: "Contato Indisponível",
+        html: '<p class="text-sm text-gray-700">Este usuário não compartilhou o número de WhatsApp.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+
+    if (!message.trim()) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Digite uma mensagem.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+
     const cleanedNumber = profileData.whatsapp_number.replace(/\D/g, "")
-    const encodedMessage = encodeURIComponent(message.trim())
-    const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
-  
-    window.open(whatsappUrl, "_blank")
-    setMessage("")
-  }, [user, profileId, message, hasMatch, profileData])
-  
+    if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+
+    setIsSending(true)
+    try {
+      const encodedMessage = encodeURIComponent(message.trim())
+      const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
+      window.open(whatsappUrl, "_blank")
+      setMessage("")
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+    } finally {
+      setIsSending(false)
+    }
+  }, [user, profileId, message, hasMatch, hasPremiumSubscription, profileData, router])
 
   useEffect(() => {
     loadProfile()
@@ -469,12 +532,7 @@ export default function ProfileView() {
             Perfil de {profileData?.name || "Usuário"}
           </h2>
 
-
-      
           <div className="flex justify-between mb-6">
-          
-          {hasLiked}
-
             {!hasLiked && !hasMatch && (
               <Button
                 onClick={handleLike}
@@ -486,7 +544,6 @@ export default function ProfileView() {
                 {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
               </Button>
             )}
-            
           </div>
           {hasMatch && (
             <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center justify-center mb-6">
@@ -494,8 +551,6 @@ export default function ProfileView() {
               Match!
             </Badge>
           )}
-
-
 
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
             <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
@@ -521,21 +576,13 @@ export default function ProfileView() {
               <ProfilePhotos photos={photos} />
             </TabsContent>
           </Tabs>
-         
-          {!profileData?.share_whatsapp && (
-            <div className="text-center text-oraculo-muted">
-              Este usuário não compartilhou o número de WhatsApp. 
-            </div>
-          )}
-     
 
-          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp &&  (
+          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp && profileData?.whatsapp_number && (
             <Card className="mb-6 border-none shadow-sm">
               <CardHeader>
                 <CardTitle>Enviar Mensagem</CardTitle>
                 <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
               </CardHeader>
-
               <CardContent>
                 <div className="space-y-4">
                   <Textarea
@@ -543,24 +590,24 @@ export default function ProfileView() {
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Digite sua mensagem..."
                     disabled={isSending}
-                    aria-label="Mensagem"
+                    aria-label="Mensagem para enviar via WhatsApp"
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={isSending || !message.trim() || !profileData?.whatsapp_number || !profileData?.share_whatsapp}
+                    disabled={isSending || !message.trim()}
                     className="w-full gradient-button"
-                    aria-label="Enviar mensagem"
+                    aria-label="Enviar mensagem via WhatsApp"
                   >
                     {isSending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
                         Enviando...
                       </>
-                    ) : profileData?.whatsapp_number && profileData?.share_whatsapp ? (
-                      <> {/* Utilize o ícone do WhatsApp */}
-                        <FaWhatsapp className="mr-2 h-5 w-5" /> Enviar por WhatsApp
-                      </> ) : (
-                      "Enviar"
+                    ) : (
+                      <>
+                        <FaWhatsapp className="mr-2 h-5 w-5" />
+                        Enviar por WhatsApp
+                      </>
                     )}
                   </Button>
                 </div>
@@ -578,9 +625,6 @@ export default function ProfileView() {
               </CardContent>
             </Card>
           )}
-
-          
-
         </motion.main>
       </div>
     </>

@@ -227,7 +227,7 @@ export default function LoginPage() {
       if (interests.length === 0) {
         router.push("/interests")
       } else {
-        router.push("/discover/v3")
+        router.push("/discover/v6")
       }
     } catch (error: any) {
       console.error("Login error:", error)
