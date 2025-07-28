@@ -18,6 +18,7 @@ import {
   CardContent,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase"
 import { useUser } from "@/hooks/use-user"
@@ -27,7 +28,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { ProfileHeader } from "@/components/profile-header"
 import { Badge } from "@/components/ui/badge"
 import { FaWhatsapp } from "react-icons/fa"
-import { useDebounce } from '@/hooks/use-debounce';
 
 // Constants
 const MySwal = withReactContent(Swal)
@@ -137,12 +137,92 @@ const fetchPhotoUrls = async (photos: any[]): Promise<Photo[]> => {
 const ProfileInfo = ({
   profileData,
   calculateAge,
+  isOwnProfile,
+  onUpdateInterests,
 }: {
   profileData: ProfileData | null
   calculateAge: (birthDate: string) => number | null
+  isOwnProfile: boolean
+  onUpdateInterests: (interests: string[]) => Promise<void>
 }) => {
   const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData])
-  
+  const [newInterest, setNewInterest] = useState("")
+  const [savingInterests, setSavingInterests] = useState(false)
+
+  const handleAddInterest = async () => {
+    if (!profileData || !newInterest.trim() || newInterest.length > 50) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">${
+          !newInterest.trim() ? "Digite um interesse." : "O interesse deve ter no máximo 50 caracteres."
+        }</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+    if (profileData.interests.includes(newInterest.trim())) {
+      MySwal.fire({
+        icon: "info",
+        title: "Interesse Duplicado",
+        html: '<p class="text-sm text-gray-700">Este interesse já foi adicionado.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+      return
+    }
+    setSavingInterests(true)
+    try {
+      const updatedInterests = [...profileData.interests, newInterest.trim()]
+      await onUpdateInterests(updatedInterests)
+      setNewInterest("")
+      MySwal.fire({
+        icon: "success",
+        title: "Interesse Adicionado",
+        html: '<p class="text-sm text-success">Interesse adicionado com sucesso!</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">Não foi possível adicionar o interesse. Tente novamente.</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+    } finally {
+      setSavingInterests(false)
+    }
+  }
+
+  const handleRemoveInterest = async (interest: string) => {
+    if (!profileData) return
+    setSavingInterests(true)
+    try {
+      const updatedInterests = profileData.interests.filter((i) => i !== interest)
+      await onUpdateInterests(updatedInterests)
+      MySwal.fire({
+        icon: "success",
+        title: "Interesse Removido",
+        html: '<p class="text-sm text-success">Interesse removido com sucesso!</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">Não foi possível remover o interesse. Tente novamente.</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      })
+    } finally {
+      setSavingInterests(false)
+    }
+  }
+
   return (
     <Card className="mb-6 border-none shadow-sm">
       <CardContent className="pt-6">
@@ -191,9 +271,9 @@ const ProfileInfo = ({
                   : "WhatsApp não compartilhado"}
               </p>
             </div>
-            {profileData.interests.length > 0 && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
+              {profileData.interests.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {profileData.interests.map((interest, index) => (
                     <Badge
@@ -201,11 +281,50 @@ const ProfileInfo = ({
                       className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs"
                     >
                       {interest}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => handleRemoveInterest(interest)}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                          aria-label={`Remover interesse ${interest}`}
+                          disabled={savingInterests}
+                        >
+                          &times;
+                        </button>
+                      )}
                     </Badge>
                   ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <p className="text-oraculo-muted">Nenhum interesse cadastrado.</p>
+              )}
+              {isOwnProfile && (
+                <div className="mt-4 space-y-2">
+                  <Input
+                    value={newInterest}
+                    onChange={(e) => setNewInterest(e.target.value)}
+                    placeholder="Adicionar novo interesse"
+                    maxLength={50}
+                    disabled={savingInterests}
+                    aria-label="Adicionar novo interesse"
+                  />
+                  <Button
+                    onClick={handleAddInterest}
+                    disabled={savingInterests || !newInterest.trim()}
+                    className="w-full gradient-button"
+                    aria-label="Adicionar interesse"
+                  >
+                    {savingInterests ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Adicionar Interesse"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
@@ -250,7 +369,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
   </Card>
 )
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
+export default function ProfileView() {
   const router = useRouter()
   const { user, isLoading: userLoading, profile } = useUser()
   const { id: profileId } = useParams() as { id: string }
@@ -266,6 +385,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [matchAlertShown, setMatchAlertShown] = useState(false)
 
   const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile])
+  const isOwnProfile = useMemo(() => profile?.id === profileId, [profile, profileId])
 
   const showMatchAlert = useCallback(() => {
     if (matchAlertShown) return
@@ -287,6 +407,22 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     })
     setMatchAlertShown(true)
   }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
+
+  const handleUpdateInterests = useCallback(async (interests: string[]) => {
+    if (!profileData || !profileId) {
+      throw new Error("Perfil inválido")
+    }
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ interests, updated_at: new Date().toISOString() })
+        .eq("id", profileId)
+      if (error) throw new Error(`Erro ao atualizar interesses: ${error.message}`)
+      setProfileData({ ...profileData, interests })
+    } catch (error: any) {
+      throw error
+    }
+  }, [profileData, profileId])
 
   const loadProfile = useCallback(async () => {
     if (!profileId || typeof profileId !== "string") {
@@ -339,8 +475,8 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       setProfileData(profileData)
       setPhotos(photosData ? await fetchPhotoUrls(photosData) : [])
       setHasLiked(!!likeData)
+      setCanLikeToday(!likeData)
       setHasMatch(!!matchData)
-      setCanMessage(true) // ou outro valor apropriado
 
       if (matchData && !matchAlertShown) showMatchAlert()
     } catch (error: any) {
@@ -545,6 +681,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
                 {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
               </Button>
             )}
+            <Button
+              onClick={() => router.push(ROUTES.DISCOVER)}
+              className="flex-1 ml-2 gradient-button"
+              aria-label="Voltar para descoberta"
+            >
+              Voltar
+            </Button>
           </div>
           {hasMatch && (
             <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center justify-center mb-6">
@@ -571,7 +714,12 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="informacoes">
-              <ProfileInfo profileData={profileData} calculateAge={calculateAge} />
+              <ProfileInfo
+                profileData={profileData}
+                calculateAge={calculateAge}
+                isOwnProfile={isOwnProfile}
+                onUpdateInterests={handleUpdateInterests}
+              />
             </TabsContent>
             <TabsContent value="fotos">
               <ProfilePhotos photos={photos} />
@@ -631,857 +779,3 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     </>
   )
 }
-
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser()
-  const { id: profileId } = useParams() as { id: string }
-  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
-  const [profileData, setProfileData] = useState<ProfileData | null>(null)
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasLiked, setHasLiked] = useState(false)
-  const [canLikeToday, setCanLikeToday] = useState(true)
-  const [hasMatch, setHasMatch] = useState(false)
-  const [message, setMessage] = useState("")
-  const [isSending, setIsSending] = useState(false)
-  const [matchAlertShown, setMatchAlertShown] = useState(false)
-
-  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile])
-
-  const showMatchAlert = useCallback(() => {
-    if (matchAlertShown) return
-    MySwal.fire({
-      icon: "success",
-      title: "É um Match!",
-      html: `<p class="text-lg text-gray-700">
-        Vocês são uma conexão cósmica, ${profileData?.name}! O universo alinhou seus caminhos.
-        ${hasPremiumSubscription ? "Que tal enviar uma mensagem?" : "Faça um upgrade para Premium!"}
-      </p>`,
-      customClass: SWAL_CONFIG,
-      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
-      willOpen: (popup) => popup.setAttribute("aria-live", "assertive"),
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (hasPremiumSubscription) setActiveTab("informacoes")
-        else router.push(ROUTES.SUBSCRIPTION)
-      }
-    })
-    setMatchAlertShown(true)
-  }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
-
-  const loadProfile = useCallback(async () => {
-    if (!profileId || typeof profileId !== "string") {
-      handleError(new Error("ID do perfil inválido"), "Erro", router, ROUTES.DISCOVER)
-      return
-    }
-
-    if (!user || !profile) {
-      handleError(new Error("Usuário não autenticado"), "Erro", router, ROUTES.LOGIN)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const [
-        { data: profileData, error: profileError },
-        { data: photosData, error: photosError },
-        { data: likeData, error: likeError },
-        { data: matchData, error: matchError },
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, user_id, name, birth_date, gender, bio, city, profession, interests, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
-          .eq("id", profileId)
-          .single(),
-        supabase
-          .from("profile_photos")
-          .select("storage_path, is_primary")
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .eq("liked_profile_id", profileId)
-          .single(),
-        supabase
-          .from("matches")
-          .select("id")
-          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
-          .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
-          .single(),
-      ])
-
-      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`)
-      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`)
-      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`)
-      if (matchError && matchError.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${matchError.message}`)
-
-      setProfileData(profileData)
-      setPhotos(photosData ? await fetchPhotoUrls(photosData) : [])
-      setHasLiked(!!likeData)
-      setHasMatch(!!matchData)
-      setCanMessage(true) // ou outro valor apropriado
-
-      if (matchData && !matchAlertShown) showMatchAlert()
-    } catch (error: any) {
-      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert])
-
-  const handleLike = useCallback(async () => {
-    if (!user || !profile || !profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Usuário ou perfil inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!canLikeToday) {
-      MySwal.fire({
-        icon: "info",
-        title: "Limite Diário",
-        html: '<p class="text-sm text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    try {
-      const { error } = await supabase.from("likes").insert({
-        profile_id: profile.id,
-        liked_profile_id: profileId,
-        created_at: new Date().toISOString(),
-      })
-      if (error) throw new Error(`Erro ao curtir: ${error.message}`)
-
-      setHasLiked(true)
-      setCanLikeToday(false)
-      MySwal.fire({
-        icon: "success",
-        title: "Perfil Curtido!",
-        html: '<p class="text-sm text-success">Você curtiu este perfil! Aguardando um match...</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-
-      const { data: mutualLike, error: mutualLikeError } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("profile_id", profileId)
-        .eq("liked_profile_id", profile.id)
-        .single()
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw new Error(`Erro ao verificar match: ${mutualLikeError.message}`)
-      if (mutualLike) {
-        setHasMatch(true)
-        showMatchAlert()
-      }
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro ao Curtir",
-        html: `<p class="text-sm text-gray-700">${
-          error.message.includes("too_many_requests")
-            ? "Muitas tentativas. Tente novamente em alguns minutos."
-            : "Não foi possível curtir o perfil."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-    }
-  }, [user, profile, profileId, canLikeToday, showMatchAlert])
-
-  const handleSendMessage = useCallback(() => {
-    if (!user || !profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">${
-          !user ? "Usuário não autenticado." : "Perfil inválido."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!hasMatch) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Vocês ainda não deram match.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!hasPremiumSubscription) {
-      MySwal.fire({
-        icon: "info",
-        title: "Assinatura Necessária",
-        html: '<p class="text-sm text-gray-700">Você precisa de uma assinatura Premium para enviar mensagens.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Fazer Upgrade",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION))
-      return
-    }
-
-    if (!profileData?.share_whatsapp || !profileData?.whatsapp_number) {
-      MySwal.fire({
-        icon: "info",
-        title: "Contato Indisponível",
-        html: '<p class="text-sm text-gray-700">Este usuário não compartilhou o número de WhatsApp.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!message.trim()) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Digite uma mensagem.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    const cleanedNumber = profileData.whatsapp_number.replace(/\D/g, "")
-    if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const encodedMessage = encodeURIComponent(message.trim())
-      const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
-      window.open(whatsappUrl, "_blank")
-      setMessage("")
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-    } finally {
-      setIsSending(false)
-    }
-  }, [user, profileId, message, hasMatch, hasPremiumSubscription, profileData, router])
-
-  useEffect(() => {
-    loadProfile()
-  }, [loadProfile])
-
-  if (isLoading || userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" aria-hidden="true" />
-        <span className="sr-only">Carregando perfil...</span>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      {profile && <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />}
-      <div className="app-container flex flex-col min-h-screen px-4 py-6">
-        <motion.main
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-md mx-auto w-full"
-        >
-          <h2 className="text-2xl font-bold gradient-text text-center mb-6">
-            Perfil de {profileData?.name || "Usuário"}
-          </h2>
-
-          <div className="flex justify-between mb-6">
-            {!hasLiked && !hasMatch && (
-              <Button
-                onClick={handleLike}
-                className="flex-1 mr-2 gradient-button"
-                disabled={!canLikeToday}
-                aria-label={canLikeToday ? "Curtir perfil" : "Você já curtiu este perfil hoje"}
-              >
-                <Heart className="h-4 w-4 mr-2 fill-current" aria-hidden="true" />
-                {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
-              </Button>
-            )}
-          </div>
-          {hasMatch && (
-            <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center justify-center mb-6">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Match!
-            </Badge>
-          )}
-
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-            <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
-              <TabsTrigger
-                value="informacoes"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver informações do perfil"
-              >
-                Informações
-              </TabsTrigger>
-              <TabsTrigger
-                value="fotos"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver fotos do perfil"
-              >
-                Fotos
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="informacoes">
-              <ProfileInfo profileData={profileData} calculateAge={calculateAge} />
-            </TabsContent>
-            <TabsContent value="fotos">
-              <ProfilePhotos photos={photos} />
-            </TabsContent>
-          </Tabs>
-
-          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp && profileData?.whatsapp_number && (
-            <Card className="mb-6 border-none shadow-sm">
-              <CardHeader>
-                <CardTitle>Enviar Mensagem</CardTitle>
-                <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    disabled={isSending}
-                    aria-label="Mensagem para enviar via WhatsApp"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={isSending || !message.trim()}
-                    className="w-full gradient-button"
-                    aria-label="Enviar mensagem via WhatsApp"
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <FaWhatsapp className="mr-2 h-5 w-5" />
-                        Enviar por WhatsApp
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {hasMatch && !hasPremiumSubscription && (
-            <Card className="mb-6 border-none shadow-sm">
-              <CardContent className="text-center py-4">
-                <p className="text-oraculo-muted">Faça um upgrade para Premium para enviar mensagens!</p>
-                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="mt-4 gradient-button">
-                  Fazer Upgrade
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </motion.main>
-      </div>
-    </>
-  )
-}
-
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser()
-  const { id: profileId } = useParams() as { id: string }
-  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
-  const [profileData, setProfileData] = useState<ProfileData | null>(null)
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasLiked, setHasLiked] = useState(false)
-  const [canLikeToday, setCanLikeToday] = useState(true)
-  const [hasMatch, setHasMatch] = useState(false)
-  const [message, setMessage] = useState("")
-  const [isSending, setIsSending] = useState(false)
-  const [matchAlertShown, setMatchAlertShown] = useState(false)
-
-  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile])
-
-  const showMatchAlert = useCallback(() => {
-    if (matchAlertShown) return
-    MySwal.fire({
-      icon: "success",
-      title: "É um Match!",
-      html: `<p class="text-lg text-gray-700">
-        Vocês são uma conexão cósmica, ${profileData?.name}! O universo alinhou seus caminhos.
-        ${hasPremiumSubscription ? "Que tal enviar uma mensagem?" : "Faça um upgrade para Premium!"}
-      </p>`,
-      customClass: SWAL_CONFIG,
-      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
-      willOpen: (popup) => popup.setAttribute("aria-live", "assertive"),
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (hasPremiumSubscription) setActiveTab("informacoes")
-        else router.push(ROUTES.SUBSCRIPTION)
-      }
-    })
-    setMatchAlertShown(true)
-  }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
-
-  const loadProfile = useCallback(async () => {
-    if (!profileId || typeof profileId !== "string") {
-      handleError(new Error("ID do perfil inválido"), "Erro", router, ROUTES.DISCOVER)
-      return
-    }
-
-    if (!user || !profile) {
-      handleError(new Error("Usuário não autenticado"), "Erro", router, ROUTES.LOGIN)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const [
-        { data: profileData, error: profileError },
-        { data: photosData, error: photosError },
-        { data: likeData, error: likeError },
-        { data: matchData, error: matchError },
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, user_id, name, birth_date, gender, bio, city, profession, interests, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
-          .eq("id", profileId)
-          .single(),
-        supabase
-          .from("profile_photos")
-          .select("storage_path, is_primary")
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .eq("liked_profile_id", profileId)
-          .single(),
-        supabase
-          .from("matches")
-          .select("id")
-          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
-          .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
-          .single(),
-      ])
-
-      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`)
-      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`)
-      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`)
-      if (matchError && matchError.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${matchError.message}`)
-
-      setProfileData(profileData)
-      setPhotos(photosData ? await fetchPhotoUrls(photosData) : [])
-      setHasLiked(!!likeData)
-      setHasMatch(!!matchData)
-      setCanMessage(true) // ou outro valor apropriado
-
-      if (matchData && !matchAlertShown) showMatchAlert()
-    } catch (error: any) {
-      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user, profile, profileId, router, matchAlertShown, showMatchAlert])
-
-  const handleLike = useCallback(async () => {
-    if (!user || !profile || !profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Usuário ou perfil inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!canLikeToday) {
-      MySwal.fire({
-        icon: "info",
-        title: "Limite Diário",
-        html: '<p class="text-sm text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    try {
-      const { error } = await supabase.from("likes").insert({
-        profile_id: profile.id,
-        liked_profile_id: profileId,
-        created_at: new Date().toISOString(),
-      })
-      if (error) throw new Error(`Erro ao curtir: ${error.message}`)
-
-      setHasLiked(true)
-      setCanLikeToday(false)
-      MySwal.fire({
-        icon: "success",
-        title: "Perfil Curtido!",
-        html: '<p class="text-sm text-success">Você curtiu este perfil! Aguardando um match...</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-
-      const { data: mutualLike, error: mutualLikeError } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("profile_id", profileId)
-        .eq("liked_profile_id", profile.id)
-        .single()
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw new Error(`Erro ao verificar match: ${mutualLikeError.message}`)
-      if (mutualLike) {
-        setHasMatch(true)
-        showMatchAlert()
-      }
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro ao Curtir",
-        html: `<p class="text-sm text-gray-700">${
-          error.message.includes("too_many_requests")
-            ? "Muitas tentativas. Tente novamente em alguns minutos."
-            : "Não foi possível curtir o perfil."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-    }
-  }, [user, profile, profileId, canLikeToday, showMatchAlert])
-
-  const handleSendMessage = useCallback(() => {
-    if (!user || !profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">${
-          !user ? "Usuário não autenticado." : "Perfil inválido."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!hasMatch) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Vocês ainda não deram match.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!hasPremiumSubscription) {
-      MySwal.fire({
-        icon: "info",
-        title: "Assinatura Necessária",
-        html: '<p class="text-sm text-gray-700">Você precisa de uma assinatura Premium para enviar mensagens.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Fazer Upgrade",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION))
-      return
-    }
-
-    if (!profileData?.share_whatsapp || !profileData?.whatsapp_number) {
-      MySwal.fire({
-        icon: "info",
-        title: "Contato Indisponível",
-        html: '<p class="text-sm text-gray-700">Este usuário não compartilhou o número de WhatsApp.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    if (!message.trim()) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Digite uma mensagem.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    const cleanedNumber = profileData.whatsapp_number.replace(/\D/g, "")
-    if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-      return
-    }
-
-    setIsSending(true)
-    try {
-      const encodedMessage = encodeURIComponent(message.trim())
-      const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`
-      window.open(whatsappUrl, "_blank")
-      setMessage("")
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      })
-    } finally {
-      setIsSending(false)
-    }
-  }, [user, profileId, message, hasMatch, hasPremiumSubscription, profileData, router])
-
-  useEffect(() => {
-    loadProfile()
-  }, [loadProfile])
-
-  if (isLoading || userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" aria-hidden="true" />
-        <span className="sr-only">Carregando perfil...</span>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      {profile && <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />}
-      <div className="app-container flex flex-col min-h-screen px-4 py-6">
-        <motion.main
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-md mx-auto w-full"
-        >
-          <h2 className="text-2xl font-bold gradient-text text-center mb-6">
-            Perfil de {profileData?.name || "Usuário"}
-          </h2>
-
-          <div className="flex justify-between mb-6">
-            {!hasLiked && !hasMatch && (
-              <Button
-                onClick={handleLike}
-                className="flex-1 mr-2 gradient-button"
-                disabled={!canLikeToday}
-                aria-label={canLikeToday ? "Curtir perfil" : "Você já curtiu este perfil hoje"}
-              >
-                <Heart className="h-4 w-4 mr-2 fill-current" aria-hidden="true" />
-                {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
-              </Button>
-            )}
-          </div>
-          {hasMatch && (
-            <Badge className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs flex items-center justify-center mb-6">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Match!
-            </Badge>
-          )}
-
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-            <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
-              <TabsTrigger
-                value="informacoes"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver informações do perfil"
-              >
-                Informações
-              </TabsTrigger>
-              <TabsTrigger
-                value="fotos"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver fotos do perfil"
-              >
-                Fotos
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="informacoes">
-              <ProfileInfo profileData={profileData} calculateAge={calculateAge} />
-            </TabsContent>
-            <TabsContent value="fotos">
-              <ProfilePhotos photos={photos} />
-            </TabsContent>
-          </Tabs>
-
-          {hasMatch && hasPremiumSubscription && profileData?.share_whatsapp && profileData?.whatsapp_number && (
-            <Card className="mb-6 border-none shadow-sm">
-              <CardHeader>
-                <CardTitle>Enviar Mensagem</CardTitle>
-                <CardDescription>Escreva uma mensagem para {profileData?.name}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <Textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    disabled={isSending}
-                    aria-label="Mensagem para enviar via WhatsApp"
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={isSending || !message.trim()}
-                    className="w-full gradient-button"
-                    aria-label="Enviar mensagem via WhatsApp"
-                  >
-                    {isSending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <FaWhatsapp className="mr-2 h-5 w-5" />
-                        Enviar por WhatsApp
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {hasMatch && !hasPremiumSubscription && (
-            <Card className="mb-6 border-none shadow-sm">
-              <CardContent className="text-center py-4">
-                <p className="text-oraculo-muted">Faça um upgrade para Premium para enviar mensagens!</p>
-                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="mt-4 gradient-button">
-                  Fazer Upgrade
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </motion.main>
-      </div>
-    </>
-  )
-}
-
-export default function ProfilePage({ params }: { params: { id: string } }) {
-  const router = useRouter()
-  const { user, isLoading: userLoading, profile } = useUser()
-  const { id: profileId } = useParams() as { id: string }
-  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes")
-  const [profileData, setProfileData] = useState<ProfileData | null>(null)
-  const [photos, setPhotos] = useState<Photo[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasLiked, setHasLiked] = useState(false)
-  const [canLikeToday, setCanLikeToday] = useState(true)
-  const [hasMatch, setHasMatch] = useState(false)
-  const [message, setMessage] = useState("")
-  const [isSending, setIsSending] = useState(false)
-  const [matchAlertShown, setMatchAlertShown] = useState(false)
-
-  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile])
-
-  const showMatchAlert = useCallback(() => {
-    if (matchAlertShown) return
-    MySwal.fire({
-      icon: "success",
-      title: "É um Match!",
-      html: `<p class="text-lg text-gray-700">
-        Vocês são uma conexão cósmica, ${profileData?.name}! O universo alinhou seus caminhos.
-        ${hasPremiumSubscription ? "Que tal enviar uma mensagem?" : "Faça um upgrade para Premium!"}
-      </p>`,
-      customClass: SWAL_CONFIG,
-      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
-      willOpen: (popup) => popup.setAttribute("aria-live", "assertive"),
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (hasPremiumSubscription) setActiveTab("informacoes")
-        else router.push(ROUTES.SUBSCRIPTION)
-      }
-    })
-    setMatchAlertShown(true)
-  }, [profileData?.name, matchAlertShown, hasPremiumSubscription, router])
-
-  const loadProfile = useCallback(async () => {
-    if (!profileId || typeof profileId !== "string") {
-      handleError(new Error("ID do perfil inválido"), "Erro", router, ROUTES.DISCOVER)
-      return
-    }
-
-    if (!user || !profile) {
-      handleError(new Error("Usuário não autenticado"), "Erro", router, ROUTES.LOGIN)
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const [
-        { data: profileData, error: profileError },
-        { data: photosData, error: photosError },
-        { data: likeData, error: likeError },
-        { data: matchData, error: matchError },
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, user_id, name, birth_date, gender, bio, city, profession, interests, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
-          .eq("id", profileId)
-          .single(),
-        supabase
-          .from("profile_photos")
-          .select("storage_path, is_primary")
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .eq("liked_profile_id", profileId)
-          .single(),
-        supabase
-          .from("matches")
-          .select("id")
-          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
-          .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
-          .single(),
-      ])
-
-      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`)
-      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`)
-      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`)
-      if (matchError && matchError.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${matchError.message}`)
-
-      setProfileData(profileData)
-      setPhotos(photosData ? await fetchPhotoUrls(photosData) : [])
-      setHasLiked(!!likeData)

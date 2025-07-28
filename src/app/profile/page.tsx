@@ -1053,21 +1053,21 @@ export default function ProfilePage() {
   })
   const [debouncedPreferences] = useDebounce(preferences, 1000)
 
-  const showAlert = useCallback(async (type: "success" | "error", titlemillisecond: number) => {
+  const showAlert = async (type: "success" | "error", title: string, text: string) => {
     return MySwal.fire({
       icon: type,
-      title : "Perfil Atualizado",
-      text : "Seu perfil foi atualizado com sucesso!",
+      title,
+      text,
       customClass: {
         popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-purple to-oraculo-cyan text-white px-4 py-2 rounded shadow",
       },
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive")
       },
     })
-  }, [])
+  }
 
   // Auto-save preferences
   useEffect(() => {
