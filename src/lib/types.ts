@@ -32,7 +32,6 @@ export interface MatchResult {
   crossMatches: string[]
 }
 
-
 export interface ProfilePhotos {
 id: UUID
 profile_id : UUID
@@ -72,4 +71,78 @@ export interface SubscriptionPlan {
   popular?: boolean
   discount?: number
 }
+
+export interface Profile {
+  id: string
+  user_id: string
+  username: string
+  name: string
+  birth_date: string
+  gender: Gender
+  bio: string
+  city: string
+  profession: string
+  interests: string[]
+  avatar_url: string | null
+  latitude: number | null
+  longitude: number | null
+  whatsapp_number: string | null
+  share_whatsapp: boolean
+  gender_preference: GenderPreference
+  min_age: number
+  max_age: number
+  max_distance: number
+  show_profile: boolean
+  match_notifications: boolean
+  message_notifications: boolean
+  created_at: string
+  updated_at: string | null
+}
+
+export interface ProfileData {
+  name: string
+  birth_date: string
+  gender: Gender
+  bio: string
+  city: string
+  profession: string
+  interests: string[]
+  latitude?: number | null
+  longitude?: number | null
+  whatsapp_number?: string
+  share_whatsapp?: boolean
+  avatar_url?: string | null
+}
+
+export interface Preferences {
+  genderPreference: GenderPreference
+  minAge: number
+  maxAge: number
+  maxDistance: number
+  showProfile: boolean
+  matchNotifications: boolean
+  messageNotifications: boolean
+}
+
+export interface Photo {
+  name: string
+  storage_path: string
+  publicUrl: string
+  isPrimary: boolean
+}
+
+export interface Errors {
+  [key: string]: string
+}
+
+export interface LocationState {
+  status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error"
+  latitude: number | null
+  longitude: number | null
+  error: string | null
+  accuracy: number | null
+}
+
+
+
 
