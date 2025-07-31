@@ -158,8 +158,8 @@ function InterestsContent() {
       if (prev.includes(interestId)) {
         return prev.filter((id) => id !== interestId);
       }
-      if (prev.length >= 5) {
-        showAlert("info", "Limite atingido", "Você deve selecionar exatamente 5 interesses. Desmarque um para adicionar outro.");
+      if (prev.length >= 10) {
+        showAlert("info", "Limite atingido", "Você deve selecionar exatamente 10 interesses. Desmarque um para adicionar outro.");
         return prev;
       }
       return [...prev, interestId];
@@ -168,8 +168,8 @@ function InterestsContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedInterests.length !== 5) {
-      await showAlert("error", "Selecione 5 interesses", "Você deve selecionar exatamente 5 interesses para continuar.");
+    if (selectedInterests.length !== 10) {
+      await showAlert("error", "Selecione 10 interesses", "Você deve selecionar exatamente 10 interesses para continuar.");
       return;
     }
 
@@ -185,7 +185,7 @@ function InterestsContent() {
         throw new Error("Erro ao atualizar interesses: " + deleteError.message);
       }
 
-      // Insert new interests (exactly 5)
+      // Insert new interests (exactly 10)
       const inserts = selectedInterests.map((interestId) => ({
         profile_id: profile?.id,
         interests_id: interestId,
@@ -259,7 +259,7 @@ function InterestsContent() {
 
   if (isLoading || userLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" />
       </div>
     );
@@ -270,7 +270,7 @@ function InterestsContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-50 p-6">
       <div className="w-full max-w-2xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -282,7 +282,7 @@ function InterestsContent() {
             Escolha Seus Interesses{interestType ? ` - ${interestType}` : ""}
           </h2>
           <p className="text-neutral-600 mb-6 text-center">
-            Clique em exatamente 5 interesses para personalizar sua experiência.
+            Clique em exatamente 10 interesses para personalizar sua experiência.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -291,9 +291,9 @@ function InterestsContent() {
                 interests.map((interest, index) => (
                   <motion.div
                     key={interest.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
+                    initial={{ opacity: 0, scale: 0.910 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    transition={{ duration: 0.3, delay: index * 0.010 }}
                     className={`relative rounded-lg overflow-hidden h-32 cursor-pointer transition-all duration-200 ${
                       selectedInterests.includes(interest.id)
                         ? "border-4 border-[#00FFD1] shadow-lg"
@@ -315,7 +315,7 @@ function InterestsContent() {
                       className="absolute inset-0 bg-cover bg-center"
                       style={{ backgroundImage: `url(${getFullImageUrl(interest.storage_path)})` }}
                     />
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/100 flex items-center justify-center">
                       <Label className="text-white text-sm font-semibold text-center px-2">
                         {interest.name}
                       </Label>
@@ -362,7 +362,7 @@ export default function InterestsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100" aria-live="polite">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-50" aria-live="polite">
           <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
           <span className="sr-only">Carregando...</span>
         </div>

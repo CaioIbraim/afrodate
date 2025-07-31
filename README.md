@@ -1,4 +1,4 @@
-\n## Próximos Passos
+ld\n## Próximos Passos
 
 - [ ] Implementação dos triggers de curtidas no Supabase
 - [ ] Desenvolvimento do algoritmo de compatibilidade (matches)
