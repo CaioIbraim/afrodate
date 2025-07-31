@@ -23,18 +23,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Label } from "@radix-ui/react-label";
 
 // Constants
-const MySwal = withReactContent(Swal); // MySwal é definido uma vez aqui
+const MySwal = withReactContent(Swal);
 
 const SWAL_CONFIG = {
-  popup: "border-2 border-transparent bg-white rounded-xl",
-  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-  confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
+  popup: "border-2 border-transparent bg-white rounded-xl",
+  title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+  confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
 };
 const ROUTES = {
-  LOGIN: "/login",
-  DISCOVER: "/oraculo",
-  SUBSCRIPTION: "/subscription",
-  MESSAGES: (id: string) => `/messages/${id}`,
+  LOGIN: "/login",
+  DISCOVER: "/oraculo",
+  SUBSCRIPTION: "/subscription",
+  MESSAGES: (id: string) => `/messages/${id}`,
 };
 const PLACEHOLDER_IMAGE = "/placeholder-image.png";
 
@@ -42,1303 +42,1244 @@ const PLACEHOLDER_IMAGE = "/placeholder-image.png";
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
 type Photo = { name: string; storage_path: string; publicUrl: string; isPrimary: boolean };
 type ProfileData = {
-  id: string;
-  name: string;
-  birth_date: string;
-  gender: Gender;
-  bio: string;
-  city: string;
-  profession: string;
-  interests: string[];
-  avatar_url: string | null;
-  user_id: string;
-  latitude?: number | null;
-  longitude?: number | null;
-  whatsapp_number?: string;
-  share_whatsapp?: boolean;
-  email?: string;
+  id: string;
+  name: string;
+  birth_date: string;
+  gender: Gender;
+  bio: string;
+  city: string;
+  profession: string;
+  interests: string[];
+  avatar_url: string | null;
+  user_id: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  whatsapp_number?: string;
+  share_whatsapp?: boolean;
+  email?: string;
 };
 
 type LoggedInUserProfile = ProfileData & {
-  gender_preference?: 'HOMEM' | 'MULHER' | 'TODOS';
-  min_age?: number;
-  max_age?: number;
-  max_distance?: number;
-  show_profile?: boolean;
-  match_notifications?: boolean;
-  message_notifications?: boolean;
-  subscription?: boolean;
+  gender_preference?: 'HOMEM' | 'MULHER' | 'TODOS';
+  min_age?: number;
+  max_age?: number;
+  max_distance?: number;
+  show_profile?: boolean;
+  match_notifications?: boolean;
+  message_notifications?: boolean;
+  subscription?: boolean;
 };
-
 
 // Utility Functions
 const handleError = (error: any, title: string, router: any, redirectRoute: string) => {
-  MySwal.fire({
-    icon: "error",
-    title,
-    html: `<p class="text-lg text-gray-700">${error.message || "Ocorreu um erro."}</p>`,
-    customClass: SWAL_CONFIG,
-    confirmButtonText: "Voltar",
-  }).then((result) => result.isConfirmed && router.push(redirectRoute));
+  MySwal.fire({
+    icon: "error",
+    title,
+    html: `<p class="text-lg text-gray-700">${error.message || "Ocorreu um erro."}</p>`,
+    customClass: SWAL_CONFIG,
+    confirmButtonText: "Voltar",
+  }).then((result) => result.isConfirmed && router.push(redirectRoute));
 };
 
 const calculateAge = (birthDate: string): number | null => {
-  if (!birthDate) return null;
-  const birth = new Date(birthDate);
-  const today = new Date();
-  if (isNaN(birth.getTime()) || birth > today || birth.getFullYear() < 1900) return null;
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
-  return age >= 18 && age <= 120 ? age : null;
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  const today = new Date();
+  if (isNaN(birth.getTime()) || birth > today || birth.getFullYear() < 1900) return null;
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+  return age >= 18 && age <= 120 ? age : null;
 };
 
 const getZodiacSign = (birthDate: string): { sign: string; emoji: string } => {
-  if (!birthDate) return { sign: "Desconhecido", emoji: "" };
-  const date = new Date(birthDate);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  if (!birthDate) return { sign: "Desconhecido", emoji: "" };
+  const date = new Date(birthDate);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
 
-  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return { sign: "Áries", emoji: "♈" };
-  if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return { sign: "Touro", emoji: "♉" };
-  if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return { sign: "Gêmeos", emoji: "♊" };
-  if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return { sign: "Câncer", emoji: "♋" };
-  if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return { sign: "Leão", emoji: "♌" };
-  if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return { sign: "Virgem", emoji: "♍" };
-  if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return { sign: "Libra", emoji: "♎" };
-  if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return { sign: "Escorpião", emoji: "♏" };
-  if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return { sign: "Sagitário", emoji: "♐" };
-  if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return { sign: "Capricórnio", emoji: "♑" };
-  if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return { sign: "Aquário", emoji: "♒" };
-  if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return { sign: "Peixes", emoji: "♓" };
-  return { sign: "Desconhecido", emoji: "" };
+  if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return { sign: "Áries", emoji: "♈" };
+  if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return { sign: "Touro", emoji: "♉" };
+  if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return { sign: "Gêmeos", emoji: "♊" };
+  if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return { sign: "Câncer", emoji: "♋" };
+  if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return { sign: "Leão", emoji: "♌" };
+  if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return { sign: "Virgem", emoji: "♍" };
+  if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return { sign: "Libra", emoji: "♎" };
+  if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return { sign: "Escorpião", emoji: "♏" };
+  if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return { sign: "Sagitário", emoji: "♐" };
+  if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return { sign: "Capricórnio", emoji: "♑" };
+  if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return { sign: "Aquário", emoji: "♒" };
+  if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return { sign: "Peixes", emoji: "♓" };
+  return { sign: "Desconhecido", emoji: "" };
 };
 
 const fetchPhotoUrls = async (photos: any[]): Promise<Photo[]> => {
-  return Promise.all(
-    photos.map(async (photo) => {
-      const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
-      let url = publicUrlData.publicUrl;
-      try {
-        const response = await fetch(url, { method: "HEAD" });
-        if (!response.ok) throw new Error("Public URL inaccessible");
-      } catch {
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from("imagens")
-          .createSignedUrl(photo.storage_path, 3600);
-        if (signedUrlError) throw signedUrlError;
-        url = signedUrlData.signedUrl;
-      }
-      return {
-        name: photo.storage_path.split("/").pop()!,
-        storage_path: photo.storage_path,
-        publicUrl: url,
-        isPrimary: photo.is_primary,
-      };
-    })
-  );
+  return Promise.all(
+    photos.map(async (photo) => {
+      const { data: publicUrlData } = supabase.storage.from("imagens").getPublicUrl(photo.storage_path);
+      let url = publicUrlData.publicUrl;
+      try {
+        const response = await fetch(url, { method: "HEAD" });
+        if (!response.ok) throw new Error("Public URL inaccessible");
+      } catch {
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from("imagens")
+          .createSignedUrl(photo.storage_path, 3600);
+        if (signedUrlError) throw signedUrlError;
+        url = signedUrlData.signedUrl;
+      }
+      return {
+        name: photo.storage_path.split("/").pop()!,
+        storage_path: photo.storage_path,
+        publicUrl: url,
+        isPrimary: photo.is_primary,
+      };
+    })
+  );
 };
 
 const calculateCompatibilityPercentage = (
-  loggedInUserProfile: LoggedInUserProfile | null,
-  viewedProfileData: ProfileData | null
+  loggedInUserProfile: LoggedInUserProfile | null,
+  viewedProfileData: ProfileData | null
 ): number => {
-  if (!loggedInUserProfile || !viewedProfileData) {
-    return 0;
-  }
+  if (!loggedInUserProfile || !viewedProfileData) {
+    return 0;
+  }
 
-  let score = 0;
-  let maxPossibleScore = 100;
+  let score = 0;
+  let maxPossibleScore = 100;
 
-  // 1. Compatibilidade de Interesses (até 50 pontos)
-  const commonInterests = loggedInUserProfile.interests.filter(interest =>
-    viewedProfileData.interests.includes(interest)
-  );
-  score += Math.min(commonInterests.length * 5, 50);
+  const commonInterests = loggedInUserProfile.interests.filter(interest =>
+    viewedProfileData.interests.includes(interest)
+  );
+  score += Math.min(commonInterests.length * 5, 50);
 
-  // 2. Compatibilidade de Preferências de Gênero (até 20 pontos)
-  if (loggedInUserProfile.gender_preference === 'TODOS' || loggedInUserProfile.gender_preference === viewedProfileData.gender) {
-    score += 20;
-  }
+  if (loggedInUserProfile.gender_preference === 'TODOS' || loggedInUserProfile.gender_preference === viewedProfileData.gender) {
+    score += 20;
+  }
 
-  // 3. Compatibilidade de Preferências de Idade (até 20 pontos)
-  const viewedAge = calculateAge(viewedProfileData.birth_date);
-  if (viewedAge !== null) {
-    if (viewedAge >= (loggedInUserProfile.min_age || 18) && viewedAge <= (loggedInUserProfile.max_age || 99)) {
-      score += 20;
-    }
-  }
+  const viewedAge = calculateAge(viewedProfileData.birth_date);
+  if (viewedAge !== null) {
+    if (viewedAge >= (loggedInUserProfile.min_age || 18) && viewedAge <= (loggedInUserProfile.max_age || 99)) {
+      score += 20;
+    }
+  }
 
-  // 4. Compatibilidade de Localização/Distância (até 10 pontos)
-  if (loggedInUserProfile.latitude && loggedInUserProfile.longitude &&
-      viewedProfileData.latitude && viewedProfileData.longitude &&
-      loggedInUserProfile.id !== viewedProfileData.id) {
-    score += 10;
-  }
+  if (loggedInUserProfile.latitude && loggedInUserProfile.longitude &&
+      viewedProfileData.latitude && viewedProfileData.longitude &&
+      loggedInUserProfile.id !== viewedProfileData.id) {
+    score += 10;
+  }
 
-  return Math.min(Math.round(score), maxPossibleScore);
+  return Math.min(Math.round(score), maxPossibleScore);
 };
-
 
 // Componente LocationCapture (Minimalista)
 type LocationState = {
-  status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error";
-  latitude: number | null;
-  longitude: number | null;
-  error: string | null;
-  accuracy: number | null;
+  status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error";
+  latitude: number | null;
+  longitude: number | null;
+  error: string | null;
+  accuracy: number | null;
 };
 
 const LocationCapture = ({
-  profileData,
-  setProfileData,
-  saving,
-  uploading,
-  onLocationUpdate,
+  profileData,
+  setProfileData,
+  saving,
+  uploading,
+  onLocationUpdate,
 }: {
-  profileData: { latitude?: number | null; longitude?: number | null };
-  setProfileData: (data: { latitude?: number | null; longitude?: number | null }) => void;
-  saving: boolean;
-  uploading: boolean;
-  onLocationUpdate: (lat: number, lng: number) => void;
+  profileData: { latitude?: number | null; longitude?: number | null };
+  setProfileData: (data: { latitude?: number | null; longitude?: number | null }) => void;
+  saving: boolean;
+  uploading: boolean;
+  onLocationUpdate: (lat: number, lng: number) => void;
 }) => {
-  const [locationState, setLocationState] = useState<LocationState>({
-    status: "idle",
-    latitude: null,
-    longitude: null,
-    error: null,
-    accuracy: null,
-  });
+  const [locationState, setLocationState] = useState<LocationState>({
+    status: "idle",
+    latitude: null,
+    longitude: null,
+    error: null,
+    accuracy: null,
+  });
 
-  const MySwal = useMemo(() => withReactContent(Swal), []);
-  const isGeolocationSupported = useMemo(() => "geolocation" in navigator, []);
-  const lastLocationAlertTimestamp = useRef(0);
-  const DEBOUNCE_ALERT_TIME = 5000;
+  const MySwal = useMemo(() => withReactContent(Swal), []);
+  const isGeolocationSupported = useMemo(() => "geolocation" in navigator, []);
+  const lastLocationAlertTimestamp = useRef(0);
+  const DEBOUNCE_ALERT_TIME = 5000;
 
-  const getCurrentLocation = useCallback(
-    (showSuccessAlert: boolean = true) => {
-      if (!isGeolocationSupported) {
-        setLocationState((prev) => ({
-          ...prev,
-          status: "unavailable",
-          error: "Geolocalização não é suportada neste dispositivo",
-        }));
-        return;
-      }
-      setLocationState((prev) => ({ ...prev, status: "requesting", error: null }));
-      const options: PositionOptions = {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000,
-      };
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude, accuracy } = position.coords;
-          setLocationState({
-            status: "granted",
-            latitude,
-            longitude,
-            error: null,
-            accuracy,
-          });
-          setProfileData({ ...profileData, latitude, longitude });
-          onLocationUpdate(latitude, longitude);
+  const getCurrentLocation = useCallback(
+    (showSuccessAlert: boolean = true) => {
+      if (!isGeolocationSupported) {
+        setLocationState((prev) => ({
+          ...prev,
+          status: "unavailable",
+          error: "Geolocalização não é suportada neste dispositivo",
+        }));
+        return;
+      }
+      setLocationState((prev) => ({ ...prev, status: "requesting", error: null }));
+      const options: PositionOptions = {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000,
+      };
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          setLocationState({
+            status: "granted",
+            latitude,
+            longitude,
+            error: null,
+            accuracy,
+          });
+          setProfileData({ ...profileData, latitude, longitude });
+          onLocationUpdate(latitude, longitude);
 
-          if (showSuccessAlert && Date.now() - lastLocationAlertTimestamp.current > DEBOUNCE_ALERT_TIME) {
-            MySwal.fire({
-              icon: "success",
-              title: "Localização Capturada!",
-              text: `Coordenadas obtidas com precisão de ${Math.round(accuracy || 0)}m`,
-              timer: 3000,
-              showConfirmButton: false,
-              customClass: {
-                popup: "border-2 border-transparent bg-white rounded-xl",
-                title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-              },
-            });
-            lastLocationAlertTimestamp.current = Date.now();
-          }
-        },
-        (error) => {
-          console.error("[getCurrentLocation] Error:", error);
-          let errorMessage = "Erro desconhecido ao obter localização";
-          let status: LocationState["status"] = "error";
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = "Permissão de localização foi negada pelo usuário";
-              status = "denied";
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = "Localização não disponível no momento";
-              status = "unavailable";
-              break;
-            case error.TIMEOUT:
-              errorMessage = "Tempo limite excedido para obter localização";
-              status = "error";
-              break;
-            default:
-              errorMessage = error.message || "Erro ao obter localização";
-              status = "error";
-              break;
-          }
-          setLocationState((prev) => ({ ...prev, status, error: errorMessage }));
-          MySwal.fire({
-            icon: "error",
-            title: "Erro de Localização",
-            text: errorMessage,
-            customClass: {
-              popup: "border-2 border-transparent bg-white rounded-xl",
-              title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-              confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
-            },
-          });
-        },
-        options
-      );
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
+          if (showSuccessAlert && Date.now() - lastLocationAlertTimestamp.current > DEBOUNCE_ALERT_TIME) {
+            MySwal.fire({
+              icon: "success",
+              title: "Localização Capturada!",
+              text: `Coordenadas obtidas com precisão de ${Math.round(accuracy || 0)}m`,
+              timer: 3000,
+              showConfirmButton: false,
+              customClass: {
+                popup: "border-2 border-transparent bg-white rounded-xl",
+                title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+              },
+            });
+            lastLocationAlertTimestamp.current = Date.now();
+          }
+        },
+        (error) => {
+          console.error("[getCurrentLocation] Error:", error);
+          let errorMessage = "Erro desconhecido ao obter localização";
+          let status: LocationState["status"] = "error";
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Permissão de localização foi negada pelo usuário";
+              status = "denied";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Localização não disponível no momento";
+              status = "unavailable";
+              break;
+            case error.TIMEOUT:
+              errorMessage = "Tempo limite excedido para obter localização";
+              status = "error";
+              break;
+            default:
+              errorMessage = error.message || "Erro ao obter localização";
+              status = "error";
+              break;
+          }
+          setLocationState((prev) => ({ ...prev, status, error: errorMessage }));
+          MySwal.fire({
+            icon: "error",
+            title: "Erro de Localização",
+            text: errorMessage,
+            customClass: {
+              popup: "border-2 border-transparent bg-white rounded-xl",
+              title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+              confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
+            },
+          });
+        },
+        options
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
-  const checkPermissionStatus = useCallback(async () => {
-    if (!isGeolocationSupported) {
-      setLocationState((prev) => ({
-        ...prev,
-        status: "unavailable",
-        error: "Geolocalização não é suportada neste dispositivo",
-      }));
-      return;
-    }
-    try {
-      if ("permissions" in navigator) {
-        const permission = await navigator.permissions.query({ name: "geolocation" });
-        if (permission.state === "granted") {
-          getCurrentLocation(false);
-        } else if (permission.state === "denied") {
-          setLocationState((prev) => ({
-            ...prev,
-            status: "denied",
-            error: "Permissão de localização foi negada",
-          }));
-        } else {
-          setLocationState((prev) => ({ ...prev, status: "idle" }));
-        }
-      }
-    } catch (error) {
-      console.error("[checkPermissionStatus] Error:", error);
-      setLocationState((prev) => ({
-        ...prev,
-        status: "error",
-        error: "Erro ao verificar permissões de localização",
-      }));
-    }
-  }, [isGeolocationSupported, getCurrentLocation]);
+  const checkPermissionStatus = useCallback(async () => {
+    if (!isGeolocationSupported) {
+      setLocationState((prev) => ({
+        ...prev,
+        status: "unavailable",
+        error: "Geolocalização não é suportada neste dispositivo",
+      }));
+      return;
+    }
+    try {
+      if ("permissions" in navigator) {
+        const permission = await navigator.permissions.query({ name: "geolocation" });
+        if (permission.state === "granted") {
+          getCurrentLocation(false);
+        } else if (permission.state === "denied") {
+          setLocationState((prev) => ({
+            ...prev,
+            status: "denied",
+            error: "Permissão de localização foi negada",
+          }));
+        } else {
+          setLocationState((prev) => ({ ...prev, status: "idle" }));
+        }
+      }
+    } catch (error) {
+      console.error("[checkPermissionStatus] Error:", error);
+      setLocationState((prev) => ({
+        ...prev,
+        status: "error",
+        error: "Erro ao verificar permissões de localização",
+      }));
+    }
+  }, [isGeolocationSupported, getCurrentLocation]);
 
-  const requestLocation = useCallback(async () => {
-    if (!isGeolocationSupported) {
-      await MySwal.fire({
-        icon: "error",
-        title: "Não Suportado",
-        text: "Seu dispositivo não suporta geolocalização",
-        customClass: {
-          popup: "border-2 border-transparent bg-white rounded-xl",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
-        },
-      });
-      return;
-    }
-    const result = await MySwal.fire({
-      icon: "info",
-      title: "Permissão de Localização",
-      html: `
-        <div class="text-left">
-          <p class="mb-3">Precisamos da sua localização para:</p>
-          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
-            <li>Mostrar pessoas próximas a você</li>
-            <li>Calcular distâncias precisas</li>
-            <li>Melhorar suas recomendações</li>
-          </ul>
-          <p class="mt-3 text-sm text-gray-500">Sua localização será armazenada de forma segura e você pode removê-la a qualquer momento.</p>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Permitir Localização",
-      cancelButtonText: "Agora Não",
-      customClass: {
-        popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
-        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
-      },
-    });
-    if (result.isConfirmed) {
-      getCurrentLocation(true);
-    }
-  }, [isGeolocationSupported, getCurrentLocation, MySwal]);
+  const requestLocation = useCallback(async () => {
+    if (!isGeolocationSupported) {
+      await MySwal.fire({
+        icon: "error",
+        title: "Não Suportado",
+        text: "Seu dispositivo não suporta geolocalização",
+        customClass: {
+          popup: "border-2 border-transparent bg-white rounded-xl",
+          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
+        },
+      });
+      return;
+    }
+    const result = await MySwal.fire({
+      icon: "info",
+      title: "Permissão de Localização",
+      html: `
+        <div class="text-left">
+          <p class="mb-3">Precisamos da sua localização para:</p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+            <li>Mostrar pessoas próximas a você</li>
+            <li>Calcular distâncias precisas</li>
+            <li>Melhorar suas recomendações</li>
+          </ul>
+          <p class="mt-3 text-sm text-gray-500">Sua localização será armazenada de forma segura e você pode removê-la a qualquer momento.</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Permitir Localização",
+      cancelButtonText: "Agora Não",
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-white px-4 py-2 rounded shadow",
+        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
+      },
+    });
+    if (result.isConfirmed) {
+      getCurrentLocation(true);
+    }
+  }, [isGeolocationSupported, getCurrentLocation, MySwal]);
 
-  const clearLocation = useCallback(async () => {
-    const result = await MySwal.fire({
-      icon: "question",
-      title: "Remover Localização?",
-      text: "Isso pode afetar a qualidade das suas recomendações",
-      showCancelButton: true,
-      confirmButtonText: "Remover",
-      cancelButtonText: "Cancelar",
-      customClass: {
-        popup: "border-2 border-transparent bg-white rounded-xl",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
-        confirmButton: "bg-red-500 text-white px-4 py-2 rounded shadow",
-        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
-      },
-    });
-    if (result.isConfirmed) {
-      setLocationState({
-        status: "idle",
-        latitude: null,
-        longitude: null,
-        error: null,
-        accuracy: null,
-      });
-      setProfileData({ ...profileData, latitude: null, longitude: null });
-      onLocationUpdate(0, 0);
-    }
-  }, [profileData, setProfileData, onLocationUpdate, MySwal]);
+  const clearLocation = useCallback(async () => {
+    const result = await MySwal.fire({
+      icon: "question",
+      title: "Remover Localização?",
+      text: "Isso pode afetar a qualidade das suas recomendações",
+      showCancelButton: true,
+      confirmButtonText: "Remover",
+      cancelButtonText: "Cancelar",
+      customClass: {
+        popup: "border-2 border-transparent bg-white rounded-xl",
+        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
+        confirmButton: "bg-red-500 text-white px-4 py-2 rounded shadow",
+        cancelButton: "bg-gray-200 text-gray-700 px-4 py-2 rounded shadow",
+      },
+    });
+    if (result.isConfirmed) {
+      setLocationState({
+        status: "idle",
+        latitude: null,
+        longitude: null,
+        error: null,
+        accuracy: null,
+      });
+      setProfileData({ ...profileData, latitude: null, longitude: null });
+      onLocationUpdate(0, 0);
+    }
+  }, [profileData, setProfileData, onLocationUpdate, MySwal]);
 
-  useEffect(() => {
-    checkPermissionStatus();
-  }, [checkPermissionStatus]);
+  useEffect(() => {
+    checkPermissionStatus();
+  }, [checkPermissionStatus]);
 
-  useEffect(() => {
-    if (
-      (profileData.latitude !== undefined && profileData.longitude !== undefined) &&
-      (profileData.latitude !== locationState.latitude || profileData.longitude !== locationState.longitude)
-    ) {
-      setLocationState((prev) => ({
-        ...prev,
-        status: "granted",
-        latitude: profileData.latitude ?? null,
-        longitude: profileData.longitude ?? null,
-      }));
-    }
-  }, [profileData.latitude, profileData.longitude, locationState.latitude, locationState.longitude]);
+  useEffect(() => {
+    if (
+      (profileData.latitude !== undefined && profileData.longitude !== undefined) &&
+      (profileData.latitude !== locationState.latitude || profileData.longitude !== locationState.longitude)
+    ) {
+      setLocationState((prev) => ({
+        ...prev,
+        status: "granted",
+        latitude: profileData.latitude ?? null,
+        longitude: profileData.longitude ?? null,
+      }));
+    }
+  }, [profileData.latitude, profileData.longitude, locationState.latitude, locationState.longitude]);
 
-  const renderLocationIcon = () => {
-    switch (locationState.status) {
-      case "granted":
-        return <MapPin className="h-5 w-5 text-green-500" />;
-      case "requesting":
-        return <Loader2 className="h-5 w-5 animate-spin text-gray-500" />;
-      case "denied":
-        return <MapPin className="h-5 w-5 text-red-500" />;
-      case "unavailable":
-        return <MapPin className="h-5 w-5 text-yellow-500" />;
-      case "error":
-        return <MapPin className="h-5 w-5 text-red-500" />;
-      default:
-        return <MapPin className="h-5 w-5 text-gray-500" />;
-    }
-  };
+  const renderLocationIcon = () => {
+    switch (locationState.status) {
+      case "granted":
+        return <MapPin className="h-5 w-5 text-green-500" />;
+      case "requesting":
+        return <Loader2 className="h-5 w-5 animate-spin text-gray-500" />;
+      case "denied":
+        return <MapPin className="h-5 w-5 text-red-500" />;
+      case "unavailable":
+        return <MapPin className="h-5 w-5 text-yellow-500" />;
+      case "error":
+        return <MapPin className="h-5 w-5 text-red-500" />;
+      default:
+        return <MapPin className="h-5 w-5 text-gray-500" />;
+    }
+  };
 
-  const renderTooltipContent = () => {
-    switch (locationState.status) {
-      case "granted":
-        return `Localização capturada (${Math.round(locationState.accuracy || 0)}m)`;
-      case "requesting":
-        return "Obtendo localização...";
-      case "denied":
-        return "Permissão de localização negada";
-      case "unavailable":
-        return "Geolocalização não disponível";
-      case "error":
-        return locationState.error || "Erro ao obter localização";
-      default:
-        return "Capturar localização";
-    }
-  };
+  const renderTooltipContent = () => {
+    switch (locationState.status) {
+      case "granted":
+        return `Localização capturada (${Math.round(locationState.accuracy || 0)}m)`;
+      case "requesting":
+        return "Obtendo localização...";
+      case "denied":
+        return "Permissão de localização negada";
+      case "unavailable":
+        return "Geolocalização não disponível";
+      case "error":
+        return locationState.error || "Erro ao obter localização";
+      default:
+        return "Capturar localização";
+    }
+  };
 
-  return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label className="text-base font-medium block" htmlFor="location-action">
-          Localização
-        </Label>
-        <p className="text-sm text-gray-600">Compartilhe sua localização para encontrar pessoas próximas</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                id="location-action"
-                onClick={requestLocation}
-                disabled={saving || uploading}
-                className="rounded-full p-2 hover:bg-gray-100"
-              >
-                {renderLocationIcon()}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{renderTooltipContent()}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        {locationState.status === "granted" && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  onClick={() => getCurrentLocation(true)}
-                  disabled={saving || uploading}
-                  className="rounded-full p-2 hover:bg-gray-100"
-                  aria-label="Atualizar localização"
-                >
-                  <Navigation className="h-5 w-5 text-green-500" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Atualizar localização</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        {(locationState.status === "granted" || (profileData.latitude !== null && profileData.longitude !== null)) && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  onClick={clearLocation}
-                  disabled={saving || uploading}
-                  className="rounded-full p-2 hover:bg-red-50"
-                  aria-label="Remover localização"
-                >
-                  <MapPin className="h-5 w-5 text-red-500" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Remover localização</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-      {locationState.status === "denied" && (
-        <p className="text-sm text-red-500">Permissão de localização negada. Ative nas configurações do navegador.</p>
-      )}
-      {locationState.status === "unavailable" && (
-        <p className="text-sm text-yellow-500">Geolocalização não disponível neste dispositivo.</p>
-      )}
-      {locationState.status === "error" && (
-        <p className="text-sm text-red-500">{locationState.error}</p>
-      )}
-    </div>
-  );
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-base font-medium block" htmlFor="location-action">
+          Localização
+        </Label>
+        <p className="text-sm text-gray-600">Compartilhe sua localização para encontrar pessoas próximas</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                id="location-action"
+                onClick={requestLocation}
+                disabled={saving || uploading}
+                className="rounded-full p-2 hover:bg-gray-100"
+              >
+                {renderLocationIcon()}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{renderTooltipContent()}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        {locationState.status === "granted" && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={() => getCurrentLocation(true)}
+                  disabled={saving || uploading}
+                  className="rounded-full p-2 hover:bg-gray-100"
+                  aria-label="Atualizar localização"
+                >
+                  <Navigation className="h-5 w-5 text-green-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Atualizar localização</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        {(locationState.status === "granted" || (profileData.latitude !== null && profileData.longitude !== null)) && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  onClick={clearLocation}
+                  disabled={saving || uploading}
+                  className="rounded-full p-2 hover:bg-red-50"
+                  aria-label="Remover localização"
+                >
+                  <MapPin className="h-5 w-5 text-red-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Remover localização</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+      {locationState.status === "denied" && (
+        <p className="text-sm text-red-500">Permissão de localização negada. Ative nas configurações do navegador.</p>
+      )}
+      {locationState.status === "unavailable" && (
+        <p className="text-sm text-yellow-500">Geolocalização não disponível neste dispositivo.</p>
+      )}
+      {locationState.status === "error" && (
+        <p className="text-sm text-red-500">{locationState.error}</p>
+      )}
+    </div>
+  );
 };
 
-// Components
 const ProfileInfo = ({
-  profileData,
-  calculateAge,
-  isOwnProfile,
-  onUpdateInterests,
-  compatibilityPercentage
+  profileData,
+  calculateAge,
+  isOwnProfile,
+  onUpdateInterests,
+  compatibilityPercentage
 }: {
-  profileData: ProfileData | null
-  calculateAge: (birthDate: string) => number | null
-  isOwnProfile: boolean
-  onUpdateInterests: (interests: string[]) => Promise<void>
-  compatibilityPercentage?: number | null; // CORRECTED: Now accepts null
+  profileData: ProfileData | null
+  calculateAge: (birthDate: string) => number | null
+  isOwnProfile: boolean
+  onUpdateInterests: (interests: string[]) => Promise<void>
+  compatibilityPercentage?: number | null;
 }) => {
-  const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData])
-  const [newInterest, setNewInterest] = useState("")
-  const [savingInterests, setSavingInterests] = useState(false)
+  const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData])
+  const [newInterest, setNewInterest] = useState("")
+  const [savingInterests, setSavingInterests] = useState(false)
 
-  const handleAddInterest = async () => {
-    if (!profileData || !newInterest.trim() || newInterest.length > 50) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">${
-          !newInterest.trim() ? "Digite um interesse." : "O interesse deve ter no máximo 50 caracteres."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
-    if (profileData.interests.length >= 10) {
-      MySwal.fire({
-        icon: "info",
-        title: "Limite de Interesses Atingido",
-        html: '<p class="text-sm text-gray-700">Você pode ter no máximo 10 interesses. Remova um para adicionar outro.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
-    if (profileData.interests.includes(newInterest.trim())) {
-      MySwal.fire({
-        icon: "info",
-        title: "Interesse Duplicado",
-        html: '<p class="text-sm text-gray-700">Este interesse já foi adicionado.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
-    setSavingInterests(true);
-    try {
-      const updatedInterests = [...profileData.interests, newInterest.trim()];
-      await onUpdateInterests(updatedInterests);
-      setNewInterest("");
-      MySwal.fire({
-        icon: "success",
-        title: "Interesse Adicionado",
-        html: '<p class="text-sm text-success">Interesse adicionado com sucesso!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">Não foi possível adicionar o interesse. Tente novamente.</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    } finally {
-      setSavingInterests(false);
-    }
-  };
+  const handleAddInterest = async () => {
+    if (!profileData || !newInterest.trim() || newInterest.length > 50) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">${
+          !newInterest.trim() ? "Digite um interesse." : "O interesse deve ter no máximo 50 caracteres."
+        }</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+    if (profileData.interests.length >= 10) {
+      MySwal.fire({
+        icon: "info",
+        title: "Limite de Interesses Atingido",
+        html: '<p class="text-sm text-gray-700">Você pode ter no máximo 10 interesses. Remova um para adicionar outro.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+    if (profileData.interests.includes(newInterest.trim())) {
+      MySwal.fire({
+        icon: "info",
+        title: "Interesse Duplicado",
+        html: '<p class="text-sm text-gray-700">Este interesse já foi adicionado.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
+    setSavingInterests(true);
+    try {
+      const updatedInterests = [...profileData.interests, newInterest.trim()];
+      await onUpdateInterests(updatedInterests);
+      setNewInterest("");
+      MySwal.fire({
+        icon: "success",
+        title: "Interesse Adicionado",
+        html: '<p class="text-sm text-success">Interesse adicionado com sucesso!</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">Não foi possível adicionar o interesse. Tente novamente.</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    } finally {
+      setSavingInterests(false);
+    }
+  };
 
-  const handleRemoveInterest = async (interest: string) => {
-    if (!profileData) return;
-    setSavingInterests(true);
-    try {
-      const updatedInterests = profileData.interests.filter((i) => i !== interest);
-      await onUpdateInterests(updatedInterests);
-      MySwal.fire({
-        icon: "success",
-        title: "Interesse Removido",
-        html: '<p class="text-sm text-success">Interesse removido com sucesso!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">Não foi possível remover o interesse. Tente novamente.</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    } finally {
-      setSavingInterests(false);
-    }
-  };
+  const handleRemoveInterest = async (interest: string) => {
+    if (!profileData) return;
+    setSavingInterests(true);
+    try {
+      const updatedInterests = profileData.interests.filter((i) => i !== interest);
+      await onUpdateInterests(updatedInterests);
+      MySwal.fire({
+        icon: "success",
+        title: "Interesse Removido",
+        html: '<p class="text-sm text-success">Interesse removido com sucesso!</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">Não foi possível remover o interesse. Tente novamente.</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    } finally {
+      setSavingInterests(false);
+    }
+  };
 
-  return (
-    <Card className="mb-6 border-none shadow-sm">
-      <CardContent className="pt-6">
-        {profileData ? (
-          <div className="flex flex-col space-y-6">
-            <div className="flex flex-col items-center space-y-2">
-              <Avatar className="w-24 h-24">
-                <AvatarImage
-                  src={profileData.avatar_url || PLACEHOLDER_IMAGE}
-                  alt={profileData.name}
-                  className="object-cover"
-                  onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
-                />
-                <AvatarFallback className="text-2xl">{profileData.name.charAt(0) || "?"}</AvatarFallback>
-              </Avatar>
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
-                {/* Destaque para o percentual de compatibilidade */}
-                {!isOwnProfile && typeof compatibilityPercentage === 'number' && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-lg font-extrabold mt-1"
-                    style={{
-                      background: `linear-gradient(90deg, #1E1E1E, ${
-                        compatibilityPercentage >= 75
-                          ? '#4CAF50'
-                          : compatibilityPercentage >= 50
-                          ? '#FFC107'
-                          : '#F44336'
-                      })`,
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                    }}
-                  >
-                    💖 {compatibilityPercentage}% de Compatibilidade
-                  </motion.p>
-                )}
-                <div className="flex items-center justify-center gap-2">
-                  {calculateAge(profileData.birth_date) && (
-                    <p className="text-sm text-oraculo-muted">
-                      {calculateAge(profileData.birth_date)} anos
-                    </p>
-                  )}
-                  {zodiac.sign !== "Desconhecido" && (
-                    <p className="text-sm text-oraculo-muted">
-                      {zodiac.emoji} {zodiac.sign}
-                    </p>
-                  )}
-                </div>
-                <p className="text-sm text-oraculo-muted">{profileData.city}</p>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
-              <p className="text-oraculo-muted">{profileData.profession || "Não informado"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
-              <p className="text-oraculo-muted">{profileData.bio || "Sem biografia"}</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">WhatsApp</h4>
-              <p className="text-oraculo-muted">
-                {profileData.share_whatsapp && profileData.whatsapp_number
-                  ? "WhatsApp compartilhado"
-                  : "WhatsApp não compartilhado"}
-              </p>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
-              {profileData.interests.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {profileData.interests.map((interest, index) => (
-                    <Badge
-                      key={index}
-                      className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs"
-                    >
-                      {interest}
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => handleRemoveInterest(interest)}
-                          className="ml-2 text-red-500 hover:text-red-700"
-                          aria-label={`Remover interesse ${interest}`}
-                          disabled={savingInterests}
-                        >
-                          &times;
-                        </button>
-                      )}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-oraculo-muted">Nenhum interesse cadastrado.</p>
-              )}
-              {isOwnProfile && (
-                <div className="mt-4 space-y-2">
-                  <Input
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    placeholder="Adicionar novo interesse"
-                    maxLength={50}
-                    disabled={savingInterests}
-                    aria-label="Adicionar novo interesse"
-                  />
-                  <Button
-                    onClick={handleAddInterest}
-                    disabled={savingInterests || !newInterest.trim()}
-                    className="w-full gradient-button"
-                    aria-label="Adicionar interesse"
-                  >
-                    {savingInterests ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                        Salvando...
-                      </>
-                    ) : (
-                      "Adicionar Interesse"
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
-        )}
-      </CardContent>
-    </Card>
-  );
+  return (
+    <Card className="mb-6 border-none shadow-sm">
+      <CardContent className="pt-6">
+        {profileData ? (
+          <div className="flex flex-col space-y-6">
+            <div className="flex flex-col items-center space-y-2">
+              <Avatar className="w-24 h-24">
+                <AvatarImage
+                  src={profileData.avatar_url || PLACEHOLDER_IMAGE}
+                  alt={profileData.name}
+                  className="object-cover"
+                  onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
+                />
+                <AvatarFallback className="text-2xl">{profileData.name.charAt(0) || "?"}</AvatarFallback>
+              </Avatar>
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
+                {/* Destaque para o percentual de compatibilidade */}
+                {!isOwnProfile && typeof compatibilityPercentage === 'number' && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="text-lg font-extrabold mt-1"
+                    style={{
+                      background: `linear-gradient(90deg, #1E1E1E, ${
+                        compatibilityPercentage >= 75
+                          ? '#4CAF50'
+                          : compatibilityPercentage >= 50
+                          ? '#FFC107'
+                          : '#F44336'
+                      })`,
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}
+                  >
+                    💖 {compatibilityPercentage}% de Compatibilidade
+                  </motion.p>
+                )}
+                <div className="flex items-center justify-center gap-2">
+                  {calculateAge(profileData.birth_date) && (
+                    <p className="text-sm text-oraculo-muted">
+                      {calculateAge(profileData.birth_date)} anos
+                    </p>
+                  )}
+                  {zodiac.sign !== "Desconhecido" && (
+                    <p className="text-sm text-oraculo-muted">
+                      {zodiac.emoji} {zodiac.sign}
+                    </p>
+                  )}
+                </div>
+                <p className="text-sm text-oraculo-muted">{profileData.city}</p>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Profissão</h4>
+              <p className="text-oraculo-muted">{profileData.profession || "Não informado"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Sobre</h4>
+              <p className="text-oraculo-muted">{profileData.bio || "Sem biografia"}</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">WhatsApp</h4>
+              <p className="text-oraculo-muted">
+                {profileData.share_whatsapp && profileData.whatsapp_number
+                  ? "WhatsApp compartilhado"
+                  : "WhatsApp não compartilhado"}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
+              {profileData.interests.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {profileData.interests.map((interest, index) => (
+                    <Badge
+                      key={index}
+                      className="bg-[#1E1E1E]/10 text-[#1E1E1E] text-xs"
+                    >
+                      {interest}
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => handleRemoveInterest(interest)}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                          aria-label={`Remover interesse ${interest}`}
+                          disabled={savingInterests}
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-oraculo-muted">Nenhum interesse cadastrado.</p>
+              )}
+              {isOwnProfile && (
+                <div className="mt-4 space-y-2">
+                  <Input
+                    value={newInterest}
+                    onChange={(e) => setNewInterest(e.target.value)}
+                    placeholder="Adicionar novo interesse"
+                    maxLength={50}
+                    disabled={savingInterests}
+                    aria-label="Adicionar novo interesse"
+                  />
+                  <Button
+                    onClick={handleAddInterest}
+                    disabled={savingInterests || !newInterest.trim()}
+                    className="w-full gradient-button"
+                    aria-label="Adicionar interesse"
+                  >
+                    {savingInterests ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                        Salvando...
+                      </>
+                    ) : (
+                      "Adicionar Interesse"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="text-center text-oraculo-muted">Nenhuma informação disponível.</p>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
 
 const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
-  <Card className="mb-6 border-none shadow-sm">
-    <CardHeader>
-      <CardTitle>Fotos</CardTitle>
-      <CardDescription>Fotos do perfil do usuário</CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {photos.length === 0 ? (
-          <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
-            <p className="text-oraculo-muted">Sem fotos disponíveis.</p>
-          </div>
-        ) : (
-          photos.map((photo, index) => (
-            <div key={photo.storage_path} className="relative">
-              <img
-                src={photo.publicUrl}
-                alt={`Foto ${index + 1}`}
-                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-[#1E1E1E]" : ""}`}
-                loading="lazy"
-                onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
-              />
-              {photo.isPrimary && (
-                <Badge className="absolute top-2 left-2 bg-[#1E1E1E] text-white text-xs">
-                  Principal
-                </Badge>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </CardContent>
-  </Card>
+  <Card className="mb-6 border-none shadow-sm">
+    <CardHeader>
+      <CardTitle>Fotos</CardTitle>
+      <CardDescription>Fotos do perfil do usuário</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {photos.length === 0 ? (
+          <div className="col-span-3 text-center py-12 border border-dashed rounded-md">
+            <p className="text-oraculo-muted">Sem fotos disponíveis.</p>
+          </div>
+        ) : (
+          photos.map((photo, index) => (
+            <div key={photo.storage_path} className="relative">
+              <img
+                src={photo.publicUrl}
+                alt={`Foto ${index + 1}`}
+                className={`w-full h-48 object-cover rounded-md ${photo.isPrimary ? "ring-2 ring-[#1E1E1E]" : ""}`}
+                loading="lazy"
+                onError={(e) => (e.currentTarget.src = PLACEHOLDER_IMAGE)}
+              />
+              {photo.isPrimary && (
+                <Badge className="absolute top-2 left-2 bg-[#1E1E1E] text-white text-xs">
+                  Principal
+                </Badge>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </CardContent>
+  </Card>
 );
 
 export default function ProfileView() {
-  const router = useRouter();
-  const { user, isLoading: userLoading, profile } = useUser(); // profile é o perfil do usuário logado
-  const { id: profileId } = useParams() as { id: string }; // profileId é o ID do perfil sendo visualizado
-  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes");
-  const [viewedProfileData, setViewedProfileData] = useState<ProfileData | null>(null); // Dados do perfil visualizado
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [isLoading, setIsLoading] = useState(true); // Controla o carregamento da tela do perfil visualizado
-  const [hasLiked, setHasLiked] = useState(false);
-  const [canLikeToday, setCanLikeToday] = useState(true);
-  const [hasMatch, setHasMatch] = useState(false);
-  const [message, setMessage] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [matchAlertShown, setMatchAlertShown] = useState(false);
-  const [compatibilityPercentage, setCompatibilityPercentage] = useState<number | null>(null);
+  const router = useRouter();
+  const { user, isLoading: userLoading, profile } = useUser();
+  const { id: profileId } = useParams() as { id: string };
+  const [activeTab, setActiveTab] = useState<"informacoes" | "fotos">("informacoes");
+  const [viewedProfileData, setViewedProfileData] = useState<ProfileData | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [canLikeToday, setCanLikeToday] = useState(true);
+  const [hasMatch, setHasMatch] = useState(false);
+  const [message, setMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [matchAlertShown, setMatchAlertShown] = useState(false);
+  const [compatibilityPercentage, setCompatibilityPercentage] = useState<number | null>(null);
 
-  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile]);
-  const isOwnProfile = useMemo(() => profile?.id === profileId, [profile, profileId]);
+  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile]);
+  const isOwnProfile = useMemo(() => profile?.id === profileId, [profile, profileId]);
 
-  // Ref para controlar se o loadProfile já foi disparado para o current profileId
-  const hasLoadedProfileRef = useRef<Record<string, boolean>>({}); // Objeto para armazenar por profileId
+  const hasLoadedProfileRef = useRef<Record<string, boolean>>({});
 
-  // showMatchAlert: depende de viewedProfileData para o nome
-  const showMatchAlert = useCallback(() => {
-    if (matchAlertShown || !viewedProfileData) return;
-    MySwal.fire({
-      icon: "success",
-      title: "É um Match!",
-      html: `<p class="text-lg text-gray-700">
-        Vocês são uma conexão cósmica, ${viewedProfileData.name || "!"}! O universo alinhou seus caminhos.
-        ${hasPremiumSubscription ? "Que tal enviar uma mensagem?" : "Faça um upgrade para Premium!"}
-      </p>`,
-      customClass: SWAL_CONFIG,
-      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
-      willOpen: (popup) => popup.setAttribute("aria-live", "assertive"),
-    }).then((result) => {
-      if (result.isConfirmed) {
-        if (hasPremiumSubscription && viewedProfileData.id) {
-          router.push(ROUTES.MESSAGES(viewedProfileData.id));
-        } else {
-          router.push(ROUTES.SUBSCRIPTION);
-        }
-      }
-    });
-    setMatchAlertShown(true);
-  }, [viewedProfileData, matchAlertShown, hasPremiumSubscription, router]);
+  const showMatchAlert = useCallback(() => {
+    if (matchAlertShown || !viewedProfileData) return;
+    MySwal.fire({
+      icon: "success",
+      title: "É um Match!",
+      html: `<p class="text-lg text-gray-700">
+        Vocês são uma conexão cósmica, ${viewedProfileData.name || "!"}! O universo alinhou seus caminhos.
+        ${hasPremiumSubscription ? "Que tal enviar uma mensagem?" : "Faça um upgrade para Premium!"}
+      </p>`,
+      customClass: SWAL_CONFIG,
+      confirmButtonText: hasPremiumSubscription ? "Enviar Mensagem" : "Fazer Upgrade",
+      willOpen: (popup) => popup.setAttribute("aria-live", "assertive"),
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (hasPremiumSubscription && viewedProfileData.id) {
+          router.push(ROUTES.MESSAGES(viewedProfileData.id));
+        } else {
+          router.push(ROUTES.SUBSCRIPTION);
+        }
+      }
+    });
+    setMatchAlertShown(true);
+  }, [viewedProfileData, matchAlertShown, hasPremiumSubscription, router]);
 
-  // handleUpdateInterests: depende de profile para o ID do usuário logado
-  const handleUpdateInterests = useCallback(async (interests: string[]) => {
-    if (!profile || !profile.id) {
-      throw new Error("Usuário logado ou ID do perfil não disponível.");
-    }
-    try {
-      const { data: allInterests, error: fetchInterestsError } = await supabase
-        .from('interests')
-        .select('id, name')
-        .in('name', interests);
+  const handleUpdateInterests = useCallback(async (interests: string[]) => {
+    if (!profile || !profile.id) {
+      throw new Error("Usuário logado ou ID do perfil não disponível.");
+    }
+    try {
+      const { data: allInterests, error: fetchInterestsError } = await supabase
+        .from('interests')
+        .select('id, name')
+        .in('name', interests);
 
-      if (fetchInterestsError) {
-        throw new Error(`Erro ao buscar IDs dos interesses: ${fetchInterestsError.message}`);
-      }
+      if (fetchInterestsError) {
+        throw new Error(`Erro ao buscar IDs dos interesses: ${fetchInterestsError.message}`);
+      }
 
-      const interestIdsToUpdate = allInterests.map(interest => interest.id);
+      const interestIdsToUpdate = allInterests.map(interest => interest.id);
 
-      const { error: deleteError } = await supabase
-        .from("profile_interests")
-        .delete()
-        .eq("profile_id", profile.id);
+      const { error: deleteError } = await supabase
+        .from("profile_interests")
+        .delete()
+        .eq("profile_id", profile.id);
 
-      if (deleteError) {
-        throw new Error(`Erro ao apagar interesses antigos: ${deleteError.message}`);
-      }
+      if (deleteError) {
+        throw new Error(`Erro ao apagar interesses antigos: ${deleteError.message}`);
+      }
 
-      const inserts = interestIdsToUpdate.map(id => ({
-        profile_id: profile.id,
-        interests_id: id,
-      }));
+      const inserts = interestIdsToUpdate.map(id => ({
+        profile_id: profile.id,
+        interests_id: id,
+      }));
 
-      if (inserts.length > 0) {
-        const { error: insertError } = await supabase
-          .from("profile_interests")
-          .insert(inserts);
+      if (inserts.length > 0) {
+        const { error: insertError } = await supabase
+          .from("profile_interests")
+          .insert(inserts);
 
-        if (insertError) {
-          throw new Error(`Erro ao inserir novos interesses: ${insertError.message}`);
-        }
-      }
+        if (insertError) {
+          throw new Error(`Erro ao inserir novos interesses: ${insertError.message}`);
+        }
+      }
 
-      // Atualiza o estado local do perfil VISUALIZADO (se for o próprio perfil)
-      // E aciona um re-load para garantir que o 'profile' do useUser seja atualizado
-      // com os novos interesses, o que impacta o 'profile.interests' para o cálculo da compatibilidade.
-      if (isOwnProfile && viewedProfileData) {
-          setViewedProfileData(prev => ({ ...prev!, interests }));
-          // Forçar um re-carregamento do perfil do usuário logado (profile do useUser)
-          // Isso é o mais complicado, pois useUser é um hook externo.
-          // Uma forma seria ter uma função de 'refreshProfile' dentro do useUser,
-          // ou re-renderizar o componente pai que encapsula o useUser.
-          // Como alternativa temporária, podemos marcar o perfil como não carregado
-          // para forçar loadProfile a rodar novamente e pegar os dados atualizados.
-          hasLoadedProfileRef.current[profileId] = false; // Força re-load na próxima render
-      }
+      setViewedProfileData(prev => prev ? { ...prev, interests } : null);
+      if (isOwnProfile && profileId) {
+          hasLoadedProfileRef.current[profileId] = false;
+      }
+    } catch (error: any) {
+      console.error("Erro em handleUpdateInterests:", error);
+      throw error;
+    }
+  }, [profile, isOwnProfile, profileId]);
 
+  const loadProfile = useCallback(async () => {
+    if (userLoading || !user || !profile || !profileId) {
+      if (!userLoading && !user) {
+        handleError(new Error("Você precisa estar logado para ver perfis."), "Não autenticado", router, ROUTES.LOGIN);
+      }
+      return;
+    }
 
-    } catch (error: any) {
-      console.error("Erro em handleUpdateInterests:", error);
-      throw error;
-    }
-  }, [profile, isOwnProfile, profileId, viewedProfileData]); // Adicionado viewedProfileData
+    if (hasLoadedProfileRef.current[profileId]) {
+      return;
+    }
 
-  // loadProfile: A função que faz as requisições de dados
-  const loadProfile = useCallback(async () => {
-    // Estas são as condições de "guarda" para evitar requisições desnecessárias.
-    // console.log("loadProfile: checking conditions...", { userLoading, user: !!user, profile: !!profile, profileId, hasLoadedProfileRef: hasLoadedProfileRef.current[profileId] });
+    setIsLoading(true);
+    try {
+      const [
+        { data: profileDataResponse, error: profileError },
+        { data: photosDataResponse, error: photosError },
+        { data: likeDataResponse, error: likeError },
+        { data: matchDataResponse, error: errorMatch },
+        { data: profileInterestsData, error: profileInterestsError }
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, user_id, name, birth_date, gender, bio, city, profession, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
+          .eq("id", profileId)
+          .single(),
+        supabase
+          .from("profile_photos")
+          .select("storage_path, is_primary")
+          .eq("profile_id", profileId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("likes")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .eq("liked_profile_id", profileId)
+          .single(),
+        supabase
+          .from("matches")
+          .select("id")
+          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
+          .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
+          .single(),
+        supabase
+          .from("profile_interests")
+          .select(`interests_id, interests (name)`)
+          .eq("profile_id", profileId),
+      ]);
 
-    if (userLoading || !user || !profile || !profileId) {
-      if (!userLoading && !user) {
-        console.log("loadProfile: User not authenticated, redirecting.");
-        handleError(new Error("Você precisa estar logado para ver perfis."), "Não autenticado", router, ROUTES.LOGIN);
-      }
-      return;
-    }
+      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`);
+      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`);
+      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`);
+      if (errorMatch && errorMatch.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${errorMatch.message}`);
+      if (profileInterestsError) throw new Error(`Erro ao carregar interesses: ${profileInterestsError.message}`);
 
-    // Se este perfil já foi carregado e não é uma atualização forçada
-    if (hasLoadedProfileRef.current[profileId]) {
-        // console.log(`loadProfile: Profile ${profileId} already loaded, skipping.`);
-        return;
-    }
+      const interestsNames = (profileInterestsData || [])
+        .map((item: any) => item.interests?.name)
+        .filter((name: any): name is string => typeof name === 'string' && name !== null);
 
-    // console.log(`loadProfile: Initiating fetch for profile ${profileId}.`);
-    setIsLoading(true);
-    try {
-      const [
-        { data: profileDataResponse, error: profileError },
-        { data: photosDataResponse, error: photosError },
-        { data: likeDataResponse, error: likeError },
-        { data: matchDataResponse, error: errorMatch }, // Renomeado para evitar conflito com 'match' do hook
-        { data: profileInterestsData, error: profileInterestsError }
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, user_id, name, birth_date, gender, bio, city, profession, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
-          .eq("id", profileId)
-          .single(),
-        supabase
-          .from("profile_photos")
-          .select("storage_path, is_primary")
-          .eq("profile_id", profileId)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("likes")
-          .select("id")
-          .eq("profile_id", profile.id)
-          .eq("liked_profile_id", profileId)
-          .single(),
-        supabase
-          .from("matches")
-          .select("id")
-          .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`)
-          .or(`profile1_id.eq.${profileId},profile2_id.eq.${profileId}`)
-          .single(),
-        supabase
-          .from("profile_interests")
-          .select(`interests_id, interests (name)`)
-          .eq("profile_id", profileId),
-      ]);
+      const loadedProfileData: ProfileData = { ...profileDataResponse, interests: interestsNames };
+      setViewedProfileData(loadedProfileData);
+      setPhotos(photosDataResponse ? await fetchPhotoUrls(photosDataResponse) : []);
+      setHasLiked(!!likeDataResponse);
+      setCanLikeToday(!likeDataResponse);
+      setHasMatch(!!matchDataResponse);
+      setMatchAlertShown(false);
 
-      if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`);
-      if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`);
-      if (likeError && likeError.code !== "PGRST116") throw new Error(`Erro ao carregar curtida: ${likeError.message}`);
-      if (errorMatch && errorMatch.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${errorMatch.message}`);
-      if (profileInterestsError) throw new Error(`Erro ao carregar interesses: ${profileInterestsError.message}`);
+      if (profile && loadedProfileData && !isOwnProfile) {
+        const comp = calculateCompatibilityPercentage(profile as LoggedInUserProfile, loadedProfileData);
+        setCompatibilityPercentage(comp);
+      } else {
+        setCompatibilityPercentage(null);
+      }
 
-      const interestsNames = (profileInterestsData || [])
-        .map((item: any) => item.interests?.name)
-        .filter((name: any): name is string => typeof name === 'string' && name !== null);
+      if (matchDataResponse && !matchAlertShown) showMatchAlert();
+      hasLoadedProfileRef.current[profileId] = true;
+    } catch (error: any) {
+      console.error("Erro no loadProfile:", error);
+      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userLoading, user, profile, profileId, router, showMatchAlert, isOwnProfile, matchAlertShown]);
 
-      const loadedProfileData: ProfileData = { ...profileDataResponse, interests: interestsNames };
-      setViewedProfileData(loadedProfileData);
-      setPhotos(photosDataResponse ? await fetchPhotoUrls(photosDataResponse) : []);
-      setHasLiked(!!likeDataResponse);
-      setCanLikeToday(!likeDataResponse);
-      setHasMatch(!!errorMatch); // Se errorMatch não for PGRST116, significa que encontrou um match
-      setMatchAlertShown(false); // Reset para que o alerta de match possa aparecer novamente se mudar o perfil
+  const handleLike = useCallback(async () => {
+    if (!user || !profile || !profileId) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Usuário ou perfil inválido.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-      // Calcular e definir o percentual de compatibilidade
-      if (profile && loadedProfileData && !isOwnProfile) {
-        const comp = calculateCompatibilityPercentage(profile as LoggedInUserProfile, loadedProfileData);
-        setCompatibilityPercentage(comp);
-      } else {
-        setCompatibilityPercentage(null);
-      }
+    if (!canLikeToday) {
+      MySwal.fire({
+        icon: "info",
+        title: "Limite Diário",
+        html: '<p class="text-sm text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-      if (!!errorMatch && errorMatch.code !== "PGRST116" && !matchAlertShown) showMatchAlert(); // Corrigir a lógica do matchAlertShown
+    try {
+      const { error } = await supabase.from("likes").insert({
+        profile_id: profile.id,
+        liked_profile_id: profileId,
+        created_at: new Date().toISOString(),
+      });
+      if (error) throw new Error(`Erro ao curtir: ${error.message}`);
 
-      hasLoadedProfileRef.current[profileId] = true; // Marca que este perfil foi carregado com sucesso
-    } catch (error: any) {
-      console.error("Erro no loadProfile:", error);
-      handleError(error, "Erro ao Carregar Perfil", router, ROUTES.DISCOVER);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userLoading, user, profile, profileId, router, showMatchAlert, isOwnProfile, matchAlertShown]); // Removido isLoading e viewedProfileData?.id das dependências
+      setHasLiked(true);
+      setCanLikeToday(false);
+      MySwal.fire({
+        icon: "success",
+        title: "Perfil Curtido!",
+        html: '<p class="text-sm text-success">Você curtiu este perfil! Aguardando um match...</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
 
-  // handleLike: depende de user, profile, profileId, canLikeToday, showMatchAlert
-  const handleLike = useCallback(async () => {
-    if (!user || !profile || !profileId) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Usuário ou perfil inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+      const { data: mutualLike, error: mutualLikeError } = await supabase
+        .from("likes")
+        .select("id")
+        .eq("profile_id", profileId)
+        .eq("liked_profile_id", profile.id)
+        .single();
+      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw new Error(`Erro ao verificar match: ${mutualLikeError.message}`);
+      if (mutualLike) {
+        setHasMatch(true);
+        showMatchAlert();
+      }
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro ao Curtir",
+        html: `<p class="text-sm text-gray-700">${
+          error.message.includes("too_many_requests")
+            ? "Muitas tentativas. Tente novamente em alguns minutos."
+            : "Não foi possível curtir o perfil."
+        }</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    }
+  }, [user, profile, profileId, canLikeToday, showMatchAlert]);
 
-    if (!canLikeToday) {
-      MySwal.fire({
-        icon: "info",
-        title: "Limite Diário",
-        html: '<p class="text-sm text-gray-700">Você já curtiu este perfil hoje. Tente novamente amanhã!</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+  const handleSendMessage = useCallback(() => {
+    if (!user || !viewedProfileData?.id) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: `<p class="text-sm text-gray-700">${
+          !user ? "Usuário não autenticado." : "Perfil inválido."
+        }</p>`,
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-    try {
-      const { error } = await supabase.from("likes").insert({
-        profile_id: profile.id,
-        liked_profile_id: profileId,
-        created_at: new Date().toISOString(),
-      });
-      if (error) throw new Error(`Erro ao curtir: ${error.message}`);
+    if (!hasMatch) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Vocês ainda não deram match.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-      setHasLiked(true);
-      setCanLikeToday(false);
-      MySwal.fire({
-        icon: "success",
-        title: "Perfil Curtido!",
-        html: '<p class="text-sm text-success">Você curtiu este perfil! Aguardando um match...</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
+    if (!hasPremiumSubscription) {
+      MySwal.fire({
+        icon: "info",
+        title: "Assinatura Necessária",
+        html: '<p class="text-sm text-gray-700">Você precisa de uma assinatura Premium para enviar mensagens.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "Fazer Upgrade",
+      }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION));
+      return;
+    }
 
-      const { data: mutualLike, error: mutualLikeError } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("profile_id", profileId)
-        .eq("liked_profile_id", profile.id)
-        .single();
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw new Error(`Erro ao verificar match: ${mutualLikeError.message}`);
-      if (mutualLike) {
-        setHasMatch(true);
-        showMatchAlert();
-      }
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro ao Curtir",
-        html: `<p class="text-sm text-gray-700">${
-          error.message.includes("too_many_requests")
-            ? "Muitas tentativas. Tente novamente em alguns minutos."
-            : "Não foi possível curtir o perfil."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    }
-  }, [user, profile, profileId, canLikeToday, showMatchAlert]);
+    if (!viewedProfileData?.share_whatsapp || !viewedProfileData?.whatsapp_number) {
+      MySwal.fire({
+        icon: "info",
+        title: "Contato Indisponível",
+        html: '<p class="text-sm text-gray-700">Este usuário não compartilhou o número de WhatsApp.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
+    if (!message.trim()) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Digite uma mensagem.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-  // handleSendMessage: depende de user, message, hasMatch, hasPremiumSubscription, viewedProfileData, router
-  const handleSendMessage = useCallback(() => {
-    if (!user || !viewedProfileData?.id) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: `<p class="text-sm text-gray-700">${
-          !user ? "Usuário não autenticado." : "Perfil inválido."
-        }</p>`,
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+    const cleanedNumber = viewedProfileData.whatsapp_number.replace(/\D/g, "");
+    if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+      return;
+    }
 
-    if (!hasMatch) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Vocês ainda não deram match.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+    setIsSending(true);
+    try {
+      const encodedMessage = encodeURIComponent(message.trim());
+      const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`;
+      window.open(whatsappUrl, "_blank");
+      setMessage("");
+    } catch (error: any) {
+      MySwal.fire({
+        icon: "error",
+        title: "Erro",
+        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }, [user, message, hasMatch, hasPremiumSubscription, viewedProfileData, router]);
 
-    if (!hasPremiumSubscription) {
-      MySwal.fire({
-        icon: "info",
-        title: "Assinatura Necessária",
-        html: '<p class="text-sm text-gray-700">Você precisa de uma assinatura Premium para enviar mensagens.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "Fazer Upgrade",
-      }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION));
-      return;
-    }
+  useEffect(() => {
+    if (!userLoading && user && profile && profileId) {
+      if (!hasLoadedProfileRef.current[profileId]) {
+        loadProfile();
+      }
+    } else if (!userLoading && !user) {
+      handleError(new Error("Você precisa estar logado para ver perfis."), "Não autenticado", router, ROUTES.LOGIN);
+    }
+  }, [userLoading, user, profile, profileId, loadProfile, router]);
 
-    if (!viewedProfileData?.share_whatsapp || !viewedProfileData?.whatsapp_number) {
-      MySwal.fire({
-        icon: "info",
-        title: "Contato Indisponível",
-        html: '<p class="text-sm text-gray-700">Este usuário não compartilhou o número de WhatsApp.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+  if (isLoading || userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" aria-live="polite">
+        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" aria-hidden="true" />
+        <span className="sr-only">Carregando perfil...</span>
+      </div>
+    );
+  }
 
-    if (!message.trim()) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Digite uma mensagem.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+  if (!user || !profile || !viewedProfileData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-700">
+        <p>Não foi possível carregar o perfil ou você não está logado.</p>
+      </div>
+    );
+  }
 
-    const cleanedNumber = viewedProfileData.whatsapp_number.replace(/\D/g, "");
-    if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-      return;
-    }
+  return (
+    <>
+      {profile && <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />}
+      <div className="app-container flex flex-col min-h-screen px-4 py-6">
+        <motion.main
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="max-w-md mx-auto w-full"
+        >
+          <h2 className="text-2xl font-bold gradient-text text-center mb-6">
+            Perfil de {viewedProfileData.name || "Usuário"}
+          </h2>
 
-    setIsSending(true);
-    try {
-      const encodedMessage = encodeURIComponent(message.trim());
-      const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`;
-      window.open(whatsappUrl, "_blank");
-      setMessage("");
-    } catch (error: any) {
-      MySwal.fire({
-        icon: "error",
-        title: "Erro",
-        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
-        customClass: SWAL_CONFIG,
-        confirmButtonText: "OK",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  }, [user, message, hasMatch, hasPremiumSubscription, viewedProfileData, router]);
+          <div className="flex justify-between mb-6">
+            {!isOwnProfile && !hasLiked && !hasMatch && (
+              <Button
+                onClick={handleLike}
+                className="flex-1 mr-2 gradient-button"
+                disabled={!canLikeToday}
+                aria-label={canLikeToday ? "Curtir perfil" : "Você já curtiu este perfil hoje"}
+              >
+                <Heart className="h-4 w-4 mr-2" aria-hidden="true" />
+                {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
+              </Button>
+            )}
+            {!isOwnProfile && hasMatch && (
+              <Button
+                onClick={handleSendMessage}
+                className="flex-1 mr-2 gradient-button"
+                aria-label="Abrir conversa"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
+                Mensagem
+              </Button>
+            )}
+            <Button
+              onClick={() => router.push(ROUTES.DISCOVER)}
+              className="flex-1 ml-2 gradient-button"
+              aria-label="Voltar para descoberta"
+            >
+              Voltar
+            </Button>
+          </div>
+          {hasMatch && (
+            <Badge className="bg-green-100 text-green-800 text-sm font-semibold flex items-center justify-center mb-6 py-2">
+              <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
+              É um Match! Conexão Cósmica!
+              <Sparkles className="h-4 w-4 ml-2 animate-pulse" />
+            </Badge>
+          )}
 
-  // Este useEffect controla quando loadProfile é disparado.
-  // Ele usa profileId como gatilho principal e user/profile para garantir autenticação.
-  // hasLoadedProfileRef ajuda a prevenir re-disparos desnecessários.
-  useEffect(() => {
-    // console.log("useEffect [userLoading, user, profile, profileId] triggered.");
-    if (userLoading || !profileId) { // Se ainda carregando usuário ou sem profileId, não faz nada
-        // console.log("useEffect: Skipping due to user loading or missing profileId.");
-        return;
-    }
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
+            <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
+              <TabsTrigger
+                value="informacoes"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                aria-label="Ver informações do perfil"
+              >
+                Informações
+              </TabsTrigger>
+              <TabsTrigger
+                value="fotos"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                aria-label="Ver fotos do perfil"
+              >
+                Fotos
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="informacoes">
+              <ProfileInfo
+                profileData={viewedProfileData}
+                calculateAge={calculateAge}
+                isOwnProfile={isOwnProfile}
+                onUpdateInterests={handleUpdateInterests}
+                compatibilityPercentage={compatibilityPercentage}
+              />
+            </TabsContent>
+            <TabsContent value="fotos">
+              <ProfilePhotos photos={photos} />
+            </TabsContent>
+          </Tabs>
 
-    // Se o usuário e o perfil logado não estão presentes APÓS o carregamento, redireciona.
-    // Isso é importante para o caso de o usuário não estar logado.
-    if (!user && !profile) {
-        // console.log("useEffect: User not logged in, redirecting via handleError.");
-        handleError(new Error("Você precisa estar logado para ver perfis."), "Não autenticado", router, ROUTES.LOGIN);
-        return;
-    }
+          {hasMatch && !hasPremiumSubscription && (
+            <Card className="mb-6 border-none shadow-sm">
+              <CardContent className="text-center py-4">
+                <p className="text-oraculo-muted mb-4">
+                  Faça um upgrade para Premium para enviar mensagens e desbloquear mais recursos!
+                </p>
+                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="gradient-button">
+                  Fazer Upgrade para Premium
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
-    // Se chegamos aqui, user e profile estão carregados (ou não existem, e fomos redirecionados acima).
-    // E profileId existe.
-    // Agora, verificamos se precisamos carregar ESTE perfil.
-    // A condição mais simples é: se o profileId é diferente do que já carregamos, ou se não carregamos nada ainda.
-    // E só carrega se o `user` e `profile` (do usuário logado) estão *realmente* disponíveis.
-    if (user && profile && !hasLoadedProfileRef.current[profileId]) {
-        // console.log("useEffect: Calling loadProfile.");
-        loadProfile();
-    }
+          {!isOwnProfile && !hasMatch && !hasLiked && (
+            <Card className="mb-6 border-none shadow-sm bg-blue-50/50 border border-blue-200">
+              <CardContent className="text-center py-4">
+                <p className="text-blue-800 font-medium">
+                  Gostou do perfil de {viewedProfileData.name}?
+                </p>
+                <p className="text-blue-700 text-sm mt-1">
+                  Mande uma curtida e espere a conexão cósmica acontecer!
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-  }, [userLoading, user, profile, profileId, loadProfile, router]); // Dependências do useEffect
-
-  if (isLoading || userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-[#1E1E1E]" aria-hidden="true" />
-        <span className="sr-only">Carregando perfil...</span>
-      </div>
-    );
-  }
-
-  // Se user é null e não está mais carregando, e não foi redirecionado (caso de falha silenciosa talvez),
-  // ou se profileId é inválido e não foi pego pelo handleError, podemos mostrar um fallback.
-  if (!user || !profile || !viewedProfileData) {
-      // Isso deve ser raro se o handleError funcionar. Pode ser útil para bugs não esperados.
-      return (
-        <div className="flex items-center justify-center min-h-screen text-gray-700">
-            <p>Não foi possível carregar o perfil ou você não está logado.</p>
-        </div>
-      );
-  }
-
-  return (
-    <>
-      {profile && <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />}
-      <div className="app-container flex flex-col min-h-screen px-4 py-6">
-        <motion.main
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-md mx-auto w-full"
-        >
-          <h2 className="text-2xl font-bold gradient-text text-center mb-6">
-            Perfil de {viewedProfileData.name || "Usuário"}
-          </h2>
-
-          <div className="flex justify-between mb-6">
-            {/* Botão Curtir - Padronizado e Contextualizado */}
-            {!isOwnProfile && !hasLiked && !hasMatch && (
-              <Button
-                onClick={handleLike}
-                className="flex-1 mr-2 gradient-button"
-                disabled={!canLikeToday}
-                aria-label={canLikeToday ? "Curtir perfil" : "Você já curtiu este perfil hoje"}
-              >
-                <Heart className="h-4 w-4 mr-2" aria-hidden="true" />
-                {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
-              </Button>
-            )}
-            {/* Botão Enviar Mensagem - Apenas se for Match */}
-            {!isOwnProfile && hasMatch && (
-              <Button
-                onClick={handleSendMessage}
-                className="flex-1 mr-2 gradient-button"
-                aria-label="Abrir conversa"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
-                Mensagem
-              </Button>
-            )}
-            <Button
-              onClick={() => router.push(ROUTES.DISCOVER)}
-              className="flex-1 ml-2 gradient-button"
-              aria-label="Voltar para descoberta"
-            >
-              Voltar
-            </Button>
-          </div>
-          {hasMatch && (
-            <Badge className="bg-green-100 text-green-800 text-sm font-semibold flex items-center justify-center mb-6 py-2">
-              <Sparkles className="h-4 w-4 mr-2 animate-pulse" />
-              É um Match! Conexão Cósmica!
-              <Sparkles className="h-4 w-4 ml-2 animate-pulse" />
-            </Badge>
-          )}
-
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
-            <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
-              <TabsTrigger
-                value="informacoes"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver informações do perfil"
-              >
-                Informações
-              </TabsTrigger>
-              <TabsTrigger
-                value="fotos"
-                className="data-[state=active]:bg-white data-[state=active]:shadow-sm"
-                aria-label="Ver fotos do perfil"
-              >
-                Fotos
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="informacoes">
-              <ProfileInfo
-                profileData={viewedProfileData}
-                calculateAge={calculateAge}
-                isOwnProfile={isOwnProfile}
-                onUpdateInterests={handleUpdateInterests}
-                compatibilityPercentage={compatibilityPercentage}
-              />
-            </TabsContent>
-            <TabsContent value="fotos">
-              <ProfilePhotos photos={photos} />
-            </TabsContent>
-          </Tabs>
-
-          {hasMatch && !hasPremiumSubscription && (
-            <Card className="mb-6 border-none shadow-sm">
-              <CardContent className="text-center py-4">
-                <p className="text-oraculo-muted mb-4">
-                  Faça um upgrade para Premium para enviar mensagens e desbloquear mais recursos!
-                </p>
-                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="gradient-button">
-                  Fazer Upgrade para Premium
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isOwnProfile && !hasMatch && !hasLiked && (
-            <Card className="mb-6 border-none shadow-sm bg-blue-50/50 border border-blue-200">
-              <CardContent className="text-center py-4">
-                <p className="text-blue-800 font-medium">
-                  Gostou do perfil de {viewedProfileData.name}?
-                </p>
-                <p className="text-blue-700 text-sm mt-1">
-                  Mande uma curtida e espere a conexão cósmica acontecer!
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {!isOwnProfile && hasLiked && !hasMatch && (
-            <Card className="mb-6 border-none shadow-sm bg-yellow-50/50 border border-yellow-200">
-              <CardContent className="text-center py-4">
-                <p className="text-yellow-800 font-medium">
-                  Sua curtida foi enviada!
-                </p>
-                <p className="text-yellow-700 text-sm mt-1">
-                  Aguardando {viewedProfileData.name} te curtir de volta para darem match.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </motion.main>
-      </div>
-    </>
-  );
+          {!isOwnProfile && hasLiked && !hasMatch && (
+            <Card className="mb-6 border-none shadow-sm bg-yellow-50/50 border border-yellow-200">
+              <CardContent className="text-center py-4">
+                <p className="text-yellow-800 font-medium">
+                  Sua curtida foi enviada!
+                </p>
+                <p className="text-yellow-700 text-sm mt-1">
+                  Aguardando {viewedProfileData.name} te curtir de volta para darem match.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </motion.main>
+      </div>
+    </>
+  );
 }

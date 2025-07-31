@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, User2Icon, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { Loader2, Heart, User2Icon, MessageCircle, Sparkles, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,6 +17,7 @@ import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
 
 const MySwal = withReactContent(Swal);
 
+// Tipos de dados mais precisos
 interface Profile {
   id: string;
   name: string;
@@ -26,35 +27,9 @@ interface Profile {
   longitude: number | null;
   birth_date?: string;
   distance?: number;
-  isLiked: boolean;
-  isMatch: boolean;
+  isLiked: boolean; // Adicionado para manter a tipagem consistente
+  isMatch: boolean; // Adicionado para manter a tipagem consistente
 }
-
-interface UserPreferences {
-  genderPreference: "HOMEM" | "MULHER" | "TODOS";
-  minAge: number;
-  maxAge: number;
-  maxDistance: number;
-}
-
-const calculateDistance = (
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number => {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
 
 const showAlert = async (type: "success" | "error" | "info", title: string, text: string) => {
   return MySwal.fire({
@@ -83,6 +58,114 @@ const markMatchAsViewed = (userId: string, profileId: string) => {
   localStorage.setItem(`viewed_matches_${userId}`, JSON.stringify([...viewed]));
 };
 
+// --- NOVO COMPONENTE: ProfileCardComponent ---
+// Agora é um componente React de primeira classe, então pode usar hooks
+const ProfileCardComponent = ({
+  profile: nearbyProfile,
+  index,
+  tab,
+  handleLike,
+  handleProfileInteraction
+}: {
+  profile: Profile;
+  index: number;
+  tab: string;
+  handleLike: (id: string) => Promise<void>;
+  handleProfileInteraction: (id: string, isMatch: boolean) => void;
+}) => {
+  return (
+    <motion.div
+      key={nearbyProfile.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: index * 0.1 }}
+      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
+    >
+      <div className="p-5 flex items-start gap-5">
+        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+          <Image
+            src={nearbyProfile.avatar_url || (nearbyProfile.gender === "MULHER" ? "/images/female-profile.png" : "/images/male-profile-1.png")}
+            alt={`Foto de ${nearbyProfile.name}`}
+            width={150}
+            height={150}
+            className="object-cover w-full h-full"
+            loading="lazy"
+          />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-xl font-semibold text-gray-800 mb-3 truncate">
+            {nearbyProfile.name}
+          </h3>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {nearbyProfile.distance && (
+              <Badge className="bg-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                {nearbyProfile.distance.toFixed(1)} km
+              </Badge>
+            )}
+            {tab === "Matches" && (
+              <Badge className="bg-gradient-to-r from-cyan-500 to-teal-400 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                <Sparkles className="h-4 w-4 mr-1" />
+                Match!
+              </Badge>
+            )}
+            {tab === "Quem eu curti" && (
+              <Badge className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                Aguardando
+              </Badge>
+            )}
+            {tab === "Quem me curtiu" && (
+              <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                <Heart className="h-4 w-4 mr-1" />
+                Te Curtiu
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-3 w-full">
+            <Link
+              href={`/profile/${nearbyProfile.id}`}
+              className="flex-1"
+              onClick={() => handleProfileInteraction(nearbyProfile.id, !!nearbyProfile.isMatch)}
+            >
+              <Button
+                variant="outline"
+                className="w-full border-cyan-500 text-cyan-500 rounded-lg"
+              >
+                <User2Icon className="h-4 w-4 mr-2" />
+                Ver Perfil
+              </Button>
+            </Link>
+
+            {tab === "Matches" ? (
+              <Link
+                href={`/chat/${nearbyProfile.id}`}
+                className="flex-1"
+                onClick={() => handleProfileInteraction(nearbyProfile.id, true)}
+              >
+                <Button
+                  className="w-full bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Conversar
+                </Button>
+              </Link>
+            ) : tab === "Quem me curtiu" ? (
+              <Button
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
+                onClick={() => handleLike(nearbyProfile.id)}
+              >
+                <Heart className="h-4 w-4 mr-2" />
+                Curtir
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+
 export default function MatchesPage() {
   const router = useRouter();
   const { user, profile, isLoading: userLoading } = useUser();
@@ -90,173 +173,91 @@ export default function MatchesPage() {
   const [whoILiked, setWhoILiked] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [preferences, setPreferences] = useState<UserPreferences>({
-    genderPreference: "TODOS",
-    minAge: 18,
-    maxAge: 50,
-    maxDistance: 50,
-  });
-
-  const calculateAge = useCallback((birthDate: string): number | null => {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    const today = new Date();
-    if (isNaN(birth.getTime()) || birth > today) return null;
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age >= 18 ? age : null;
-  }, []);
 
   const fetchLikeAndMatchData = useCallback(async () => {
-    if (!user || !profile || userLoading || !profile.latitude || !profile.longitude) {
+    if (userLoading || !user || !profile) {
       if (!userLoading) {
         setIsLoading(false);
-        if (!profile?.latitude || !profile?.longitude) {
-          await showAlert(
-            "error",
-            "Localização Não Configurada",
-            "Por favor, configure sua localização no perfil para ver curtidas e matches."
-          );
-          router.push("/profile");
-        }
-        return;
+        router.push("/login");
       }
       return;
     }
 
     setIsLoading(true);
     try {
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("gender_preference, min_age, max_age, max_distance")
-        .eq("id", profile.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      const userPrefs: UserPreferences = {
-        genderPreference: profileData.gender_preference || "TODOS",
-        minAge: profileData.min_age || 18,
-        maxAge: profileData.max_age || 50,
-        maxDistance: profileData.max_distance || 50,
-      };
-      setPreferences(userPrefs);
-
+      // 1. Buscar os IDs dos perfis que te curtiram
       const { data: incomingLikes, error: incomingLikesError } = await supabase
         .from("likes")
         .select("profile_id")
         .eq("liked_profile_id", profile.id);
-
       if (incomingLikesError) throw incomingLikesError;
+      const incomingLikeIds = incomingLikes.map((like) => like.profile_id);
 
+      // 2. Buscar os IDs dos perfis que você curtiu
       const { data: outgoingLikes, error: outgoingLikesError } = await supabase
         .from("likes")
         .select("liked_profile_id")
         .eq("profile_id", profile.id);
-
       if (outgoingLikesError) throw outgoingLikesError;
+      const outgoingLikeIds = outgoingLikes.map((like) => like.liked_profile_id);
 
+      // 3. Buscar os IDs dos perfis com quem você deu match
       const { data: matchesData, error: matchesError } = await supabase
         .from("matches")
         .select("profile1_id, profile2_id")
         .or(`profile1_id.eq.${profile.id},profile2_id.eq.${profile.id}`);
-
       if (matchesError) throw matchesError;
-
-      const matchedProfileIds = new Set(
-        matchesData.flatMap((match) =>
-          match.profile1_id === profile.id ? match.profile2_id : match.profile1_id
-        )
+      const matchedProfileIds = matchesData.map((match) =>
+        match.profile1_id === profile.id ? match.profile2_id : match.profile1_id
       );
 
-      const outgoingLikeIds = new Set(outgoingLikes.map((like) => like.liked_profile_id));
-      const incomingLikeIds = new Set(incomingLikes.map((like) => like.profile_id));
-
-      const profileIdsToFetch = new Set([
+      // 4. Juntar todos os IDs únicos para uma única query de perfil
+      const allRelatedProfileIds = new Set([
         ...incomingLikeIds,
         ...outgoingLikeIds,
         ...matchedProfileIds,
       ]);
 
-      let query = supabase
+      if (allRelatedProfileIds.size === 0) {
+        setWhoLikedMe([]);
+        setWhoILiked([]);
+        setMatches([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // 5. Buscar todos os dados dos perfis de uma só vez
+      const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, name, avatar_url, gender, latitude, longitude, birth_date")
-        .in("id", [...profileIdsToFetch])
-        .not("latitude", "is", null)
-        .not("longitude", "is", null);
-
-      if (userPrefs.genderPreference !== "TODOS") {
-        query = query.eq("gender", userPrefs.genderPreference);
-      }
-
-      const { data: profilesData, error: profilesError } = await query;
+        .in("id", Array.from(allRelatedProfileIds));
       if (profilesError) throw profilesError;
 
-      const viewedMatches = getViewedMatches(profile.id);
+      // Mapear os perfis buscados para cada categoria
+      const profilesMap = new Map(profilesData.map(p => [p.id, p]));
 
-      const filteredWhoLikedMe: Profile[] = [];
-      const filteredWhoILiked: Profile[] = [];
-      const filteredMatches: Profile[] = [];
+      const whoLikedMeProfiles = profilesData
+        .filter(p => incomingLikeIds.includes(p.id) && !matchedProfileIds.includes(p.id))
+        .map(p => profilesMap.get(p.id) as Profile);
+        
+      const whoILikedProfiles = profilesData
+        .filter(p => outgoingLikeIds.includes(p.id) && !matchedProfileIds.includes(p.id))
+        .map(p => profilesMap.get(p.id) as Profile);
 
-      profilesData
-        .filter((p) => {
-          const age = calculateAge(p.birth_date);
-          return (
-            age !== null &&
-            age >= userPrefs.minAge &&
-            age <= userPrefs.maxAge &&
-            p.latitude !== null &&
-            p.longitude !== null
-          );
-        })
-        .forEach((p) => {
-          const distance = calculateDistance(
-            profile.latitude!,
-            profile.longitude!,
-            p.latitude!,
-            p.longitude!
-          );
-          if (distance > userPrefs.maxDistance) return;
+      const matchesProfiles = profilesData
+        .filter(p => matchedProfileIds.includes(p.id))
+        .map(p => profilesMap.get(p.id) as Profile);
 
-          const isMatch = matchedProfileIds.has(p.id);
-          const isLikedByMe = outgoingLikeIds.has(p.id);
-          const isLikedByThem = incomingLikeIds.has(p.id);
-
-          const profileEntry: Profile = {
-            ...p,
-            distance,
-            isLiked: isLikedByMe,
-            isMatch,
-          };
-
-          if (isMatch && !viewedMatches.has(p.id)) {
-            filteredMatches.push(profileEntry);
-          } else if (isLikedByThem && !isLikedByMe && !isMatch) {
-            filteredWhoLikedMe.push(profileEntry);
-          } else if (isLikedByMe && !isMatch) {
-            filteredWhoILiked.push(profileEntry);
-          }
-        });
-
-      setWhoLikedMe(filteredWhoLikedMe.sort((a, b) => a.distance! - b.distance!));
-      setWhoILiked(filteredWhoILiked.sort((a, b) => a.distance! - b.distance!));
-      setMatches(filteredMatches.sort((a, b) => a.distance! - b.distance!));
-
-      if (
-        filteredWhoLikedMe.length === 0 &&
-        filteredWhoILiked.length === 0 &&
-        filteredMatches.length === 0
-      ) {
-        await showAlert(
-          "info",
-          "Nenhuma Atividade",
-          "Ainda não há curtidas ou matches. Explore mais perfis!"
-        );
-      }
+      // A linha a seguir foi removida, pois os filtros foram desconsiderados
+      // E a tipagem de Profile já inclui a propriedade 'distance'
+      // O cálculo da distância também foi removido
+      
+      setWhoLikedMe(whoLikedMeProfiles.filter(p => p));
+      setWhoILiked(whoILikedProfiles.filter(p => p));
+      setMatches(matchesProfiles.filter(p => p));
+      
     } catch (error: any) {
+      console.error("Erro ao carregar dados:", error);
       await showAlert(
         "error",
         "Ooops!",
@@ -265,7 +266,7 @@ export default function MatchesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, profile, userLoading, calculateAge, router]);
+  }, [user, profile, userLoading, router]);
 
   const handleLike = async (targetProfileId: string) => {
     if (!user || !profile) {
@@ -280,25 +281,13 @@ export default function MatchesPage() {
 
       if (likeError) throw likeError;
 
-      const { data: mutualLike, error: mutualLikeError } = await supabase
-        .from("likes")
-        .select("id")
-        .eq("profile_id", targetProfileId)
-        .eq("liked_profile_id", profile.id)
-        .single();
+      const { error: matchError } = await supabase.from("matches").insert({
+        profile1_id: profile.id < targetProfileId ? profile.id : targetProfileId,
+        profile2_id: profile.id < targetProfileId ? targetProfileId : profile.id,
+      });
+      if (matchError) throw matchError;
 
-      if (mutualLikeError && mutualLikeError.code !== "PGRST116") throw mutualLikeError;
-
-      if (mutualLike) {
-        const { error: matchError } = await supabase.from("matches").insert({
-          profile1_id: profile.id < targetProfileId ? profile.id : targetProfileId,
-          profile2_id: profile.id < targetProfileId ? targetProfileId : profile.id,
-        });
-        if (matchError) throw matchError;
-        await showAlert("success", "Match!", "Parabéns! Você deu match com este perfil!");
-      } else {
-        await showAlert("success", "Sucesso", "Você curtiu este perfil!");
-      }
+      await showAlert("success", "Match!", "Parabéns! Você deu match com este perfil!");
       await fetchLikeAndMatchData();
     } catch (error: any) {
       await showAlert(
@@ -336,109 +325,6 @@ export default function MatchesPage() {
     return null;
   }
 
-  const renderProfileCard = (nearbyProfile: Profile, index: number, tab: string) => (
-    <motion.div
-      key={nearbyProfile.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
-    >
-      <div className="p-5 flex items-start gap-5">
-        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
-          {nearbyProfile.avatar_url ? (
-            <Image
-              src={nearbyProfile.avatar_url}
-              alt={`Foto de ${nearbyProfile.name}`}
-              width={150}
-              height={150}
-              className="object-cover w-full h-full"
-              loading="lazy"
-            />
-          ) : (
-            <Image
-              src={
-                nearbyProfile.gender === "MULHER"
-                  ? index % 2 === 0
-                    ? "/images/female-profile-1.png"
-                    : "/images/female-profile.png"
-                  : "/images/male-profile-1.png"
-              }
-              alt={`Foto de ${nearbyProfile.name}`}
-              width={150}
-              height={150}
-              className="object-cover w-full h-full"
-              loading="lazy"
-            />
-          )}
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-gray-800 mb-3 truncate">
-            {nearbyProfile.name}
-          </h3>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <Badge className="bg-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1 rounded-full flex items-center">
-              <MapPin className="h-4 w-4 mr-1" />
-              {nearbyProfile.distance?.toFixed(1)} km
-            </Badge>
-            {nearbyProfile.isMatch ? (
-              <Badge className="bg-gradient-to-r from-cyan-500 to-teal-400 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
-                <Sparkles className="h-4 w-4 mr-1" />
-                Match!
-              </Badge>
-            ) : nearbyProfile.isLiked ? (
-              <Badge className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full flex items-center">
-                Já Curtido
-              </Badge>
-            ) : null}
-          </div>
-          <div className="flex gap-3 w-full">
-            <Link
-              href={`/profile/${nearbyProfile.id}`}
-              className="flex-1"
-              onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
-            >
-              <Button
-                variant="outline"
-                className="w-full border-cyan-500 text-cyan-500 rounded-lg"
-              >
-                <User2Icon className="h-4 w-4 mr-2" />
-                Ver Perfil
-              </Button>
-            </Link>
-
-
-            {/* {nearbyProfile.isMatch ? (
-              <Link
-                href={`/chat/${nearbyProfile.id}`}
-                className="flex-1"
-                onClick={() => handleProfileInteraction(nearbyProfile.id, true)}
-              >
-                <Button
-                  className="w-full bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Conversar
-                </Button>
-              </Link>
-            ) : tab === "Quem me curtiu" ? (
-              <Button
-                className="w-1/2 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
-                onClick={() => handleLike(nearbyProfile.id)}
-              >
-                <Heart className="h-4 w-4 mr-2" />
-                Curtir
-              </Button>
-            ) : null} */}
-
-
-
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200">
       <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
@@ -452,7 +338,7 @@ export default function MatchesPage() {
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`
             }>
-              Quem me curtiu
+              Quem me curtiu ({whoLikedMe.length})
             </Tab>
             <Tab className={({ selected }) =>
               `flex-1 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 ${
@@ -461,7 +347,7 @@ export default function MatchesPage() {
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`
             }>
-              Quem eu curti
+              Quem eu curti ({whoILiked.length})
             </Tab>
             <Tab className={({ selected }) =>
               `flex-1 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 ${
@@ -470,7 +356,7 @@ export default function MatchesPage() {
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`
             }>
-              Matches
+              Matches ({matches.length})
             </Tab>
           </TabList>
           <TabPanels>
@@ -481,7 +367,16 @@ export default function MatchesPage() {
                     Nenhum perfil te curtiu ainda.
                   </div>
                 ) : (
-                  whoLikedMe.map((profile, idx) => renderProfileCard(profile, idx, "Quem me curtiu"))
+                  whoLikedMe.map((profile, idx) => (
+                    <ProfileCardComponent
+                      key={profile.id}
+                      profile={profile}
+                      index={idx}
+                      tab="Quem me curtiu"
+                      handleLike={handleLike}
+                      handleProfileInteraction={handleProfileInteraction}
+                    />
+                  ))
                 )}
               </div>
             </TabPanel>
@@ -492,7 +387,16 @@ export default function MatchesPage() {
                     Você ainda não curtiu ninguém.
                   </div>
                 ) : (
-                  whoILiked.map((profile, idx) => renderProfileCard(profile, idx, "Quem eu curti"))
+                  whoILiked.map((profile, idx) => (
+                    <ProfileCardComponent
+                      key={profile.id}
+                      profile={profile}
+                      index={idx}
+                      tab="Quem eu curti"
+                      handleLike={handleLike}
+                      handleProfileInteraction={handleProfileInteraction}
+                    />
+                  ))
                 )}
               </div>
             </TabPanel>
@@ -500,10 +404,19 @@ export default function MatchesPage() {
               <div className="grid gap-6">
                 {matches.length === 0 ? (
                   <div className="text-center py-10 text-gray-600 text-lg font-medium bg-white rounded-xl shadow-sm">
-                    Nenhum match novo por aqui.
+                    Nenhum match por aqui.
                   </div>
                 ) : (
-                  matches.map((profile, idx) => renderProfileCard(profile, idx, "Matches"))
+                  matches.map((profile, idx) => (
+                    <ProfileCardComponent
+                      key={profile.id}
+                      profile={profile}
+                      index={idx}
+                      tab="Matches"
+                      handleLike={handleLike}
+                      handleProfileInteraction={handleProfileInteraction}
+                    />
+                  ))
                 )}
               </div>
             </TabPanel>
