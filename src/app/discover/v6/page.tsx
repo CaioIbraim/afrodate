@@ -19,6 +19,7 @@ import {
   Filter,
   EyeIcon,
   Layers,
+  RefreshCw,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -174,7 +175,7 @@ export default function ProximityPage() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
   // Check premium status from profile.subscription
-  const isPremiumUser = profile?.subscription && profile.subscription.is_active;
+  const isPremiumUser = profile?.subscription?.is_active ?? false;
 
   // Fetch interest types
   const fetchInterestTypes = useCallback(async () => {
@@ -214,6 +215,7 @@ export default function ProximityPage() {
         .single();
 
       if (error && error.code !== "PGRST116") {
+        console.error("Check card choice error:", error);
         throw new Error("Erro ao verificar escolha de carta: " + error.message);
       }
 
@@ -226,7 +228,7 @@ export default function ProximityPage() {
       await showAlert(
         "error",
         "Erro",
-        "Não foi possível verificar a escolha de carta."
+        "Não foi possível verificar a escolha de carta. Por favor, tente novamente."
       );
     }
   }, [user, profile]);
@@ -238,11 +240,12 @@ export default function ProximityPage() {
       return;
     }
 
-    if (!isPremiumUser) {
+    // Check if non-premium user has already chosen a card
+    if (!isPremiumUser && hasChosenCardToday) {
       const result = await MySwal.fire({
         icon: "info",
         title: "Conta Premium Necessária",
-        text: "Para usar as Cartas do Amor, você precisa de uma conta premium.",
+        text: "Usuários não premium podem escolher apenas uma carta por dia. Faça upgrade para escolher novamente hoje.",
         showCancelButton: true,
         confirmButtonText: "Fazer Upgrade",
         cancelButtonText: "Cancelar",
@@ -265,6 +268,38 @@ export default function ProximityPage() {
 
     try {
       const today = new Date().toISOString().split("T")[0];
+      console.log("Attempting to save card choice:", {
+        user_id: profile.id,
+        card_id: card.id,
+        choice_date: today,
+      });
+
+      // Double-check if choice exists
+      const { data: existingChoice, error: checkError } = await supabase
+        .from("daily_card_choices")
+        .select("id")
+        .eq("user_id", profile.id)
+        .eq("choice_date", today)
+        .single();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        console.error("Error checking existing choice:", checkError);
+        throw new Error("Erro ao verificar escolha existente: " + checkError.message);
+      }
+
+      if (existingChoice) {
+        console.warn("User already chose a card today:", existingChoice);
+        setHasChosenCardToday(true);
+        setSelectedCardId(card.id);
+        setIsCardsModalOpen(false);
+        await showAlert(
+          "info",
+          "Já Escolhida",
+          "Você já escolheu uma carta hoje. Tente novamente amanhã!"
+        );
+        return;
+      }
+
       // Save card choice
       const { error } = await supabase.from("daily_card_choices").insert({
         user_id: profile.id,
@@ -273,7 +308,25 @@ export default function ProximityPage() {
       });
 
       if (error) {
-        throw new Error("Erro ao salvar escolha de carta: " + error.message);
+        console.error("Insert error:", error);
+        if (error.code === "23505") {
+          setHasChosenCardToday(true);
+          setSelectedCardId(card.id);
+          await showAlert(
+            "info",
+            "Já Escolhida",
+            "Você já escolheu uma carta hoje. Tente novamente amanhã!"
+          );
+        } else if (error.code === "42501") {
+          await showAlert(
+            "error",
+            "Erro de Permissão",
+            "Você não tem permissão para salvar uma escolha de carta. Entre em contato com o suporte."
+          );
+        } else {
+          throw new Error("Erro ao salvar escolha de carta: " + error.message);
+        }
+        return;
       }
 
       setHasChosenCardToday(true);
@@ -293,7 +346,55 @@ export default function ProximityPage() {
       await showAlert(
         "error",
         "Erro",
-        "Não foi possível salvar sua escolha de carta."
+        "Não foi possível salvar sua escolha de carta. Por favor, tente novamente."
+      );
+    }
+  };
+
+  // Handle reset search
+  const handleResetSearch = async () => {
+    if (!user || !profile) {
+      await showAlert("error", "Erro", "Usuário não autenticado.");
+      return;
+    }
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      console.log("Attempting to reset card choice for:", {
+        user_id: profile.id,
+        choice_date: today,
+      });
+
+      // Delete the user's card choice for today
+      const { error } = await supabase
+        .from("daily_card_choices")
+        .delete()
+        .eq("user_id", profile.id)
+        .eq("choice_date", today);
+
+      if (error) {
+        console.error("Delete card choice error:", error);
+        throw new Error("Erro ao resetar escolha de carta: " + error.message);
+      }
+
+      setHasChosenCardToday(false);
+      setSelectedCardId(null);
+      setIsCardsModalOpen(false);
+
+      // Fetch nearby profiles
+      await fetchNearbyProfiles();
+
+      await showAlert(
+        "success",
+        "Busca Resetada",
+        "A busca foi resetada. Você está vendo perfis próximos novamente."
+      );
+    } catch (error: any) {
+      console.error("Reset search error:", error.message);
+      await showAlert(
+        "error",
+        "Erro",
+        "Não foi possível resetar a busca. Por favor, tente novamente."
       );
     }
   };
@@ -316,6 +417,7 @@ export default function ProximityPage() {
           .eq("choice_date", today);
 
         if (cardError) {
+          console.error("Card choices fetch error:", cardError);
           throw new Error(
             "Erro ao buscar escolhas de carta: " + cardError.message
           );
@@ -364,6 +466,7 @@ export default function ProximityPage() {
           .eq("profile_id", profile.id);
 
         if (rejectedError) {
+          console.error("Rejected profiles fetch error:", rejectedError);
           throw new Error(
             "Erro ao carregar perfis rejeitados: " + rejectedError.message
           );
@@ -509,13 +612,14 @@ export default function ProximityPage() {
 
       setPreferences(fetchedPreferences);
 
-      // Fetch rejected profiles from Supabase
+      // Fetch rejected profiles
       const { data: rejectedProfilesData, error: rejectedError } = await supabase
         .from("rejections")
         .select("rejected_profile_id")
         .eq("profile_id", profile.id);
 
       if (rejectedError) {
+        console.error("Rejected profiles fetch error:", rejectedError);
         throw new Error(
           "Erro ao carregar perfis rejeitados: " + rejectedError.message
         );
@@ -585,8 +689,8 @@ export default function ProximityPage() {
         .insert({ profile_id: profile.id, liked_profile_id: targetProfileId });
 
       if (likeError) {
-        console.error("Error liking profile:", likeError.message);
-        throw likeError;
+        console.error("Error liking profile:", likeError);
+        throw new Error("Erro ao curtir perfil: " + likeError.message);
       }
 
       // Check for mutual like (match)
@@ -598,8 +702,8 @@ export default function ProximityPage() {
         .single();
 
       if (mutualLikeError && mutualLikeError.code !== "PGRST116") {
-        console.error("Error checking mutual like:", mutualLikeError.message);
-        throw mutualLikeError;
+        console.error("Error checking mutual like:", mutualLikeError);
+        throw new Error("Erro ao verificar like mútuo: " + mutualLikeError.message);
       }
 
       if (mutualLike) {
@@ -610,8 +714,8 @@ export default function ProximityPage() {
         });
 
         if (matchError) {
-          console.error("Error creating match:", matchError.message);
-          throw matchError;
+          console.error("Error creating match:", matchError);
+          throw new Error("Erro ao criar match: " + matchError.message);
         }
 
         await showAlert(
@@ -630,6 +734,7 @@ export default function ProximityPage() {
         await fetchNearbyProfiles();
       }
     } catch (error: any) {
+      console.error("Like error:", error.message);
       await showAlert(
         "error",
         "Ooops!",
@@ -652,8 +757,8 @@ export default function ProximityPage() {
         .insert({ profile_id: profile.id, rejected_profile_id: targetProfileId });
 
       if (rejectError) {
-        console.error("Error rejecting profile:", rejectError.message);
-        throw rejectError;
+        console.error("Error rejecting profile:", rejectError);
+        throw new Error("Erro ao rejeitar perfil: " + rejectError.message);
       }
 
       // Mark profile as rejected in localStorage
@@ -716,110 +821,149 @@ export default function ProximityPage() {
     return null;
   }
 
+  const selectedCard = selectedCardId
+    ? loveCards.find((card) => card.id === selectedCardId)
+    : null;
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
 
       <div className="w-full max-w-md mx-auto mt-2 px-4 py-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-center font-bold">
-            {selectedCardId
-              ? `Perfis da Carta: ${
-                  loveCards.find((card) => card.id === selectedCardId)?.name
-                }`
-              : "Pessoas Próximas"}
-          </h2>
-          <div className="flex gap-2">
-            {isPremiumUser && (
-              <Dialog.Root
-                open={isCardsModalOpen}
-                onOpenChange={setIsCardsModalOpen}
-              >
-                <Dialog.Trigger asChild>
+         
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Dialog.Root
+              open={isCardsModalOpen}
+              onOpenChange={(open) => {
+                if (!isPremiumUser && hasChosenCardToday) {
+                  MySwal.fire({
+                    icon: "info",
+                    title: "Conta Premium Necessária",
+                    text: "Usuários não premium podem escolher apenas uma carta por dia. Faça upgrade para escolher novamente hoje.",
+                    showCancelButton: true,
+                    confirmButtonText: "Fazer Upgrade",
+                    cancelButtonText: "Cancelar",
+                    customClass: {
+                      popup:
+                        "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
+                      title:
+                        "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+                      confirmButton:
+                        "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+                      cancelButton:
+                        "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300",
+                    },
+                  }).then((result) => {
+                    if (result.isConfirmed) {
+                      router.push("/subscription");
+                    }
+                  });
+                  return;
+                }
+                setIsCardsModalOpen(open);
+              }}
+            >
+              <Dialog.Trigger asChild>
+                {isPremiumUser && hasChosenCardToday && selectedCard ? (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg h-10 w-10 p-0"
+                      aria-label={`Carta escolhida: ${selectedCard.name}`}
+                      
+                    >
+                      <Image
+                        src={selectedCard.image}
+                        alt={`Carta ${selectedCard.name}`}
+                        width={24}
+                        height={24}
+                        className="object-cover rounded-md"
+                      />
+                    </Button>
+
+                 
+                    <Button
+                      variant="outline"
+                     className="flex items-center justify-center w-10 h-10 bg-red-500 text-white border-red-500 hover:bg-red-600 rounded-full text-sm font-semibold transition-all duration-200 ease-in-out"
+                      onClick={handleResetSearch}
+                      aria-label="Resetar busca"
+                    >
+                      <X className="h-6 w-6" />
+                    </Button>
+
+                 
+                  </div>
+                ) : (
                   <Button
                     variant="outline"
-                    className={`text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg ${
-                      hasChosenCardToday ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    className="text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg"
                     aria-label="Escolher carta do amor"
-                    disabled={hasChosenCardToday}
-                    onClick={() => {
-                      if (!isPremiumUser) {
-                        showAlert(
-                          "info",
-                          "Conta Premium Necessária",
-                          "Para usar as Cartas do Amor, você precisa de uma conta premium."
-                        ).then((result) => {
-                          if (result.isConfirmed) {
-                            router.push("/subscription");
-                          }
-                        });
-                      }
-                    }}
+                    disabled={isPremiumUser && hasChosenCardToday}
                   >
                     <Layers className="h-4 w-4 mr-2" />
                     Cartas
                   </Button>
-                </Dialog.Trigger>
-                <Dialog.Portal>
-                  <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-                  <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md">
-                    <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
-                      Cartas do Amor
-                    </Dialog.Title>
-                    <p className="text-oraculo-muted mb-4 text-sm">
-                      Escolha uma carta para encontrar pessoas com a mesma vibe
-                      hoje!
-                    </p>
-                    <div className="grid grid-cols-1 gap-4">
-                      {loveCards.map((card) => (
-                        <motion.div
-                          key={card.id}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="bg-gray-50 rounded-lg p-4 flex items-center gap-4 cursor-pointer border border-gray-200 hover:border-[#00FFD1] transition-all"
-                          onClick={() => handleCardSelection(card)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleCardSelection(card);
-                            }
-                          }}
-                          tabIndex={0}
-                          role="button"
-                          aria-label={`Escolher carta ${card.name}`}
-                        >
-                          <Image
-                            src={card.image}
-                            alt={`Carta ${card.name}`}
-                            width={80}
-                            height={80}
-                            className="rounded-md object-cover"
-                          />
-                          <div>
-                            <h3 className="text-lg font-semibold text-oraculo-dark">
-                              {card.name}
-                            </h3>
-                            <p className="text-sm text-oraculo-muted">
-                              {card.description}
-                            </p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                    <Dialog.Close asChild>
-                      <Button
-                        variant="ghost"
-                        className="mt-4 w-full text-oraculo-muted hover:text-oraculo-dark"
-                        aria-label="Fechar modal"
+                )}
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md max-h-[80vh] overflow-hidden">
+                  <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
+                    Cartas do Amor
+                  </Dialog.Title>
+                  <p className="text-oraculo-muted mb-4 text-sm">
+                    Escolha uma carta para encontrar pessoas com a mesma vibe
+                    hoje!
+                  </p>
+                  <div className="grid grid-cols-1 gap-4 max-h-[50vh] overflow-y-auto">
+                    {loveCards.map((card) => (
+                      <motion.div
+                        key={card.id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-gray-50 rounded-lg p-4 flex items-center gap-4 cursor-pointer border border-gray-200 hover:border-[#00FFD1] transition-all"
+                        onClick={() => handleCardSelection(card)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleCardSelection(card);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Escolher carta ${card.name}`}
                       >
-                        Cancelar
-                      </Button>
-                    </Dialog.Close>
-                  </Dialog.Content>
-                </Dialog.Portal>
-              </Dialog.Root>
-            )}
+                        <Image
+                          src={card.image}
+                          alt={`Carta ${card.name}`}
+                          width={80}
+                          height={80}
+                          className="rounded-md object-cover"
+                        />
+                        <div>
+                          <h3 className="text-lg font-semibold text-oraculo-dark">
+                            {card.name}
+                          </h3>
+                          <p className="text-sm text-oraculo-muted">
+                            {card.description}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <Dialog.Close asChild>
+                    <Button
+                      variant="ghost"
+                      className="mt-4 w-full text-oraculo-muted hover:text-oraculo-dark"
+                      aria-label="Fechar modal"
+                    >
+                      Cancelar
+                    </Button>
+                  </Dialog.Close>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
             <Dialog.Root
               open={isFilterModalOpen}
               onOpenChange={setIsFilterModalOpen}
@@ -831,21 +975,21 @@ export default function ProximityPage() {
                   aria-label="Filtrar interesses por tipo"
                 >
                   <Filter className="h-4 w-4 mr-2" />
-                  Filtrar
+                  Filtrar por interesses
                 </Button>
               </Dialog.Trigger>
               <Dialog.Portal>
                 <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-                <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md">
+                <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-sm max-h-[80vh] overflow-hidden">
                   <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
                     Filtrar Interesses
                   </Dialog.Title>
-                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  <div className="grid grid-cols-1 gap-2 max-h-[50vh] overflow-y-auto pr-2">
                     {interestTypes.map((type) => (
                       <Button
                         key={type}
                         variant="outline"
-                        className="w-full text-left text-oraculo-dark hover:bg-[#00FFD1]/10"
+                        className="w-full text-left text-oraculo-dark hover:bg-[#00FFD1]/10 text-sm py-2 px-3 text-wrap break-words"
                         onClick={() => {
                           router.push(
                             `/interests?type=${encodeURIComponent(type)}`
@@ -871,7 +1015,16 @@ export default function ProximityPage() {
               </Dialog.Portal>
             </Dialog.Root>
           </div>
+
         </div>
+
+
+        <h2 className="text-xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-center font-bold">
+            {selectedCardId
+              ? `Perfis da Carta: ${selectedCard?.name}`
+              : "Pessoas Próximas"}
+        </h2>
+
 
         {nearbyProfiles.length > 0 ? (
           <div className="space-y-6">
