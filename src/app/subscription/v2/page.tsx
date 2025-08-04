@@ -469,7 +469,7 @@ function BuyCoinsContent() {
           className="bg-white rounded-xl shadow-md p-6"
         >
           <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4 text-center">
-            Comprar Coins com PIX
+            Assinal plano
           </h2>
           <Label className="text-neutral-600 mb-6 text-center">
             Escolha o plano ideal para você e aumente suas chances de encontrar sua alma gêmea.

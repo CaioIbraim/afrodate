@@ -2192,6 +2192,8 @@ export default function ProfilePage() {
           </Tabs>
         </motion.div>
       </main>
+
+      <MobileFooterMenu/>
     </div>
   );
 }
@@ -2201,6 +2203,7 @@ export default function ProfilePage() {
 // mantido aqui para completude da solução conforme a solicitação.
 
 import { useSearchParams } from "next/navigation";
+import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 // import { CheckCircle2 } from "lucide-react";
 
 function InterestsContent() {

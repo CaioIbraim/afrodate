@@ -14,6 +14,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from "@headlessui/react";
+import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 
 const MySwal = withReactContent(Swal);
 
@@ -136,20 +137,7 @@ const ProfileCardComponent = ({
               </Button>
             </Link>
 
-            {tab === "Matches" ? (
-              <Link
-                href={`/chat/${nearbyProfile.id}`}
-                className="flex-1"
-                onClick={() => handleProfileInteraction(nearbyProfile.id, true)}
-              >
-                <Button
-                  className="w-full bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Conversar
-                </Button>
-              </Link>
-            ) : tab === "Quem me curtiu" ? (
+            { tab === "Quem me curtiu" ? (
               <Button
                 className="flex-1 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
                 onClick={() => handleLike(nearbyProfile.id)}
@@ -423,6 +411,7 @@ export default function MatchesPage() {
           </TabPanels>
         </TabGroup>
       </div>
+      <MobileFooterMenu/>
     </div>
   );
 }

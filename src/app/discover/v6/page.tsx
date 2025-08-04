@@ -7,13 +7,26 @@ import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, User2Icon, MapPin, ArrowRight, MessageSquare, Sparkles, X, Filter, EyeIcon } from "lucide-react";
+import {
+  Loader2,
+  Heart,
+  User2Icon,
+  MapPin,
+  ArrowRight,
+  MessageSquare,
+  Sparkles,
+  X,
+  Filter,
+  EyeIcon,
+  Layers,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { ProfileHeader } from "@/components/profile-header";
 import * as Dialog from "@radix-ui/react-dialog";
+import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 
 const MySwal = withReactContent(Swal);
 
@@ -31,6 +44,7 @@ interface Profile {
   whatsapp_number?: string | null;
   share_whatsapp?: boolean;
   age?: number | null;
+  birth_date?: string | null;
 }
 
 interface UserPreferences {
@@ -39,6 +53,35 @@ interface UserPreferences {
   maxAge: number;
   maxDistance: number;
 }
+
+interface CardOption {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+}
+
+// Love Cards Options
+const loveCards: CardOption[] = [
+  {
+    id: "amor",
+    name: "Amor",
+    description: "Busque conexões profundas e duradouras.",
+    image: "/cards/amor.png",
+  },
+  {
+    id: "paixao",
+    name: "Paixão",
+    description: "Encontre faíscas e emoções intensas.",
+    image: "/cards/paixao.png",
+  },
+  {
+    id: "conexao",
+    name: "Conexão",
+    description: "Descubra laços significativos e amizades.",
+    image: "/cards/conexao.png",
+  },
+];
 
 // Haversine formula to calculate distance between two points (in kilometers)
 const calculateDistance = (
@@ -60,15 +103,21 @@ const calculateDistance = (
   return R * c;
 };
 
-const showAlert = async (type: "success" | "error" | "info", title: string, text: string) => {
+const showAlert = async (
+  type: "success" | "error" | "info",
+  title: string,
+  text: string
+) => {
   return MySwal.fire({
     icon: type,
     title,
     text,
     customClass: {
       popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-      title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
-      confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+      title:
+        "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+      confirmButton:
+        "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
     },
     willOpen: (popup) => {
       popup.setAttribute("aria-live", "assertive");
@@ -119,7 +168,10 @@ export default function ProximityPage() {
     maxDistance: 50,
   });
   const [interestTypes, setInterestTypes] = useState<string[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isCardsModalOpen, setIsCardsModalOpen] = useState(false);
+  const [hasChosenCardToday, setHasChosenCardToday] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
 
   // Check premium status from profile.subscription
   const isPremiumUser = profile?.subscription && profile.subscription.is_active;
@@ -140,12 +192,243 @@ export default function ProximityPage() {
       setInterestTypes(uniqueTypes);
     } catch (error: any) {
       console.error("Fetch interest types error:", error.message);
-      await showAlert("error", "Erro", "Não foi possível carregar os tipos de interesses.");
+      await showAlert(
+        "error",
+        "Erro",
+        "Não foi possível carregar os tipos de interesses."
+      );
     }
   }, []);
 
+  // Check if user has chosen a card today
+  const checkCardChoice = useCallback(async () => {
+    if (!user || !profile) return;
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      const { data, error } = await supabase
+        .from("daily_card_choices")
+        .select("card_id")
+        .eq("user_id", profile.id)
+        .eq("choice_date", today)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        throw new Error("Erro ao verificar escolha de carta: " + error.message);
+      }
+
+      if (data) {
+        setHasChosenCardToday(true);
+        setSelectedCardId(data.card_id);
+      }
+    } catch (error: any) {
+      console.error("Check card choice error:", error.message);
+      await showAlert(
+        "error",
+        "Erro",
+        "Não foi possível verificar a escolha de carta."
+      );
+    }
+  }, [user, profile]);
+
+  // Handle card selection
+  const handleCardSelection = async (card: CardOption) => {
+    if (!user || !profile) {
+      await showAlert("error", "Erro", "Usuário não autenticado.");
+      return;
+    }
+
+    if (!isPremiumUser) {
+      const result = await MySwal.fire({
+        icon: "info",
+        title: "Conta Premium Necessária",
+        text: "Para usar as Cartas do Amor, você precisa de uma conta premium.",
+        showCancelButton: true,
+        confirmButtonText: "Fazer Upgrade",
+        cancelButtonText: "Cancelar",
+        customClass: {
+          popup:
+            "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
+          title:
+            "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+          confirmButton:
+            "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+          cancelButton: "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300",
+        },
+      });
+
+      if (result.isConfirmed) {
+        router.push("/subscription");
+      }
+      return;
+    }
+
+    try {
+      const today = new Date().toISOString().split("T")[0];
+      // Save card choice
+      const { error } = await supabase.from("daily_card_choices").insert({
+        user_id: profile.id,
+        card_id: card.id,
+        choice_date: today,
+      });
+
+      if (error) {
+        throw new Error("Erro ao salvar escolha de carta: " + error.message);
+      }
+
+      setHasChosenCardToday(true);
+      setSelectedCardId(card.id);
+      setIsCardsModalOpen(false);
+
+      // Fetch profiles with the same card choice
+      await fetchCardMatchedProfiles(card.id);
+
+      await showAlert(
+        "success",
+        "Carta Escolhida!",
+        `Você escolheu a carta ${card.name}. Veja os perfis que escolheram a mesma carta!`
+      );
+    } catch (error: any) {
+      console.error("Card selection error:", error.message);
+      await showAlert(
+        "error",
+        "Erro",
+        "Não foi possível salvar sua escolha de carta."
+      );
+    }
+  };
+
+  // Fetch profiles that chose the same card
+  const fetchCardMatchedProfiles = useCallback(
+    async (cardId: string) => {
+      if (!user || !profile) {
+        await showAlert("error", "Erro", "Usuário não autenticado.");
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: cardChoices, error: cardError } = await supabase
+          .from("daily_card_choices")
+          .select("user_id")
+          .eq("card_id", cardId)
+          .eq("choice_date", today);
+
+        if (cardError) {
+          throw new Error(
+            "Erro ao buscar escolhas de carta: " + cardError.message
+          );
+        }
+
+        const userIds = cardChoices
+          .map((choice) => choice.user_id)
+          .filter((id) => id !== profile.id);
+
+        if (userIds.length === 0) {
+          setNearbyProfiles([]);
+          await showAlert(
+            "info",
+            "Nenhum Perfil Encontrado",
+            "Ninguém escolheu a mesma carta hoje. Tente novamente amanhã!"
+          );
+          return;
+        }
+
+        const response = await fetch(`/api/nearby-profiles?userId=${profile.id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erro ao carregar perfis.");
+        }
+
+        const { profiles, preferences: fetchedPreferences } = data;
+
+        if (!profile.latitude || !profile.longitude) {
+          setNearbyProfiles([]);
+          await showAlert(
+            "error",
+            "Localização Não Configurada",
+            "Por favor, configure sua localização no perfil para encontrar pessoas."
+          );
+          router.push("/profile");
+          return;
+        }
+
+        setPreferences(fetchedPreferences);
+
+        // Fetch rejected profiles
+        const { data: rejectedProfilesData, error: rejectedError } = await supabase
+          .from("rejections")
+          .select("rejected_profile_id")
+          .eq("profile_id", profile.id);
+
+        if (rejectedError) {
+          throw new Error(
+            "Erro ao carregar perfis rejeitados: " + rejectedError.message
+          );
+        }
+
+        const rejectedProfileIds = new Set(
+          rejectedProfilesData?.map((item) => item.rejected_profile_id) || []
+        );
+
+        // Filter profiles by card choice
+        const viewedMatches = getViewedMatches(profile.id);
+        const processedProfiles = profiles
+          .filter((p: Profile) => userIds.includes(p.id))
+          .map((p: Profile) => ({
+            ...p,
+            avatar_url: getFullAvatarUrl(p.avatar_url),
+            distance: calculateDistance(
+              profile.latitude!,
+              profile.longitude!,
+              p.latitude!,
+              p.longitude!
+            ),
+          }))
+          .filter(
+            (p: Profile) =>
+              p.distance! <= fetchedPreferences.maxDistance &&
+              (!p.isMatch || (p.isMatch && !viewedMatches.has(p.id))) &&
+              !rejectedProfileIds.has(p.id)
+          )
+          .sort((a: Profile, b: Profile) => a.distance! - b.distance!)
+          .slice(0, 3);
+
+        setNearbyProfiles(processedProfiles);
+
+        if (processedProfiles.length === 0) {
+          await showAlert(
+            "info",
+            "Nenhum Perfil Encontrado",
+            "Ninguém que escolheu a mesma carta atende às suas preferências."
+          );
+        }
+      } catch (error: any) {
+        console.error("Error fetching card matched profiles:", error.message);
+        await showAlert(
+          "error",
+          "Ooops!",
+          error.message.includes("Localização")
+            ? error.message
+            : "Não foi possível carregar os perfis. Por favor, entre em contato com o suporte."
+        );
+        setNearbyProfiles([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, profile, router]
+  );
+
   // Handle WhatsApp button click with premium check
-  const handleWhatsAppClick = async (profileId: string, name: string, whatsappNumber: string, isMatch: boolean) => {
+  const handleWhatsAppClick = async (
+    profileId: string,
+    name: string,
+    whatsappNumber: string,
+    isMatch: boolean
+  ) => {
     if (!user || !profile) {
       await showAlert("error", "Erro", "Usuário não autenticado.");
       return;
@@ -160,9 +443,12 @@ export default function ProximityPage() {
         confirmButtonText: "Fazer Upgrade",
         cancelButtonText: "Cancelar",
         customClass: {
-          popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-          title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
-          confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+          popup:
+            "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
+          title:
+            "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
+          confirmButton:
+            "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
           cancelButton: "bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300",
         },
       });
@@ -177,7 +463,11 @@ export default function ProximityPage() {
       markMatchAsViewed(profile.id, profileId);
     }
 
-    window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer');
+    window.open(
+      `https://wa.me/${whatsappNumber.replace(/\D/g, "")}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   // Fetch nearby profiles from API
@@ -201,7 +491,7 @@ export default function ProximityPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao carregar perfis próximos.');
+        throw new Error(data.error || "Erro ao carregar perfis próximos.");
       }
 
       const { profiles, preferences: fetchedPreferences } = data;
@@ -226,10 +516,14 @@ export default function ProximityPage() {
         .eq("profile_id", profile.id);
 
       if (rejectedError) {
-        throw new Error("Erro ao carregar perfis rejeitados: " + rejectedError.message);
+        throw new Error(
+          "Erro ao carregar perfis rejeitados: " + rejectedError.message
+        );
       }
 
-      const rejectedProfileIds = new Set(rejectedProfilesData?.map((item) => item.rejected_profile_id) || []);
+      const rejectedProfileIds = new Set(
+        rejectedProfilesData?.map((item) => item.rejected_profile_id) || []
+      );
 
       // Process profiles to add distance and ensure avatar URLs
       const viewedMatches = getViewedMatches(profile.id);
@@ -244,10 +538,11 @@ export default function ProximityPage() {
             p.longitude!
           ),
         }))
-        .filter((p: Profile) => 
-          p.distance! <= fetchedPreferences.maxDistance && 
-          (!p.isMatch || (p.isMatch && !viewedMatches.has(p.id))) &&
-          !rejectedProfileIds.has(p.id)
+        .filter(
+          (p: Profile) =>
+            p.distance! <= fetchedPreferences.maxDistance &&
+            (!p.isMatch || (p.isMatch && !viewedMatches.has(p.id))) &&
+            !rejectedProfileIds.has(p.id)
         )
         .sort((a: Profile, b: Profile) => a.distance! - b.distance!)
         .slice(0, 3);
@@ -266,8 +561,8 @@ export default function ProximityPage() {
       await showAlert(
         "error",
         "Ooops!",
-        error.message.includes('Localização') 
-          ? error.message 
+        error.message.includes("Localização")
+          ? error.message
           : "Não foi possível carregar os perfis próximos. Por favor, entre em contato com o suporte."
       );
       setNearbyProfiles([]);
@@ -329,7 +624,11 @@ export default function ProximityPage() {
       }
 
       // Refresh profiles
-      await fetchNearbyProfiles();
+      if (selectedCardId) {
+        await fetchCardMatchedProfiles(selectedCardId);
+      } else {
+        await fetchNearbyProfiles();
+      }
     } catch (error: any) {
       await showAlert(
         "error",
@@ -363,8 +662,18 @@ export default function ProximityPage() {
       // Remove rejected profile from state
       setNearbyProfiles((prev) => prev.filter((p) => p.id !== targetProfileId));
 
-      await showAlert("success", "Perfil Rejeitado", `Você rejeitou o perfil de ${name}.`);
-      await fetchNearbyProfiles();
+      await showAlert(
+        "success",
+        "Perfil Rejeitado",
+        `Você rejeitou o perfil de ${name}.`
+      );
+
+      // Refresh profiles
+      if (selectedCardId) {
+        await fetchCardMatchedProfiles(selectedCardId);
+      } else {
+        await fetchNearbyProfiles();
+      }
     } catch (error: any) {
       console.error("Reject error:", error.message);
       await showAlert(
@@ -385,13 +694,16 @@ export default function ProximityPage() {
   useEffect(() => {
     fetchNearbyProfiles();
     fetchInterestTypes();
-  }, [fetchNearbyProfiles, fetchInterestTypes]);
+    checkCardChoice();
+  }, [fetchNearbyProfiles, fetchInterestTypes, checkCardChoice]);
 
   if (userLoading || isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
         <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
-        <p className="text-oraculo-muted mt-3 text-base font-medium">Carregando perfis...</p>
+        <p className="text-oraculo-muted mt-3 text-base font-medium">
+          Carregando perfis...
+        </p>
       </div>
     );
   }
@@ -405,59 +717,160 @@ export default function ProximityPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 px-4 py-6 ">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
 
-      <div className="w-full max-w-md mx-auto mt-8">
+      <div className="w-full max-w-md mx-auto mt-2 px-4 py-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-center font-bold">
-            Pessoas Próximas
+            {selectedCardId
+              ? `Perfis da Carta: ${
+                  loveCards.find((card) => card.id === selectedCardId)?.name
+                }`
+              : "Pessoas Próximas"}
           </h2>
-          <Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <Dialog.Trigger asChild>
-              <Button
-                variant="outline"
-                className="text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg"
-                aria-label="Filtrar interesses por tipo"
+          <div className="flex gap-2">
+            {isPremiumUser && (
+              <Dialog.Root
+                open={isCardsModalOpen}
+                onOpenChange={setIsCardsModalOpen}
               >
-                <Filter className="h-4 w-4 mr-2" />
-                Filtrar
-              </Button>
-            </Dialog.Trigger>
-            <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-              <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md">
-                <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
-                  Filtrar Interesses
-                </Dialog.Title>
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                  {interestTypes.map((type) => (
-                    <Button
-                      key={type}
-                      variant="outline"
-                      className="w-full text-left text-oraculo-dark hover:bg-[#00FFD1]/10"
-                      onClick={() => {
-                        router.push(`/interests?type=${encodeURIComponent(type)}`);
-                        setIsModalOpen(false);
-                      }}
-                      aria-label={`Filtrar por ${type}`}
-                    >
-                      {type}
-                    </Button>
-                  ))}
-                </div>
-                <Dialog.Close asChild>
+                <Dialog.Trigger asChild>
                   <Button
-                    variant="ghost"
-                    className="mt-4 w-full text-oraculo-muted hover:text-oraculo-dark"
-                    aria-label="Fechar modal"
+                    variant="outline"
+                    className={`text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg ${
+                      hasChosenCardToday ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
+                    aria-label="Escolher carta do amor"
+                    disabled={hasChosenCardToday}
+                    onClick={() => {
+                      if (!isPremiumUser) {
+                        showAlert(
+                          "info",
+                          "Conta Premium Necessária",
+                          "Para usar as Cartas do Amor, você precisa de uma conta premium."
+                        ).then((result) => {
+                          if (result.isConfirmed) {
+                            router.push("/subscription");
+                          }
+                        });
+                      }
+                    }}
                   >
-                    Cancelar
+                    <Layers className="h-4 w-4 mr-2" />
+                    Cartas
                   </Button>
-                </Dialog.Close>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
+                </Dialog.Trigger>
+                <Dialog.Portal>
+                  <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                  <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md">
+                    <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
+                      Cartas do Amor
+                    </Dialog.Title>
+                    <p className="text-oraculo-muted mb-4 text-sm">
+                      Escolha uma carta para encontrar pessoas com a mesma vibe
+                      hoje!
+                    </p>
+                    <div className="grid grid-cols-1 gap-4">
+                      {loveCards.map((card) => (
+                        <motion.div
+                          key={card.id}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="bg-gray-50 rounded-lg p-4 flex items-center gap-4 cursor-pointer border border-gray-200 hover:border-[#00FFD1] transition-all"
+                          onClick={() => handleCardSelection(card)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleCardSelection(card);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`Escolher carta ${card.name}`}
+                        >
+                          <Image
+                            src={card.image}
+                            alt={`Carta ${card.name}`}
+                            width={80}
+                            height={80}
+                            className="rounded-md object-cover"
+                          />
+                          <div>
+                            <h3 className="text-lg font-semibold text-oraculo-dark">
+                              {card.name}
+                            </h3>
+                            <p className="text-sm text-oraculo-muted">
+                              {card.description}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                    <Dialog.Close asChild>
+                      <Button
+                        variant="ghost"
+                        className="mt-4 w-full text-oraculo-muted hover:text-oraculo-dark"
+                        aria-label="Fechar modal"
+                      >
+                        Cancelar
+                      </Button>
+                    </Dialog.Close>
+                  </Dialog.Content>
+                </Dialog.Portal>
+              </Dialog.Root>
+            )}
+            <Dialog.Root
+              open={isFilterModalOpen}
+              onOpenChange={setIsFilterModalOpen}
+            >
+              <Dialog.Trigger asChild>
+                <Button
+                  variant="outline"
+                  className="text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-lg"
+                  aria-label="Filtrar interesses por tipo"
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filtrar
+                </Button>
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+                <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-lg p-6 w-[90vw] max-w-md">
+                  <Dialog.Title className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
+                    Filtrar Interesses
+                  </Dialog.Title>
+                  <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {interestTypes.map((type) => (
+                      <Button
+                        key={type}
+                        variant="outline"
+                        className="w-full text-left text-oraculo-dark hover:bg-[#00FFD1]/10"
+                        onClick={() => {
+                          router.push(
+                            `/interests?type=${encodeURIComponent(type)}`
+                          );
+                          setIsFilterModalOpen(false);
+                        }}
+                        aria-label={`Filtrar por ${type}`}
+                      >
+                        {type}
+                      </Button>
+                    ))}
+                  </div>
+                  <Dialog.Close asChild>
+                    <Button
+                      variant="ghost"
+                      className="mt-4 w-full text-oraculo-muted hover:text-oraculo-dark"
+                      aria-label="Fechar modal"
+                    >
+                      Cancelar
+                    </Button>
+                  </Dialog.Close>
+                </Dialog.Content>
+              </Dialog.Portal>
+            </Dialog.Root>
+          </div>
         </div>
 
         {nearbyProfiles.length > 0 ? (
@@ -552,48 +965,73 @@ export default function ProximityPage() {
 
                       {/* Buttons */}
                       <div className="flex gap-2 mt-4 w-full justify-center items-center">
-                          <Link
-                            href={`/profile/${nearbyProfile.id}`}
-                            className={nearbyProfile.isMatch && nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? "flex-1" : nearbyProfile.isMatch ? "flex-[2]" : "flex-1"}
-                            onClick={() => handleProfileInteraction(nearbyProfile.id, nearbyProfile.isMatch)}
+                        <Link
+                          href={`/profile/${nearbyProfile.id}`}
+                          className={
+                            nearbyProfile.isMatch &&
+                            nearbyProfile.share_whatsapp &&
+                            nearbyProfile.whatsapp_number
+                              ? "flex-1"
+                              : nearbyProfile.isMatch
+                              ? "flex-[2]"
+                              : "flex-1"
+                          }
+                          onClick={() =>
+                            handleProfileInteraction(
+                              nearbyProfile.id,
+                              nearbyProfile.isMatch
+                            )
+                          }
+                        >
+                          <Button
+                            variant="outline"
+                            className="flex-1 w-full text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-xl py-3 px-4 text-sm font-semibold transition-all duration-200 ease-in-out"
+                            aria-label={`Ver perfil de ${nearbyProfile.name}`}
                           >
+                            <EyeIcon className="h-5 w-5 mr-2" />
+                            Ver Perfil
+                          </Button>
+                        </Link>
+                        {!nearbyProfile.isMatch ? (
+                          <>
                             <Button
-                              variant="outline"
-                              className="flex-1 w-full text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-xl py-3 px-4 text-sm font-semibold transition-all duration-200 ease-in-out"
-                              aria-label={`Ver perfil de ${nearbyProfile.name}`}
+                              className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-full text-sm font-semibold hover:opacity-90 transition-all duration-200 ease-in-out"
+                              onClick={() => handleLike(nearbyProfile.id)}
+                              aria-label={`Curtir ${nearbyProfile.name}`}
                             >
-                              <EyeIcon className="h-5 w-5 mr-2" />
-                              Ver Perfil
+                              <Heart className="h-6 w-6" />
                             </Button>
-                          </Link>
-                          {!nearbyProfile.isMatch ? (
-                            <>
-                              <Button
-                                className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-full text-sm font-semibold hover:opacity-90 transition-all duration-200 ease-in-out"
-                                onClick={() => handleLike(nearbyProfile.id)}
-                                aria-label={`Curtir ${nearbyProfile.name}`}
-                              >
-                                <Heart className="h-6 w-6" />
-                              </Button>
-                              <Button
-                                className="flex items-center justify-center w-12 h-12 bg-red-500 text-white border-red-500 hover:bg-red-600 rounded-full text-sm font-semibold transition-all duration-200 ease-in-out"
-                                onClick={() => handleReject(nearbyProfile.id, nearbyProfile.name)}
-                                aria-label={`Rejeitar ${nearbyProfile.name}`}
-                              >
-                                <X className="h-6 w-6" />
-                              </Button>
-                            </>
-                          ) : nearbyProfile.share_whatsapp && nearbyProfile.whatsapp_number ? (
                             <Button
-                              className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-xl py-3 px-4 text-sm font-semibold hover:opacity-90 transition-all duration-200 ease-in-out"
-                              onClick={() => handleWhatsAppClick(nearbyProfile.id, nearbyProfile.name, nearbyProfile.whatsapp_number!, nearbyProfile.isMatch)}
-                              aria-label={`Enviar mensagem no WhatsApp para ${nearbyProfile.name}${!isPremiumUser ? " (requer conta premium)" : ""}`}
+                              className="flex items-center justify-center w-12 h-12 bg-red-500 text-white border-red-500 hover:bg-red-600 rounded-full text-sm font-semibold transition-all duration-200 ease-in-out"
+                              onClick={() =>
+                                handleReject(nearbyProfile.id, nearbyProfile.name)
+                              }
+                              aria-label={`Rejeitar ${nearbyProfile.name}`}
                             >
-                              <MessageSquare className="h-5 w-5 mr-2" />
-                              WhatsApp
+                              <X className="h-6 w-6" />
                             </Button>
-                          ) : null}
-                        </div>
+                          </>
+                        ) : nearbyProfile.share_whatsapp &&
+                          nearbyProfile.whatsapp_number ? (
+                          <Button
+                            className="flex-1 w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-xl py-3 px-4 text-sm font-semibold hover:opacity-90 transition-all duration-200 ease-in-out"
+                            onClick={() =>
+                              handleWhatsAppClick(
+                                nearbyProfile.id,
+                                nearbyProfile.name,
+                                nearbyProfile.whatsapp_number!,
+                                nearbyProfile.isMatch
+                              )
+                            }
+                            aria-label={`Enviar mensagem no WhatsApp para ${nearbyProfile.name}${
+                              !isPremiumUser ? " (requer conta premium)" : ""
+                            }`}
+                          >
+                            <MessageSquare className="h-5 w-5 mr-2" />
+                            WhatsApp
+                          </Button>
+                        ) : null}
+                      </div>
                       {/* Hidden Accessibility Description */}
                       <span
                         id={`profile-status-${nearbyProfile.id}`}
@@ -620,10 +1058,13 @@ export default function ProximityPage() {
               Ninguém por Perto
             </h3>
             <p className="text-oraculo-muted mb-4 text-sm sm:text-base">
-              Não encontramos pessoas próximas no momento. Tente aumentar a distância ou ajustar suas preferências.
+              Não encontramos pessoas próximas no momento. Tente aumentar a
+              distância ou ajustar suas preferências.
             </p>
             <Link href="/profile">
-              <Button className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90">
+              <Button
+                className="bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white rounded-lg py-2 px-4 text-sm font-medium hover:opacity-90"
+              >
                 Ajustar Preferências
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -631,6 +1072,8 @@ export default function ProximityPage() {
           </motion.div>
         )}
       </div>
+
+      <MobileFooterMenu />
     </div>
   );
 }

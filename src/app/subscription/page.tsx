@@ -1,4 +1,5 @@
 "use client";
+
 import { Suspense, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { subscriptionPlans } from "@/lib/match-utils";
 import type { SubscriptionPlan } from "@/lib/types";
 import { ProfileHeader } from "@/components/profile-header";
 import { supabase } from "@/lib/supabase";
+import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 
 const MySwal = withReactContent(Swal);
 
@@ -26,7 +28,7 @@ function BuyCoinsContent() {
   const { user, profile, isLoading: userLoading } = useUser();
   const [asaasCustomerId, setAsaasCustomerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cpf, setCpf] = useState("");
+  const [cpf, setCpf] = useState("14434463780");
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [paymentStep, setPaymentStep] = useState(false);
@@ -40,9 +42,11 @@ function BuyCoinsContent() {
       title,
       text,
       customClass: {
-        popup: "border-2 border-transparent bg-white rounded-2xl shadow-lg w-[90vw] max-w-sm",
-        title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-xl font-bold",
-        confirmButton: "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90",
+        popup: "border-2 border-transparent bg-white rounded-2xl shadow-xl w-[90vw] max-w-md",
+        title: "text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]",
+        confirmButton:
+          "bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90 transition",
+        
       },
       willOpen: (popup) => {
         popup.setAttribute("aria-live", "assertive");
@@ -50,7 +54,6 @@ function BuyCoinsContent() {
     });
   };
 
-  // Check for active subscription on mount
   useEffect(() => {
     const checkSubscription = async () => {
       if (!user?.id) return;
@@ -80,11 +83,13 @@ function BuyCoinsContent() {
     };
 
     checkSubscription();
-  }, [user?.id]);
+    if (user && cpf) {
+      checkAndCreateAsaasUser();
+    }
+  }, [user?.id, cpf]);
 
-  // Create or retrieve Asaas customer
-  const checkAndCreateAsaasUser = async (cpfValue: string) => {
-    if (!user || !cpfValue) {
+  const checkAndCreateAsaasUser = async () => {
+    if (!user || !cpf) {
       await showAlert("error", "Erro", "Usuário ou CPF não fornecido.");
       return;
     }
@@ -100,8 +105,8 @@ function BuyCoinsContent() {
         },
         body: JSON.stringify({
           name: profile?.name || "Usuário",
-          cpf: cpfValue,
-          email: user.email,
+          cpf: cpf,
+          email: user!.email,
         }),
       });
 
@@ -121,13 +126,6 @@ function BuyCoinsContent() {
       await showAlert("error", "Erro", "Erro ao processar cliente. Por favor, tente novamente.");
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  const handleCpfSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (cpf) {
-      checkAndCreateAsaasUser(cpf);
     }
   };
 
@@ -161,7 +159,6 @@ function BuyCoinsContent() {
     setPixData(null);
 
     try {
-      // Create payment
       const res = await fetch("/api/gerar-pagamento", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -177,7 +174,6 @@ function BuyCoinsContent() {
       const invoiceNumber = data.invoiceNumber;
       localStorage.setItem("paymentId", invoiceNumber);
 
-      // Fetch QR code and payload
       const qrRes = await fetch(`/api/pix-qrcode?id=${invoiceNumber}`);
       const qrData = await qrRes.json();
 
@@ -189,7 +185,6 @@ function BuyCoinsContent() {
       setLoadingPix(false);
       await showAlert("success", "Pix gerado!", "Você pode copiar ou escanear o código para pagar.");
 
-      // Start polling payment status
       checkStatus(invoiceNumber);
     } catch (err: any) {
       setLoadingPix(false);
@@ -237,7 +232,7 @@ function BuyCoinsContent() {
   if (userLoading || isProcessing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100" aria-live="polite">
-        <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
+        <Loader2 className="h-10 w-10 animate-spin text-[#00FFD1]" />
         <span className="sr-only">Carregando...</span>
       </div>
     );
@@ -245,14 +240,22 @@ function BuyCoinsContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="bg-white rounded-xl shadow-md p-6 text-center w-full max-w-2xl"
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-xl p-8 text-center w-full max-w-md"
         >
-          <Label className="text-red-500 text-lg font-semibold">Erro: {error}</Label>
+          <h2 className="text-xl font-bold text-red-500 mb-4">Erro</h2>
+          <Label className="text-neutral-600">{error}</Label>
+          <Button
+            className="mt-6 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90"
+            onClick={() => router.back()}
+            aria-label="Voltar"
+          >
+            Voltar
+          </Button>
         </motion.div>
       </div>
     );
@@ -260,16 +263,22 @@ function BuyCoinsContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="bg-white rounded-xl shadow-md p-6 text-center w-full max-w-2xl"
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-xl p-8 text-center w-full max-w-md"
         >
-          <Label className="text-lg font-semibold text-neutral-600">
-            Por favor, faça login para comprar coins.
-          </Label>
+          <h2 className="text-xl font-bold text-neutral-600 mb-4">Faça Login</h2>
+          <Label className="text-neutral-600">Por favor, faça login para comprar coins.</Label>
+          <Button
+            className="mt-6 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90"
+            onClick={() => router.push("/login")}
+            aria-label="Ir para login"
+          >
+            Fazer Login
+          </Button>
         </motion.div>
       </div>
     );
@@ -279,76 +288,27 @@ function BuyCoinsContent() {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
         <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-white rounded-xl shadow-md p-6 text-center"
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-2xl shadow-xl p-8 text-center"
           >
             <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
-              Comprar Coins com PIX
+              Assinatura Ativa
             </h2>
-            <Label className="text-neutral-600 text-lg font-semibold flex items-center justify-center">
+            <Label className="text-neutral-600 text-lg flex items-center justify-center">
               <CheckCircle2 className="h-6 w-6 text-[#00FFD1] mr-2" />
               Você já possui uma assinatura ativa!
             </Label>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!asaasCustomerId) {
-    return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
-        <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-white rounded-xl shadow-md p-6 w-full max-w-2xl"
-          >
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4 text-center">
-              Informar CPF
-            </h2>
-            <Label className="text-neutral-600 mb-6 text-center">
-              Para criar sua conta e processar pagamentos com segurança, precisamos do seu CPF. Esta informação é utilizada exclusivamente pelo nosso parceiro de pagamentos, Asaas, para garantir transações seguras e conformidade com as regulamentações financeiras.
-            </Label>
-            <form onSubmit={handleCpfSubmit} className="flex flex-col items-center space-y-4">
-              <label htmlFor="cpf" className="text-sm font-medium text-neutral-600">
-                Por favor, informe seu CPF para continuar:
-              </label>
-              <input
-                type="text"
-                id="cpf"
-                value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
-                className="border border-gray-300 p-3 rounded-xl w-full max-w-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#00FFD1] transition-all duration-200"
-                placeholder="Digite seu CPF"
-                required
-                aria-label="Digite seu CPF"
-              />
-              <Button
-                type="submit"
-                className="w-full max-w-sm bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1]"
-                disabled={!cpf || isProcessing}
-                aria-label="Enviar CPF"
-              >
-                {isProcessing ? (
-                  <span className="flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Processando...
-                  </span>
-                ) : (
-                  <>
-                    Enviar CPF
-                    <CheckCircle2 className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </Button>
-            </form>
+            <Button
+              className="mt-6 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90"
+              onClick={() => router.push("/discover/v6")}
+              aria-label="Ir para Discover"
+            >
+              Explorar
+            </Button>
           </motion.div>
         </div>
       </div>
@@ -359,62 +319,71 @@ function BuyCoinsContent() {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
         <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-        <div className="w-full max-w-2xl mx-auto">
+        <div className="w-full max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="bg-white rounded-xl shadow-md p-6 text-center"
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-2xl shadow-xl p-8"
           >
-            <Button
-              onClick={handleBack}
-              className="mb-4 bg-transparent text-neutral-600 hover:bg-gray-100"
-              aria-label="Voltar"
-            >
-              <ChevronLeft className="h-5 w-5 mr-2" />
-              Voltar
-            </Button>
-            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
-              Pagar com Pix
-            </h2>
-            <Label className="text-neutral-600 mb-6">
-              Plano selecionado: <span className="font-semibold">{selectedPlan?.name}</span>
-            </Label>
+            <div className="flex items-center justify-between mb-6">
+              <Button
+                onClick={handleBack}
+                className="bg-transparent text-neutral-600 hover:bg-gray-100"
+                aria-label="Voltar"
+              >
+                <ChevronLeft className="h-5 w-5 mr-2" />
+                Voltar
+              </Button>
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
+                Pagar com Pix
+              </h2>
+              <div className="w-12" /> {/* Spacer */}
+            </div>
+            <div className="text-center mb-6">
+              <Label className="text-neutral-600 text-lg">
+                Plano selecionado: <span className="font-semibold">{selectedPlan?.name}</span>
+              </Label>
+            </div>
 
-            <Button
-              onClick={generatePixPayment}
-              disabled={loadingPix}
-              className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] mb-6"
-              aria-label="Gerar pagamento Pix"
-            >
-              {loadingPix ? (
-                <span className="flex items-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Gerando...
-                </span>
-              ) : (
-                <>
-                  Gerar Pix
-                  <CheckCircle2 className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <div className="flex justify-center mb-6">
+              <Button
+                onClick={generatePixPayment}
+                disabled={loadingPix}
+                className="w-full max-w-xs bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-12"
+                aria-label="Gerar pagamento Pix"
+              >
+                {loadingPix ? (
+                  <span className="flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Gerando...
+                  </span>
+                ) : (
+                  <>
+                    Gerar Pix
+                    <CheckCircle2 className="ml-2 h-5 w-5" />
+                  </>
+                )}
+              </Button>
+            </div>
 
             {pixData && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className="space-y-4"
+                className="space-y-6 text-center"
               >
-                <Label className="text-neutral-600 font-medium">
+                <Label className="text-neutral-600 text-lg font-medium">
                   Escaneie ou copie a chave para pagar:
                 </Label>
-                <img
-                  src={`data:image/png;base64,${pixData.qrCodeUrl}`}
-                  alt="QR Code Pix"
-                  className="mx-auto mb-4 w-48 h-48"
-                />
+                <div className="flex justify-center">
+                  <img
+                    src={`data:image/png;base64,${pixData.qrCodeUrl}`}
+                    alt="QR Code Pix"
+                    className="w-64 h-64 rounded-lg shadow-md"
+                  />
+                </div>
                 <div
                   onClick={handleCopyPix}
                   onKeyDown={(e) => {
@@ -423,7 +392,7 @@ function BuyCoinsContent() {
                       handleCopyPix();
                     }
                   }}
-                  className="cursor-pointer bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto hover:bg-gray-200 transition"
+                  className="cursor-pointer bg-gray-100 p-4 rounded-lg text-sm text-neutral-600 break-all hover:bg-gray-200 transition"
                   role="button"
                   tabIndex={0}
                   aria-label="Copiar chave PIX"
@@ -431,23 +400,24 @@ function BuyCoinsContent() {
                   <pre>{pixData.payload}</pre>
                 </div>
                 <Button
-                  className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1]"
+                  className="w-full max-w-xs bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-12"
                   onClick={handleCopyPix}
+                  aria-label="Copiar código Pix"
                 >
                   Copiar Código Pix
                 </Button>
               </motion.div>
             )}
 
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="mt-8 p-6 bg-gray-50 rounded-lg shadow-inner">
               <div className="flex justify-between items-center">
                 <div>
-                  <h4 className="text-neutral-600 font-semibold">Total</h4>
+                  <h4 className="text-lg font-semibold text-neutral-600">Total</h4>
                   <p className="text-neutral-600 text-sm">
                     {selectedPlan?.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
                   </p>
                 </div>
-                <div className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
+                <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
                   R$ {selectedPlan?.price.toFixed(2).replace(".", ",")}
                 </div>
               </div>
@@ -461,29 +431,30 @@ function BuyCoinsContent() {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
       <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-      <div className="w-full max-w-2xl mx-auto">
+      <div className="w-full max-w-3xl mx-auto mt-2">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="bg-white rounded-xl shadow-md p-6"
+          transition={{ duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-xl p-8"
         >
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4 text-center">
-            Comprar Coins com PIX
+          <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4 text-center">
+            Escolha Seu Plano
           </h2>
-          <Label className="text-neutral-600 mb-6 text-center">
-            Escolha o plano ideal para você e aumente suas chances de encontrar sua alma gêmea.
+          <Label className="text-neutral-600 text-lg mb-8 text-center block">
+            Selecione o plano ideal para turbinar suas conexões e encontrar sua alma gêmea.
           </Label>
-          <div className="space-y-4 mb-6">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {subscriptionPlans.map((plan) => (
               <motion.div
                 key={plan.id}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                className={`relative p-6 rounded-lg border-2 bg-white shadow-md cursor-pointer transition-all hover:shadow-lg ${
                   selectedPlan?.id === plan.id
-                    ? "border-[#00FFD1] shadow-lg"
+                    ? "border-[#00FFD1] ring-2 ring-[#00FFD1]/50"
                     : "border-gray-200 hover:border-oraculo-cyan"
                 }`}
                 role="button"
@@ -498,17 +469,17 @@ function BuyCoinsContent() {
                 }}
               >
                 {plan?.popular && (
-                  <div className="absolute -top-3 right-4 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white text-xs py-1 px-3 rounded-full">
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white text-xs py-1 px-3 rounded-full shadow-sm">
                     Mais Popular
                   </div>
                 )}
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-neutral-600 flex items-center">
+                    <h3 className="text-xl font-semibold text-neutral-600 flex items-center">
                       {plan.tier === "VIP" ? (
-                        <Crown className="h-5 w-5 text-amber-500 mr-1" />
+                        <Crown className="h-5 w-5 text-amber-500 mr-2" />
                       ) : plan.tier === "PREMIUM" ? (
-                        <Star className="h-5 w-5 text-[#00FFD1] mr-1" />
+                        <Star className="h-5 w-5 text-[#00FFD1] mr-2" />
                       ) : null}
                       {plan.name}
                     </h3>
@@ -516,66 +487,68 @@ function BuyCoinsContent() {
                       {plan.interval === "year" ? "Cobrança anual" : "Cobrança mensal"}
                     </p>
                   </div>
-                  <div className="flex items-center">
+                  <div className="text-right">
                     {plan.price > 0 ? (
-                      <div className="text-right">
+                      <>
                         {plan.discount && (
-                          <div className="text-xs text-green-600 font-semibold">
+                          <div className="text-xs text-green-600 font-semibold mb-1">
                             Economize {plan.discount}%
                           </div>
                         )}
-                        <div className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
+                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1]">
                           R$ {plan.price.toFixed(2).replace(".", ",")}
                         </div>
-                      </div>
+                      </>
                     ) : (
-                      <div className="text-xl font-bold text-neutral-600">Grátis</div>
+                      <div className="text-2xl font-bold text-neutral-600">Grátis</div>
                     )}
                   </div>
                 </div>
                 <div className="space-y-2">
                   {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-center">
-                      <Check className="h-4 w-4 text-green-500 mr-2" />
+                    <div key={index} className="flex items-start">
+                      <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
                       <span className="text-neutral-600 text-sm">{feature}</span>
                     </div>
                   ))}
                 </div>
                 {selectedPlan?.id === plan.id && (
-                  <div className="absolute top-2 right-2 bg-[#00FFD1] rounded-full p-1">
-                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  <div className="absolute top-4 right-4 bg-[#00FFD1] rounded-full p-1.5">
+                    <CheckCircle2 className="h-5 w-5 text-white" />
                   </div>
                 )}
               </motion.div>
             ))}
           </div>
-          <div className="p-4 bg-gray-50 rounded-lg mb-6">
-            <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-3">
+
+          <div className="p-6 bg-gray-50 rounded-lg shadow-inner mb-8">
+            <h3 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
               Por que fazer upgrade?
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-start">
-                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-                <p className="text-neutral-600 text-sm">
+                <Check className="h-5 w-5 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-neutral-600 text-base">
                   <span className="font-semibold">3x mais matches</span> do que usuários gratuitos
                 </p>
               </div>
               <div className="flex items-start">
-                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-                <p className="text-neutral-600 text-sm">
+                <Check className="h-5 w-5 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-neutral-600 text-base">
                   <span className="font-semibold">Contato direto via WhatsApp</span> com seus matches (plano VIP)
                 </p>
               </div>
               <div className="flex items-start">
-                <Check className="h-4 w-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
-                <p className="text-neutral-600 text-sm">
+                <Check className="h-5 w-5 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                <p className="text-neutral-600 text-base">
                   <span className="font-semibold">Destaque no topo da busca</span> para mais visibilidade
                 </p>
               </div>
             </div>
           </div>
+
           <Button
-            className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-14"
+            className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-12 text-lg"
             onClick={handleContinue}
             disabled={!selectedPlan}
             aria-label="Continuar para pagamento"
@@ -584,6 +557,7 @@ function BuyCoinsContent() {
           </Button>
         </motion.div>
       </div>
+      <MobileFooterMenu/>
     </div>
   );
 }
@@ -596,7 +570,7 @@ export default function BuyCoinsPage() {
           className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100"
           aria-live="polite"
         >
-          <Loader2 className="h-8 w-8 animate-spin text-[#00FFD1]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00FFD1]" />
           <span className="sr-only">Carregando...</span>
         </div>
       }
@@ -606,5 +580,4 @@ export default function BuyCoinsPage() {
   );
 }
 
-// Force dynamic rendering to avoid static generation issues
 export const dynamic = "force-dynamic";
