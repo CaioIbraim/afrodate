@@ -1,5 +1,4 @@
 "use client";
-
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -12,19 +11,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, MessageSquare, Sparkles, MapPin, Navigation } from "lucide-react";
+import { Loader2, Heart, MessageSquare, Sparkles, MapPin, Navigation, HeartPulseIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileHeader } from "@/components/profile-header";
 import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
-
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Label } from "@radix-ui/react-label";
 
 // Constants
 const MySwal = withReactContent(Swal);
-
 const SWAL_CONFIG = {
   popup: "border-2 border-transparent bg-white rounded-xl",
   title: "text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] text-xl font-bold",
@@ -44,12 +41,12 @@ type Photo = { name: string; storage_path: string; publicUrl: string; isPrimary:
 type ProfileData = {
   id: string;
   name: string;
-  birth_date: string;
-  gender: Gender;
-  bio: string;
-  city: string;
-  profession: string;
-  interests: string[];
+  birth_date?: string;
+  gender?: Gender;
+  bio?: string;
+  city?: string;
+  profession?: string;
+  interests: string[] | null;
   avatar_url: string | null;
   user_id: string;
   latitude?: number | null;
@@ -58,7 +55,6 @@ type ProfileData = {
   share_whatsapp?: boolean;
   email?: string;
 };
-
 type LoggedInUserProfile = ProfileData & {
   gender_preference?: 'HOMEM' | 'MULHER' | 'TODOS';
   min_age?: number;
@@ -81,7 +77,7 @@ const handleError = (error: any, title: string, router: any, redirectRoute: stri
   }).then((result) => result.isConfirmed && router.push(redirectRoute));
 };
 
-const calculateAge = (birthDate: string): number | null => {
+const calculateAge = (birthDate?: string): number | null => {
   if (!birthDate) return null;
   const birth = new Date(birthDate);
   const today = new Date();
@@ -92,12 +88,11 @@ const calculateAge = (birthDate: string): number | null => {
   return age >= 18 && age <= 120 ? age : null;
 };
 
-const getZodiacSign = (birthDate: string): { sign: string; emoji: string } => {
+const getZodiacSign = (birthDate?: string): { sign: string; emoji: string } => {
   if (!birthDate) return { sign: "Desconhecido", emoji: "" };
   const date = new Date(birthDate);
   const month = date.getMonth() + 1;
   const day = date.getDate();
-
   if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return { sign: "Áries", emoji: "♈" };
   if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return { sign: "Touro", emoji: "♉" };
   if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return { sign: "Gêmeos", emoji: "♊" };
@@ -142,39 +137,32 @@ const calculateCompatibilityPercentage = (
   loggedInUserProfile: LoggedInUserProfile | null,
   viewedProfileData: ProfileData | null
 ): number => {
-  if (!loggedInUserProfile || !viewedProfileData) {
-    return 0;
-  }
-
+  if (!loggedInUserProfile || !viewedProfileData) return 0;
   let score = 0;
-  let maxPossibleScore = 100;
-
-  const commonInterests = loggedInUserProfile.interests.filter(interest =>
-    viewedProfileData.interests.includes(interest)
-  );
+  const userInterests = Array.isArray(loggedInUserProfile.interests) ? loggedInUserProfile.interests : [];
+  const viewedInterests = Array.isArray(viewedProfileData.interests) ? viewedProfileData.interests : [];
+  const commonInterests = userInterests.filter(interest => viewedInterests.includes(interest));
   score += Math.min(commonInterests.length * 5, 50);
-
-  if (loggedInUserProfile.gender_preference === 'TODOS' || loggedInUserProfile.gender_preference === viewedProfileData.gender) {
+  if (loggedInUserProfile.gender_preference && viewedProfileData.gender &&
+      (loggedInUserProfile.gender_preference === 'TODOS' || 
+       loggedInUserProfile.gender_preference === viewedProfileData.gender)) {
     score += 20;
   }
-
   const viewedAge = calculateAge(viewedProfileData.birth_date);
   if (viewedAge !== null) {
     if (viewedAge >= (loggedInUserProfile.min_age || 18) && viewedAge <= (loggedInUserProfile.max_age || 99)) {
       score += 20;
     }
   }
-
   if (loggedInUserProfile.latitude && loggedInUserProfile.longitude &&
       viewedProfileData.latitude && viewedProfileData.longitude &&
       loggedInUserProfile.id !== viewedProfileData.id) {
     score += 10;
   }
-
-  return Math.min(Math.round(score), maxPossibleScore);
+  return Math.min(Math.round(score), 100);
 };
 
-// Componente LocationCapture (Minimalista)
+// LocationCapture Component (Minimalista)
 type LocationState = {
   status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error";
   latitude: number | null;
@@ -203,7 +191,6 @@ const LocationCapture = ({
     error: null,
     accuracy: null,
   });
-
   const MySwal = useMemo(() => withReactContent(Swal), []);
   const isGeolocationSupported = useMemo(() => "geolocation" in navigator, []);
   const lastLocationAlertTimestamp = useRef(0);
@@ -237,7 +224,6 @@ const LocationCapture = ({
           });
           setProfileData({ ...profileData, latitude, longitude });
           onLocationUpdate(latitude, longitude);
-
           if (showSuccessAlert && Date.now() - lastLocationAlertTimestamp.current > DEBOUNCE_ALERT_TIME) {
             MySwal.fire({
               icon: "success",
@@ -290,8 +276,7 @@ const LocationCapture = ({
         options
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [isGeolocationSupported, profileData, setProfileData, onLocationUpdate]
   );
 
   const checkPermissionStatus = useCallback(async () => {
@@ -319,12 +304,7 @@ const LocationCapture = ({
         }
       }
     } catch (error) {
-      console.error("[checkPermissionStatus] Error:", error);
-      setLocationState((prev) => ({
-        ...prev,
-        status: "error",
-        error: "Erro ao verificar permissões de localização",
-      }));
+      console.log(error);
     }
   }, [isGeolocationSupported, getCurrentLocation]);
 
@@ -369,7 +349,7 @@ const LocationCapture = ({
     if (result.isConfirmed) {
       getCurrentLocation(true);
     }
-  }, [isGeolocationSupported, getCurrentLocation, MySwal]);
+  }, [isGeolocationSupported, getCurrentLocation]);
 
   const clearLocation = useCallback(async () => {
     const result = await MySwal.fire({
@@ -397,7 +377,7 @@ const LocationCapture = ({
       setProfileData({ ...profileData, latitude: null, longitude: null });
       onLocationUpdate(0, 0);
     }
-  }, [profileData, setProfileData, onLocationUpdate, MySwal]);
+  }, [profileData, setProfileData, onLocationUpdate]);
 
   useEffect(() => {
     checkPermissionStatus();
@@ -519,29 +499,29 @@ const LocationCapture = ({
       {locationState.status === "unavailable" && (
         <p className="text-sm text-yellow-500">Geolocalização não disponível neste dispositivo.</p>
       )}
-      {locationState.status === "error" && (
-        <p className="text-sm text-red-500">{locationState.error}</p>
-      )}
     </div>
   );
 };
 
+// ProfileInfo Component
 const ProfileInfo = ({
   profileData,
   calculateAge,
   isOwnProfile,
   onUpdateInterests,
-  compatibilityPercentage
+  compatibilityPercentage,
+  dailyCard
 }: {
-  profileData: ProfileData | null
-  calculateAge: (birthDate: string) => number | null
-  isOwnProfile: boolean
-  onUpdateInterests: (interests: string[]) => Promise<void>
+  profileData: ProfileData | null;
+  calculateAge: (birthDate?: string) => number | null;
+  isOwnProfile: boolean;
+  onUpdateInterests: (interests: string[]) => Promise<void>;
   compatibilityPercentage?: number | null;
+  dailyCard?: string | null;
 }) => {
-  const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData])
-  const [newInterest, setNewInterest] = useState("")
-  const [savingInterests, setSavingInterests] = useState(false)
+  const zodiac = useMemo(() => profileData ? getZodiacSign(profileData.birth_date) : { sign: "Desconhecido", emoji: "" }, [profileData]);
+  const [newInterest, setNewInterest] = useState("");
+  const [savingInterests, setSavingInterests] = useState(false);
 
   const handleAddInterest = async () => {
     if (!profileData || !newInterest.trim() || newInterest.length > 50) {
@@ -556,7 +536,7 @@ const ProfileInfo = ({
       });
       return;
     }
-    if (profileData.interests.length >= 10) {
+    if (profileData.interests && profileData.interests.length >= 10) {
       MySwal.fire({
         icon: "info",
         title: "Limite de Interesses Atingido",
@@ -566,7 +546,7 @@ const ProfileInfo = ({
       });
       return;
     }
-    if (profileData.interests.includes(newInterest.trim())) {
+    if (profileData.interests && profileData.interests.includes(newInterest.trim())) {
       MySwal.fire({
         icon: "info",
         title: "Interesse Duplicado",
@@ -578,7 +558,7 @@ const ProfileInfo = ({
     }
     setSavingInterests(true);
     try {
-      const updatedInterests = [...profileData.interests, newInterest.trim()];
+      const updatedInterests = [...(profileData.interests || []), newInterest.trim()];
       await onUpdateInterests(updatedInterests);
       setNewInterest("");
       MySwal.fire({
@@ -605,7 +585,7 @@ const ProfileInfo = ({
     if (!profileData) return;
     setSavingInterests(true);
     try {
-      const updatedInterests = profileData.interests.filter((i) => i !== interest);
+      const updatedInterests = (profileData.interests || []).filter((i) => i !== interest);
       await onUpdateInterests(updatedInterests);
       MySwal.fire({
         icon: "success",
@@ -644,7 +624,6 @@ const ProfileInfo = ({
               </Avatar>
               <div className="text-center">
                 <h3 className="text-xl font-semibold text-oraculo-dark">{profileData.name}</h3>
-                {/* Destaque para o percentual de compatibilidade */}
                 {!isOwnProfile && typeof compatibilityPercentage === 'number' && (
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
@@ -663,7 +642,7 @@ const ProfileInfo = ({
                       WebkitTextFillColor: 'transparent',
                     }}
                   >
-                    💖 {compatibilityPercentage}% de Compatibilidade
+                    {compatibilityPercentage}% de Compatibilidade
                   </motion.p>
                 )}
                 <div className="flex items-center justify-center gap-2">
@@ -678,7 +657,7 @@ const ProfileInfo = ({
                     </p>
                   )}
                 </div>
-                <p className="text-sm text-oraculo-muted">{profileData.city}</p>
+                <p className="text-sm text-oraculo-muted">{profileData.city || "Cidade não informada"}</p>
               </div>
             </div>
             <div>
@@ -697,9 +676,15 @@ const ProfileInfo = ({
                   : "WhatsApp não compartilhado"}
               </p>
             </div>
+            {!isOwnProfile && dailyCard && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700">Carta do Dia</h4>
+                <p className="text-oraculo-muted">{dailyCard}</p>
+              </div>
+            )}
             <div>
               <h4 className="text-sm font-medium text-gray-700">Interesses</h4>
-              {profileData.interests.length > 0 ? (
+              {profileData.interests && profileData.interests.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {profileData.interests.map((interest, index) => (
                     <Badge
@@ -760,6 +745,7 @@ const ProfileInfo = ({
   );
 };
 
+// ProfilePhotos Component
 const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
   <Card className="mb-6 border-none shadow-sm">
     <CardHeader>
@@ -795,6 +781,7 @@ const ProfilePhotos = ({ photos }: { photos: Photo[] }) => (
   </Card>
 );
 
+// Main Component
 export default function ProfileView() {
   const router = useRouter();
   const { user, isLoading: userLoading, profile } = useUser();
@@ -810,10 +797,9 @@ export default function ProfileView() {
   const [isSending, setIsSending] = useState(false);
   const [matchAlertShown, setMatchAlertShown] = useState(false);
   const [compatibilityPercentage, setCompatibilityPercentage] = useState<number | null>(null);
-
+  const [dailyCard, setDailyCard] = useState<string | null>(null);
   const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile]);
   const isOwnProfile = useMemo(() => profile?.id === profileId, [profile, profileId]);
-
   const hasLoadedProfileRef = useRef<Record<string, boolean>>({});
 
   const showMatchAlert = useCallback(() => {
@@ -849,40 +835,32 @@ export default function ProfileView() {
         .from('interests')
         .select('id, name')
         .in('name', interests);
-
       if (fetchInterestsError) {
         throw new Error(`Erro ao buscar IDs dos interesses: ${fetchInterestsError.message}`);
       }
-
       const interestIdsToUpdate = allInterests.map(interest => interest.id);
-
       const { error: deleteError } = await supabase
         .from("profile_interests")
         .delete()
         .eq("profile_id", profile.id);
-
       if (deleteError) {
         throw new Error(`Erro ao apagar interesses antigos: ${deleteError.message}`);
       }
-
       const inserts = interestIdsToUpdate.map(id => ({
         profile_id: profile.id,
         interests_id: id,
       }));
-
       if (inserts.length > 0) {
         const { error: insertError } = await supabase
           .from("profile_interests")
           .insert(inserts);
-
         if (insertError) {
           throw new Error(`Erro ao inserir novos interesses: ${insertError.message}`);
         }
       }
-
       setViewedProfileData(prev => prev ? { ...prev, interests } : null);
       if (isOwnProfile && profileId) {
-          hasLoadedProfileRef.current[profileId] = false;
+        hasLoadedProfileRef.current[profileId] = false;
       }
     } catch (error: any) {
       console.error("Erro em handleUpdateInterests:", error);
@@ -897,20 +875,12 @@ export default function ProfileView() {
       }
       return;
     }
-
     if (hasLoadedProfileRef.current[profileId]) {
       return;
     }
-
     setIsLoading(true);
     try {
-      const [
-        { data: profileDataResponse, error: profileError },
-        { data: photosDataResponse, error: photosError },
-        { data: likeDataResponse, error: likeError },
-        { data: matchDataResponse, error: errorMatch },
-        { data: profileInterestsData, error: profileInterestsError }
-      ] = await Promise.all([
+      const queries = [
         supabase
           .from("profiles")
           .select("id, user_id, name, birth_date, gender, bio, city, profession, avatar_url, latitude, longitude, whatsapp_number, share_whatsapp")
@@ -937,7 +907,34 @@ export default function ProfileView() {
           .from("profile_interests")
           .select(`interests_id, interests (name)`)
           .eq("profile_id", profileId),
-      ]);
+      ];
+
+      let dailyCardResponse: { data: { card_name: string } | null; error: any } | undefined;
+      if (hasPremiumSubscription && !isOwnProfile) {
+        try {
+          const { data, error } = await supabase
+            .from("daily_cards")
+            .select("card_name")
+            .eq("profile_id", profileId)
+            .eq("selected_date", new Date().toISOString().split('T')[0])
+            .single();
+          dailyCardResponse = { data, error };
+        } catch (error: any) {
+          if (error.code === '42P01' || error.code === 'PGRST116') {
+            dailyCardResponse = { data: null, error: null };
+          } else {
+            throw new Error(`Erro ao carregar carta do dia: ${error.message}`);
+          }
+        }
+      }
+
+      const [
+        { data: profileDataResponse, error: profileError },
+        { data: photosDataResponse, error: photosError },
+        { data: likeDataResponse, error: likeError },
+        { data: matchDataResponse, error: errorMatch },
+        { data: profileInterestsData, error: profileInterestsError },
+      ] = await Promise.all(queries);
 
       if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`);
       if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`);
@@ -945,20 +942,54 @@ export default function ProfileView() {
       if (errorMatch && errorMatch.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${errorMatch.message}`);
       if (profileInterestsError) throw new Error(`Erro ao carregar interesses: ${profileInterestsError.message}`);
 
-      const interestsNames = (profileInterestsData || [])
-        .map((item: any) => item.interests?.name)
-        .filter((name: any): name is string => typeof name === 'string' && name !== null);
+      // ✅ Correção 1: Garantir que profileInterestsData é array
+      const interestsNames = Array.isArray(profileInterestsData)
+        ? profileInterestsData
+            .map(item => item.interests?.name)
+            .filter((name): name is string => typeof name === 'string')
+        : [];
 
-      const loadedProfileData: ProfileData = { ...profileDataResponse, interests: interestsNames };
+      // ✅ Correção 2: Garantir que todos os campos estão presentes
+      const loadedProfileData: ProfileData = {
+        id: profileDataResponse.id,
+        name: profileDataResponse.name,
+        birth_date: profileDataResponse.birth_date || undefined,
+        gender: profileDataResponse.gender as Gender | undefined,
+        bio: profileDataResponse.bio || undefined,
+        city: profileDataResponse.city || undefined,
+        profession: profileDataResponse.profession || undefined,
+        avatar_url: profileDataResponse.avatar_url || null,
+        user_id: profileDataResponse.user_id,
+        latitude: profileDataResponse.latitude || null,
+        longitude: profileDataResponse.longitude || null,
+        whatsapp_number: profileDataResponse.whatsapp_number || undefined,
+        share_whatsapp: profileDataResponse.share_whatsapp || undefined,
+        email: profileDataResponse.email || undefined,
+        interests: interestsNames.length > 0 ? interestsNames : [],
+      };
+
+      // ✅ Correção 3: Verificar se photosDataResponse é array
+      setPhotos(
+        Array.isArray(photosDataResponse)
+          ? await fetchPhotoUrls(photosDataResponse)
+          : []
+      );
+
       setViewedProfileData(loadedProfileData);
-      setPhotos(photosDataResponse ? await fetchPhotoUrls(photosDataResponse) : []);
       setHasLiked(!!likeDataResponse);
       setCanLikeToday(!likeDataResponse);
       setHasMatch(!!matchDataResponse);
       setMatchAlertShown(false);
+      setDailyCard(dailyCardResponse?.data?.card_name || null);
 
+      // ✅ Correção 4: Normalizar avatar_url para null se undefined
       if (profile && loadedProfileData && !isOwnProfile) {
-        const comp = calculateCompatibilityPercentage(profile as LoggedInUserProfile, loadedProfileData);
+        const normalizedProfile: LoggedInUserProfile = {
+          ...profile,
+          avatar_url: profile.avatar_url ?? null,
+          interests: Array.isArray(profile.interests) ? profile.interests : [],
+        };
+        const comp = calculateCompatibilityPercentage(normalizedProfile, loadedProfileData);
         setCompatibilityPercentage(comp);
       } else {
         setCompatibilityPercentage(null);
@@ -972,7 +1003,7 @@ export default function ProfileView() {
     } finally {
       setIsLoading(false);
     }
-  }, [userLoading, user, profile, profileId, router, showMatchAlert, isOwnProfile, matchAlertShown]);
+  }, [userLoading, user, profile, profileId, router, showMatchAlert, isOwnProfile, matchAlertShown, hasPremiumSubscription]);
 
   const handleLike = useCallback(async () => {
     if (!user || !profile || !profileId) {
@@ -985,7 +1016,6 @@ export default function ProfileView() {
       });
       return;
     }
-
     if (!canLikeToday) {
       MySwal.fire({
         icon: "info",
@@ -996,7 +1026,6 @@ export default function ProfileView() {
       });
       return;
     }
-
     try {
       const { error } = await supabase.from("likes").insert({
         profile_id: profile.id,
@@ -1004,7 +1033,6 @@ export default function ProfileView() {
         created_at: new Date().toISOString(),
       });
       if (error) throw new Error(`Erro ao curtir: ${error.message}`);
-
       setHasLiked(true);
       setCanLikeToday(false);
       MySwal.fire({
@@ -1014,7 +1042,6 @@ export default function ProfileView() {
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       });
-
       const { data: mutualLike, error: mutualLikeError } = await supabase
         .from("likes")
         .select("id")
@@ -1041,8 +1068,9 @@ export default function ProfileView() {
     }
   }, [user, profile, profileId, canLikeToday, showMatchAlert]);
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     if (!user || !viewedProfileData?.id) {
+      console.log("[handleSendMessage] Validation failed: Missing user or profile", { user, profileId: viewedProfileData?.id });
       MySwal.fire({
         icon: "error",
         title: "Erro",
@@ -1054,8 +1082,8 @@ export default function ProfileView() {
       });
       return;
     }
-
     if (!hasMatch) {
+      console.log("[handleSendMessage] Validation failed: No match", { hasMatch, profileId, userProfileId: profile?.id });
       MySwal.fire({
         icon: "error",
         title: "Erro",
@@ -1065,8 +1093,8 @@ export default function ProfileView() {
       });
       return;
     }
-
     if (!hasPremiumSubscription) {
+      console.log("[handleSendMessage] Validation failed: Not premium", { hasPremiumSubscription, userId: user.id });
       MySwal.fire({
         icon: "info",
         title: "Assinatura Necessária",
@@ -1076,8 +1104,11 @@ export default function ProfileView() {
       }).then((result) => result.isConfirmed && router.push(ROUTES.SUBSCRIPTION));
       return;
     }
-
     if (!viewedProfileData?.share_whatsapp || !viewedProfileData?.whatsapp_number) {
+      console.log("[handleSendMessage] Validation failed: WhatsApp not shared", {
+        share_whatsapp: viewedProfileData?.share_whatsapp,
+        whatsapp_number: viewedProfileData?.whatsapp_number,
+      });
       MySwal.fire({
         icon: "info",
         title: "Contato Indisponível",
@@ -1087,8 +1118,8 @@ export default function ProfileView() {
       });
       return;
     }
-
     if (!message.trim()) {
+      console.log("[handleSendMessage] Validation failed: Empty message");
       MySwal.fire({
         icon: "error",
         title: "Erro",
@@ -1099,12 +1130,16 @@ export default function ProfileView() {
       return;
     }
 
-    const cleanedNumber = viewedProfileData.whatsapp_number.replace(/\D/g, "");
+    let cleanedNumber = viewedProfileData.whatsapp_number.replace(/[\s()-]/g, "");
+    if (!cleanedNumber.startsWith("+")) {
+      cleanedNumber = `+55${cleanedNumber}`;
+    }
+
     if (!/^\+?\d{10,15}$/.test(cleanedNumber)) {
       MySwal.fire({
         icon: "error",
         title: "Erro",
-        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido.</p>',
+        html: '<p class="text-sm text-gray-700">Número de WhatsApp inválido. Deve conter 10 a 15 dígitos.</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       });
@@ -1115,13 +1150,45 @@ export default function ProfileView() {
     try {
       const encodedMessage = encodeURIComponent(message.trim());
       const whatsappUrl = `https://wa.me/${cleanedNumber}?text=${encodedMessage}`;
-      window.open(whatsappUrl, "_blank");
+      const newWindow = window.open(whatsappUrl, "_blank");
+      if (!newWindow) {
+        MySwal.fire({
+          icon: "error",
+          title: "Erro",
+          html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Verifique se o bloqueador de pop-ups está desativado ou se o WhatsApp está instalado.</p>',
+          customClass: SWAL_CONFIG,
+          confirmButtonText: "OK",
+        });
+        setIsSending(false);
+        return;
+      }
+      setTimeout(() => {
+        if (newWindow.closed) {
+          const webUrl = `https://web.whatsapp.com/send?phone=${cleanedNumber}&text=${encodedMessage}`;
+          window.open(webUrl, "_blank");
+          MySwal.fire({
+            icon: "info",
+            title: "Tentando WhatsApp Web",
+            html: '<p class="text-sm text-gray-700">Não foi possível abrir o aplicativo WhatsApp. Tentando abrir no WhatsApp Web.</p>',
+            customClass: SWAL_CONFIG,
+            confirmButtonText: "OK",
+          });
+        }
+      }, 2000);
       setMessage("");
+      MySwal.fire({
+        icon: "success",
+        title: "Mensagem Enviada!",
+        html: '<p class="text-sm text-success">A conversa no WhatsApp foi iniciada.</p>',
+        customClass: SWAL_CONFIG,
+        confirmButtonText: "OK",
+      });
     } catch (error: any) {
+      console.error("[handleSendMessage] Error:", error);
       MySwal.fire({
         icon: "error",
         title: "Erro",
-        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Tente novamente.</p>',
+        html: '<p class="text-sm text-gray-700">Não foi possível abrir o WhatsApp. Verifique se o número está registrado no WhatsApp ou tente novamente.</p>',
         customClass: SWAL_CONFIG,
         confirmButtonText: "OK",
       });
@@ -1170,7 +1237,6 @@ export default function ProfileView() {
           <h2 className="text-2xl font-bold gradient-text text-center mb-6">
             Perfil de {viewedProfileData.name || "Usuário"}
           </h2>
-
           <div className="flex justify-between mb-6">
             {!isOwnProfile && !hasLiked && !hasMatch && (
               <Button
@@ -1181,16 +1247,6 @@ export default function ProfileView() {
               >
                 <Heart className="h-4 w-4 mr-2" aria-hidden="true" />
                 {canLikeToday ? "Curtir" : "Já Curtido Hoje"}
-              </Button>
-            )}
-            {!isOwnProfile && hasMatch && (
-              <Button
-                onClick={handleSendMessage}
-                className="flex-1 mr-2 gradient-button"
-                aria-label="Abrir conversa"
-              >
-                <MessageSquare className="h-4 w-4 mr-2" aria-hidden="true" />
-                Mensagem
               </Button>
             )}
             <Button
@@ -1208,7 +1264,6 @@ export default function ProfileView() {
               <Sparkles className="h-4 w-4 ml-2 animate-pulse" />
             </Badge>
           )}
-
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
             <TabsList className="gradient-tabs grid grid-cols-2 w-full rounded-xl bg-white shadow-sm border border-gray-200">
               <TabsTrigger
@@ -1233,13 +1288,13 @@ export default function ProfileView() {
                 isOwnProfile={isOwnProfile}
                 onUpdateInterests={handleUpdateInterests}
                 compatibilityPercentage={compatibilityPercentage}
+                dailyCard={hasPremiumSubscription && !isOwnProfile ? dailyCard : null}
               />
             </TabsContent>
             <TabsContent value="fotos">
               <ProfilePhotos photos={photos} />
             </TabsContent>
           </Tabs>
-
           {hasMatch && !hasPremiumSubscription && (
             <Card className="mb-6 border-none shadow-sm">
               <CardContent className="text-center py-4">
@@ -1252,7 +1307,6 @@ export default function ProfileView() {
               </CardContent>
             </Card>
           )}
-
           {!isOwnProfile && !hasMatch && !hasLiked && (
             <Card className="mb-6 border-none shadow-sm bg-blue-50/50 border border-blue-200">
               <CardContent className="text-center py-4">
@@ -1265,7 +1319,6 @@ export default function ProfileView() {
               </CardContent>
             </Card>
           )}
-
           {!isOwnProfile && hasLiked && !hasMatch && (
             <Card className="mb-6 border-none shadow-sm bg-yellow-50/50 border border-yellow-200">
               <CardContent className="text-center py-4">
@@ -1275,6 +1328,40 @@ export default function ProfileView() {
                 <p className="text-yellow-700 text-sm mt-1">
                   Aguardando {viewedProfileData.name} te curtir de volta para darem match.
                 </p>
+              </CardContent>
+            </Card>
+          )}
+          {!isOwnProfile && hasMatch && hasPremiumSubscription && (
+            <Card className="mb-6 border-none shadow-sm bg-gray-50/50 border border-yellow-200">
+              <CardContent className="text-center py-4">
+                <div className="flex-1 mr-2">
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Digite sua mensagem para o WhatsApp"
+                    className="mb-2"
+                    disabled={isSending}
+                    aria-label="Digite sua mensagem para o WhatsApp"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    className="w-full gradient-button"
+                    disabled={isSending}
+                    aria-label="Enviar mensagem via WhatsApp"
+                  >
+                    {isSending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" aria-hidden="true" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <FaWhatsapp className="h-4 w-4 mr-2" aria-hidden="true" />
+                        Enviar Mensagem
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}

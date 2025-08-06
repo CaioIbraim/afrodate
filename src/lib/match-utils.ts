@@ -142,7 +142,7 @@ export const subscriptionPlans: SubscriptionPlan[] = [
   {
     id: "premium",
     name: "Premium",
-    price: 29.90,
+    price: 19.90,
     interval: "month",
     features: [
       "Matches ilimitados",
@@ -153,7 +153,8 @@ export const subscriptionPlans: SubscriptionPlan[] = [
     ],
     tier: "PREMIUM",
     popular: true,
-  },
+  }
+  /*,
   {
     id: "vip",
     name: "VIP",
@@ -164,11 +165,12 @@ export const subscriptionPlans: SubscriptionPlan[] = [
       "Contato direto via WhatsApp",
       "Prioridade nos matches",
       "Suporte VIP 24/7",
-      //"Eventos exclusivos",
+    
     ],
     tier: "VIP",
-    discount: 20, // 20% de desconto na assinatura anual
+    discount: 20, 
   },
+  */
 ]
 
 export function isFeatureAvailable(feature: string, subscriptionTier: 'FREE' | 'PREMIUM' | 'VIP'): boolean {

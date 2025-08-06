@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { PremiumBadge } from "@/components/ui/premium-badge";
 import { useUser } from "@/hooks/use-user";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Star } from "lucide-react";
 import Image from "next/image";
 
 interface ProfileHeaderProps {
@@ -63,7 +63,15 @@ export function ProfileHeader({
             <div className="space-y-2">
               <div className="flex items-center">
                 {hasActiveSubscription && <PremiumBadge size="sm" className="mr-2" />}
-                <span className="font-medium text-oraculo-dark">Premium</span>
+
+                {!hasActiveSubscription &&  <button
+                        className="relative flex flex-row rounded-md  items-center p-1  transition-all w-full shadow-md
+                                   bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90"
+                        aria-label="Assinar plano premium"
+                    >
+                        <Star className="h-5 w-5" />
+                        <span className="text-xs mt-1">Assinar</span>
+                    </button>}
               </div>
               <p className="text-xs text-oraculo-muted">
                 {online ? "Online" : `Últ. vez ${lastActive}`}

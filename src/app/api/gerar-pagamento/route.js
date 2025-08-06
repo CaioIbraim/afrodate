@@ -22,7 +22,7 @@ export async function POST(req) {
             {
                 customer: customerId,
                 billingType: 'PIX',
-                value: 29.9,
+                value: 19.9,
                 dueDate: new Date().toISOString().split('T')[0],
                 description : "Pagamento de acesso ao aplicativo Oráculo - Plano I"
             },

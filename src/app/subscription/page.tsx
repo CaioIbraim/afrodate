@@ -23,12 +23,21 @@ interface PixData {
   invoiceNumber: string;
 }
 
+// --- MELHORIA 1: Função helper para encurtar a chave PIX ---
+const truncatePix = (pixKey: string, start = 15, end = 15) => {
+  if (!pixKey || pixKey.length <= start + end) {
+    return pixKey;
+  }
+  return `${pixKey.substring(0, start)}...${pixKey.substring(pixKey.length - end)}`;
+};
+
+
 function BuyCoinsContent() {
   const router = useRouter();
   const { user, profile, isLoading: userLoading } = useUser();
   const [asaasCustomerId, setAsaasCustomerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [cpf, setCpf] = useState("14434463780");
+  const [cpf, setCpf] = useState("14434463780"); // Lembre-se de substituir por um método dinâmico
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   const [paymentStep, setPaymentStep] = useState(false);
@@ -202,6 +211,7 @@ function BuyCoinsContent() {
   };
 
   const checkStatus = (invoiceNumber: string) => {
+    // Lembrete: Considere usar Supabase Realtime para uma solução mais eficiente.
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`/api/status-pagamento/${invoiceNumber}?userId=${user?.id}`);
@@ -240,12 +250,12 @@ function BuyCoinsContent() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-8 text-center w-full max-w-md"
+          className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 text-center w-full max-w-md"
         >
           <h2 className="text-xl font-bold text-red-500 mb-4">Erro</h2>
           <Label className="text-neutral-600">{error}</Label>
@@ -263,12 +273,12 @@ function BuyCoinsContent() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 p-4 sm:p-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-8 text-center w-full max-w-md"
+          className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 text-center w-full max-w-md"
         >
           <h2 className="text-xl font-bold text-neutral-600 mb-4">Faça Login</h2>
           <Label className="text-neutral-600">Por favor, faça login para comprar coins.</Label>
@@ -286,14 +296,14 @@ function BuyCoinsContent() {
 
   if (hasActiveSubscription) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-4 sm:p-6">
         <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
         <div className="w-full max-w-3xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl shadow-xl p-8 text-center"
+            className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 text-center"
           >
             <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
               Assinatura Ativa
@@ -317,14 +327,15 @@ function BuyCoinsContent() {
 
   if (paymentStep) {
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+      // --- MELHORIA 2: Espaçamento responsivo (p-4 para mobile, p-6 para telas maiores) ---
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100">
         <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-        <div className="w-full max-w-3xl mx-auto">
+        <div className="w-full max-w-3xl mx-auto p-4 sm:p-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl shadow-xl p-8"
+            className="bg-white rounded-2xl shadow-xl p-6 sm:p-8"
           >
             <div className="flex items-center justify-between mb-6">
               <Button
@@ -366,7 +377,8 @@ function BuyCoinsContent() {
                 )}
               </Button>
             </div>
-
+            
+            {/* --- MELHORIA 3: Bloco PIX completamente refeito para melhor UX e responsividade --- */}
             {pixData && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -375,30 +387,27 @@ function BuyCoinsContent() {
                 className="space-y-6 text-center"
               >
                 <Label className="text-neutral-600 text-lg font-medium">
-                  Escaneie ou copie a chave para pagar:
+                  Escaneie o QR Code ou copie a chave abaixo:
                 </Label>
+                
                 <div className="flex justify-center">
                   <img
                     src={`data:image/png;base64,${pixData.qrCodeUrl}`}
                     alt="QR Code Pix"
-                    className="w-64 h-64 rounded-lg shadow-md"
+                    className="w-56 h-56 md:w-64 md:h-64 rounded-lg shadow-md"
                   />
                 </div>
-                <div
-                  onClick={handleCopyPix}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleCopyPix();
-                    }
-                  }}
-                  className="cursor-pointer bg-gray-100 p-4 rounded-lg text-sm text-neutral-600 break-all hover:bg-gray-200 transition"
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Copiar chave PIX"
-                >
-                  <pre>{pixData.payload}</pre>
+                
+                <div className="bg-gray-100 p-4 rounded-lg space-y-3">
+                  <Label className="text-sm text-neutral-500">Chave PIX Copia e Cola</Label>
+                  <p 
+                    className="text-sm text-neutral-700 font-mono bg-white p-3 rounded border border-gray-200"
+                    style={{ wordBreak: 'break-all' }} 
+                  >
+                    {truncatePix(pixData.payload)}
+                  </p>
                 </div>
+
                 <Button
                   className="w-full max-w-xs bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-12"
                   onClick={handleCopyPix}
@@ -409,7 +418,7 @@ function BuyCoinsContent() {
               </motion.div>
             )}
 
-            <div className="mt-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <div className="mt-8 p-4 sm:p-6 bg-gray-50 rounded-lg shadow-inner">
               <div className="flex justify-between items-center">
                 <div>
                   <h4 className="text-lg font-semibold text-neutral-600">Total</h4>
@@ -424,22 +433,23 @@ function BuyCoinsContent() {
             </div>
           </motion.div>
         </div>
+        <MobileFooterMenu/>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 p-6">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 ">
       <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-      <div className="w-full max-w-3xl mx-auto mt-2">
+      <div className="w-full h-screen max-w-3xl mx-auto mt-1">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-8"
+          className="bg-white rounded-2xl shadow-xl p-6 sm:p-8"
         >
           <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4 text-center">
-            Escolha Seu Plano
+            Seja Premium
           </h2>
           <Label className="text-neutral-600 text-lg mb-8 text-center block">
             Selecione o plano ideal para turbinar suas conexões e encontrar sua alma gêmea.
@@ -467,6 +477,7 @@ function BuyCoinsContent() {
                     handleSelectPlan(plan);
                   }
                 }}
+                
               >
                 {plan?.popular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white text-xs py-1 px-3 rounded-full shadow-sm">
@@ -521,7 +532,9 @@ function BuyCoinsContent() {
             ))}
           </div>
 
-          <div className="p-6 bg-gray-50 rounded-lg shadow-inner mb-8">
+
+{/**
+          <div className="p-4 sm:p-6 bg-gray-50 rounded-lg shadow-inner mb-8">
             <h3 className="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] mb-4">
               Por que fazer upgrade?
             </h3>
@@ -546,7 +559,11 @@ function BuyCoinsContent() {
               </div>
             </div>
           </div>
+ */}
 
+
+
+            
           <Button
             className="w-full bg-gradient-to-r from-oraculo-cyan to-[#00FFD1] text-white hover:opacity-90 focus:ring-2 focus:ring-[#00FFD1] h-12 text-lg"
             onClick={handleContinue}
@@ -555,6 +572,9 @@ function BuyCoinsContent() {
           >
             Continuar
           </Button>
+
+
+
         </motion.div>
       </div>
       <MobileFooterMenu/>

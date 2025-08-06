@@ -1039,6 +1039,8 @@ export default function ProximityPage() {
                 <div className="p-4 sm:p-5">
                   <div className="flex flex-row items-start gap-4 w-full relative">
                     {/* Avatar */}
+
+                    
                     <div
                       className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 transition-transform hover:scale-105 focus:ring-2 focus:ring-[#00FFD1] focus:outline-none"
                       tabIndex={0}
@@ -1117,7 +1119,8 @@ export default function ProximityPage() {
                       </div>
 
                       {/* Buttons */}
-                      <div className="flex gap-2 mt-4 w-full justify-center items-center">
+                      
+                      <div className="flex gap-1 mt-2 w-full justify-center items-center">
                         <Link
                           href={`/profile/${nearbyProfile.id}`}
                           className={
@@ -1138,10 +1141,10 @@ export default function ProximityPage() {
                         >
                           <Button
                             variant="outline"
-                            className="flex-1 w-full text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-xl py-3 px-4 text-sm font-semibold transition-all duration-200 ease-in-out"
+                            className="flex-1 w-full text-[#00FFD1] border-[#00FFD1] hover:bg-[#00FFD1]/10 rounded-xl py-3 px-3 text-sm font-semibold transition-all duration-200 ease-in-out"
                             aria-label={`Ver perfil de ${nearbyProfile.name}`}
                           >
-                            <EyeIcon className="h-5 w-5 mr-2" />
+                            <EyeIcon className="h-4 w-4 mr-1" />
                             Ver Perfil
                           </Button>
                         </Link>
@@ -1185,6 +1188,7 @@ export default function ProximityPage() {
                           </Button>
                         ) : null}
                       </div>
+
                       {/* Hidden Accessibility Description */}
                       <span
                         id={`profile-status-${nearbyProfile.id}`}

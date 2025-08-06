@@ -7,6 +7,7 @@ import { Heart, Search, User, Star, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PremiumBadge } from "@/components/ui/premium-badge";
 import { supabase } from "@/lib/supabase";
+import { OracleIlluminatedIcon } from "@/components/oraculo-icons/EsotericEyeIcon";
 
 export function MobileFooterMenu() {
     const router = useRouter();
@@ -66,7 +67,7 @@ export function MobileFooterMenu() {
                             onClick={navigateToDiscover}
                             aria-label="Explorar perfis"
                         >
-                            <Search className="h-5 w-5" />
+                            <OracleIlluminatedIcon className="h-5 w-5" />
                             <span className="text-xs mt-1">Oráculo</span>
                         </button>
                     </>

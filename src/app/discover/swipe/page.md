@@ -8,66 +8,9 @@ import { motion, type PanInfo, useMotionValue, useTransform } from "framer-motio
 import { Logo } from "@/components/ui/logo"
 import { useToast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
-import type { ProfileData } from "@/lib/types"
+import type { Profile } from "@/lib/types"
 import { supabase } from "@/lib/supabase"
 
-const profiles: ProfileData[] = [
-  // {
-  //   id: 1,
-  //   name: "Ana",
-  //   age: 28,
-  //   gender: "MULHER",
-  //   city: "São Paulo",
-  //   distance: "5km",
-  //   compatibility: 95,
-  //   bio: "Adoro música e filmes de aventura. Sempre em busca de novas experiências.",
-  //   interests: ["Música", "Cinema", "Viagens"],
-  //   locations: ["shows", "cinemas", "parques", "cafes", "festivais"],
-  //   photos: ["/images/female-profile.png"],
-  //   crossMatches: ["Música em shows", "Cinema em cinemas"],
-  // },
-  // {
-  //   id: 2,
-  //   name: "Carlos",
-  //   age: 30,
-  //   gender: "HOMEM",
-  //   city: "Rio de Janeiro",
-  //   distance: "12km",
-  //   compatibility: 88,
-  //   bio: "Fã de rock e esportes ao ar livre. Gosto de trilhas e escalada.",
-  //   interests: ["Esportes", "Rock", "Natureza"],
-  //   locations: ["parques", "natureza", "esportes", "shows"],
-  //   photos: ["/images/male-profile-1.png"],
-  //   crossMatches: ["Esportes em parques"],
-  // },
-  // {
-  //   id: 3,
-  //   name: "Juliana",
-  //   age: 26,
-  //   gender: "MULHER",
-  //   city: "Belo Horizonte",
-  //   distance: "8km",
-  //   compatibility: 92,
-  //   bio: "Amo viajar e conhecer novas culturas. Fotógrafa nas horas vagas.",
-  //   interests: ["Fotografia", "Culinária", "Livros"],
-  //   locations: ["museus", "restaurantes", "cafes", "livrarias", "mercados"],
-  //   photos: ["/images/female-profile-1.png"],
-  //   crossMatches: ["Fotografia em museus", "Culinária em restaurantes"],
-  // },
-  // {
-  //   id: 4,
-  //   name: "Rafael",
-  //   age: 32,
-  //   gender: "HOMEM",
-  //   city: "Curitiba",
-  //   distance: "15km",
-  //   compatibility: 85,
-  //   bio: "Trabalho com tecnologia e adoro jogos. Nas horas vagas gosto de maratonar séries.",
-  //   interests: ["Tecnologia", "Jogos", "Séries"],
-  //   locations: ["cinemas", "shopping", "cafes"],
-  //   photos: ["/images/male-profile-1.png"],
-  // },
-]
 
 
 
@@ -95,7 +38,7 @@ export default function SwipePage() {
   const [exitDirection, setExitDirection] = useState<null | "left" | "right">(null)
   const [isLoading, setIsLoading] = useState(false)
 
-const [profilesData, setProfilesData] = useState<ProfileData[]>(profiles)
+const [profilesData, setProfilesData] = useState<Profile[]>(profiles)
 
 useEffect(() => {
   const fetchProfiles = async () => {
@@ -114,7 +57,7 @@ useEffect(() => {
       }
 
       if (data) {
-        setProfilesData(data as ProfileData[])
+        setProfilesData(data as Profile[])
       }
     } catch (error) {
       console.log('Error fetching profiles:', error)
@@ -227,7 +170,7 @@ useEffect(() => {
 }
 
 interface SwipeCardProps {
-  profile: ProfileData
+  profile: Profile
   isActive: boolean
   exitDirection: "left" | "right" | null
   onSwipe: (direction: "left" | "right") => void

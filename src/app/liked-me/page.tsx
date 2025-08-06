@@ -7,7 +7,7 @@ import withReactContent from "sweetalert2-react-content";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Heart, User2Icon, MessageCircle, Sparkles, MapPin } from "lucide-react";
+import { Loader2, Heart, User2Icon, MessageCircle, Sparkles, MapPin, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,7 +18,7 @@ import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 
 const MySwal = withReactContent(Swal);
 
-// Tipos de dados mais precisos
+// Tipos de dados
 interface Profile {
   id: string;
   name: string;
@@ -28,8 +28,8 @@ interface Profile {
   longitude: number | null;
   birth_date?: string;
   distance?: number;
-  isLiked: boolean; // Adicionado para manter a tipagem consistente
-  isMatch: boolean; // Adicionado para manter a tipagem consistente
+  isLiked: boolean;
+  isMatch: boolean;
 }
 
 const showAlert = async (type: "success" | "error" | "info", title: string, text: string) => {
@@ -39,8 +39,8 @@ const showAlert = async (type: "success" | "error" | "info", title: string, text
     text,
     customClass: {
       popup: "border-2 border-transparent bg-white rounded-2xl shadow-xl w-[90vw] max-w-md",
-      title: "text-2xl font-bold text-gray-800",
-      confirmButton: "bg-gradient-to-r from-cyan-500 to-teal-400 text-white px-6 py-2 rounded-lg shadow-md hover:opacity-90 transition-opacity",
+      title: "text-xl sm:text-2xl font-bold text-gray-800",
+      confirmButton: "bg-gradient-to-r from-cyan-500 to-teal-400 text-white px-4 sm:px-6 py-2 rounded-lg shadow-md hover:opacity-90 transition-opacity",
     },
     willOpen: (popup) => {
       popup.setAttribute("aria-live", "assertive");
@@ -59,100 +59,126 @@ const markMatchAsViewed = (userId: string, profileId: string) => {
   localStorage.setItem(`viewed_matches_${userId}`, JSON.stringify([...viewed]));
 };
 
-// --- NOVO COMPONENTE: ProfileCardComponent ---
-// Agora é um componente React de primeira classe, então pode usar hooks
 const ProfileCardComponent = ({
   profile: nearbyProfile,
   index,
   tab,
   handleLike,
-  handleProfileInteraction
+  handleProfileInteraction,
+  hasPremiumSubscription,
 }: {
   profile: Profile;
   index: number;
   tab: string;
   handleLike: (id: string) => Promise<void>;
   handleProfileInteraction: (id: string, isMatch: boolean) => void;
+  hasPremiumSubscription: boolean;
 }) => {
+  const router = useRouter();
+  const isWhoLikedMeTab = tab === "Quem me curtiu";
+  const isRestricted = isWhoLikedMeTab && !hasPremiumSubscription;
+
   return (
     <motion.div
       key={nearbyProfile.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100"
+      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100 w-full max-w-[400px] mx-auto"
     >
-      <div className="p-5 flex items-start gap-5">
-        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+      <div className="p-4 flex flex-row items-start gap-4">
+        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 relative">
           <Image
             src={nearbyProfile.avatar_url || (nearbyProfile.gender === "MULHER" ? "/images/female-profile.png" : "/images/male-profile-1.png")}
             alt={`Foto de ${nearbyProfile.name}`}
             width={150}
             height={150}
-            className="object-cover w-full h-full"
+            className={`object-cover w-full h-full ${isRestricted ? "filter blur-md" : ""}`}
             loading="lazy"
           />
+          {isRestricted && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+              <Lock className="h-6 w-6 text-white" />
+            </div>
+          )}
         </div>
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-gray-800 mb-3 truncate">
-            {nearbyProfile.name}
-          </h3>
-          <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-center justify-between">
+            <h3 className={`text-lg font-semibold text-gray-800 truncate ${isRestricted ? "filter blur-sm" : ""}`}>
+              {isRestricted ? "Nome oculto" : nearbyProfile.name}
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2 mb-3">
             {nearbyProfile.distance && (
-              <Badge className="bg-cyan-100 text-cyan-700 text-xs font-medium px-3 py-1 rounded-full flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
+              <Badge className="bg-cyan-100 text-cyan-700 text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                <MapPin className="h-3.5 w-3.5 mr-1" />
                 {nearbyProfile.distance.toFixed(1)} km
               </Badge>
             )}
             {tab === "Matches" && (
-              <Badge className="bg-gradient-to-r from-cyan-500 to-teal-400 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
-                <Sparkles className="h-4 w-4 mr-1" />
+              <Badge className="bg-gradient-to-r from-cyan-500 to-teal-400 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
                 Match!
               </Badge>
             )}
             {tab === "Quem eu curti" && (
-              <Badge className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full flex items-center">
+              <Badge className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-1 rounded-full flex items-center">
                 Aguardando
               </Badge>
             )}
-            {tab === "Quem me curtiu" && (
-              <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
-                <Heart className="h-4 w-4 mr-1" />
+            {isWhoLikedMeTab && (
+              <Badge className="bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                <Heart className="h-3.5 w-3.5 mr-1" />
                 Te Curtiu
               </Badge>
             )}
+            {isRestricted && (
+              <Badge className="bg-yellow-100 text-yellow-700 text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                <Lock className="h-3.5 w-3.5 mr-1" />
+                Premium necessário
+              </Badge>
+            )}
           </div>
-          <div className="flex gap-3 w-full">
-            <Link
-              href={`/profile/${nearbyProfile.id}`}
-              className="flex-1"
-              onClick={() => handleProfileInteraction(nearbyProfile.id, !!nearbyProfile.isMatch)}
-            >
-              <Button
-                variant="outline"
-                className="w-full border-cyan-500 text-cyan-500 rounded-lg"
+          <div className="flex flex-row gap-2">
+            {!isRestricted && (
+              <Link
+                href={`/profile/${nearbyProfile.id}`}
+                className="flex-1"
+                onClick={() => handleProfileInteraction(nearbyProfile.id, !!nearbyProfile.isMatch)}
               >
-                <User2Icon className="h-4 w-4 mr-2" />
-                Ver Perfil
-              </Button>
-            </Link>
-
-            { tab === "Quem me curtiu" ? (
+                <Button
+                  variant="outline"
+                  className="w-full border-cyan-500 text-cyan-500 rounded-lg text-sm"
+                >
+                  <User2Icon className="h-4 w-4 mr-2" />
+                  Ver Perfil
+                </Button>
+              </Link>
+            )}
+            {isWhoLikedMeTab && hasPremiumSubscription && (
               <Button
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg"
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-teal-400 text-white hover:opacity-90 transition-opacity rounded-lg text-sm"
                 onClick={() => handleLike(nearbyProfile.id)}
               >
                 <Heart className="h-4 w-4 mr-2" />
                 Curtir
               </Button>
-            ) : null}
+            )}
+            {isRestricted && (
+              <Button
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-400 text-white hover:opacity-90 transition-opacity rounded-lg text-sm"
+                onClick={() => router.push("/subscriptions")}
+              >
+                <Lock className="h-4 w-4 mr-2" />
+                Fazer Upgrade
+              </Button>
+            )}
           </div>
         </div>
       </div>
     </motion.div>
   );
 };
-
 
 export default function MatchesPage() {
   const router = useRouter();
@@ -161,6 +187,8 @@ export default function MatchesPage() {
   const [whoILiked, setWhoILiked] = useState<Profile[]>([]);
   const [matches, setMatches] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const hasPremiumSubscription = useMemo(() => !!profile?.subscription, [profile]);
 
   const fetchLikeAndMatchData = useCallback(async () => {
     if (userLoading || !user || !profile) {
@@ -173,7 +201,6 @@ export default function MatchesPage() {
 
     setIsLoading(true);
     try {
-      // 1. Buscar os IDs dos perfis que te curtiram
       const { data: incomingLikes, error: incomingLikesError } = await supabase
         .from("likes")
         .select("profile_id")
@@ -181,7 +208,6 @@ export default function MatchesPage() {
       if (incomingLikesError) throw incomingLikesError;
       const incomingLikeIds = incomingLikes.map((like) => like.profile_id);
 
-      // 2. Buscar os IDs dos perfis que você curtiu
       const { data: outgoingLikes, error: outgoingLikesError } = await supabase
         .from("likes")
         .select("liked_profile_id")
@@ -189,7 +215,6 @@ export default function MatchesPage() {
       if (outgoingLikesError) throw outgoingLikesError;
       const outgoingLikeIds = outgoingLikes.map((like) => like.liked_profile_id);
 
-      // 3. Buscar os IDs dos perfis com quem você deu match
       const { data: matchesData, error: matchesError } = await supabase
         .from("matches")
         .select("profile1_id, profile2_id")
@@ -199,7 +224,6 @@ export default function MatchesPage() {
         match.profile1_id === profile.id ? match.profile2_id : match.profile1_id
       );
 
-      // 4. Juntar todos os IDs únicos para uma única query de perfil
       const allRelatedProfileIds = new Set([
         ...incomingLikeIds,
         ...outgoingLikeIds,
@@ -214,36 +238,35 @@ export default function MatchesPage() {
         return;
       }
 
-      // 5. Buscar todos os dados dos perfis de uma só vez
       const { data: profilesData, error: profilesError } = await supabase
         .from("profiles")
         .select("id, name, avatar_url, gender, latitude, longitude, birth_date")
         .in("id", Array.from(allRelatedProfileIds));
       if (profilesError) throw profilesError;
 
-      // Mapear os perfis buscados para cada categoria
-      const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+      const profilesMap = new Map(profilesData.map(p => [p.id, {
+        ...p,
+        isLiked: outgoingLikeIds.includes(p.id),
+        isMatch: matchedProfileIds.includes(p.id),
+      }]));
 
-      const whoLikedMeProfiles = profilesData
-        .filter(p => incomingLikeIds.includes(p.id) && !matchedProfileIds.includes(p.id))
-        .map(p => profilesMap.get(p.id) as Profile);
-        
-      const whoILikedProfiles = profilesData
-        .filter(p => outgoingLikeIds.includes(p.id) && !matchedProfileIds.includes(p.id))
-        .map(p => profilesMap.get(p.id) as Profile);
+      const whoLikedMeProfiles = incomingLikeIds
+        .filter(id => !matchedProfileIds.includes(id))
+        .map(id => profilesMap.get(id) as Profile)
+        .filter(p => p);
 
-      const matchesProfiles = profilesData
-        .filter(p => matchedProfileIds.includes(p.id))
-        .map(p => profilesMap.get(p.id) as Profile);
+      const whoILikedProfiles = outgoingLikeIds
+        .filter(id => !matchedProfileIds.includes(id))
+        .map(id => profilesMap.get(id) as Profile)
+        .filter(p => p);
 
-      // A linha a seguir foi removida, pois os filtros foram desconsiderados
-      // E a tipagem de Profile já inclui a propriedade 'distance'
-      // O cálculo da distância também foi removido
-      
-      setWhoLikedMe(whoLikedMeProfiles.filter(p => p));
-      setWhoILiked(whoILikedProfiles.filter(p => p));
-      setMatches(matchesProfiles.filter(p => p));
-      
+      const matchesProfiles = matchedProfileIds
+        .map(id => profilesMap.get(id) as Profile)
+        .filter(p => p);
+
+      setWhoLikedMe(whoLikedMeProfiles);
+      setWhoILiked(whoILikedProfiles);
+      setMatches(matchesProfiles);
     } catch (error: any) {
       console.error("Erro ao carregar dados:", error);
       await showAlert(
@@ -259,6 +282,16 @@ export default function MatchesPage() {
   const handleLike = async (targetProfileId: string) => {
     if (!user || !profile) {
       await showAlert("error", "Erro", "Usuário não autenticado.");
+      return;
+    }
+
+    if (!hasPremiumSubscription) {
+      await showAlert(
+        "error",
+        "Premium necessário",
+        "Você precisa de uma assinatura premium para curtir perfis."
+      );
+      router.push("/subscription");
       return;
     }
 
@@ -299,8 +332,8 @@ export default function MatchesPage() {
   if (userLoading || isLoading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-200">
-        <Loader2 className="h-10 w-10 animate-spin text-cyan-500" />
-        <p className="mt-4 text-lg font-medium text-gray-600">Carregando dados...</p>
+        <Loader2 className="h-8 w-8 animate-spin text-cyan-500" />
+        <p className="mt-4 text-base font-medium text-gray-600">Carregando dados...</p>
       </div>
     );
   }
@@ -315,43 +348,30 @@ export default function MatchesPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200">
-      <ProfileHeader name={profile!.name} avatarUrl={profile!.avatar_url} />
-      <div className="max-w-4xl mx-auto w-full py-10 px-4 sm:px-6">
+      <ProfileHeader name={profile.name} avatarUrl={profile.avatar_url} />
+      <div className="max-w-4xl mx-auto w-full py-6 px-4">
         <TabGroup>
-          <TabList className="flex gap-4 mb-8 bg-white p-2 rounded-xl shadow-sm">
-            <Tab className={({ selected }) =>
-              `flex-1 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 ${
-                selected
-                  ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`
-            }>
-              Quem me curtiu ({whoLikedMe.length})
-            </Tab>
-            <Tab className={({ selected }) =>
-              `flex-1 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 ${
-                selected
-                  ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`
-            }>
-              Quem eu curti ({whoILiked.length})
-            </Tab>
-            <Tab className={({ selected }) =>
-              `flex-1 px-4 py-3 rounded-lg font-semibold text-sm sm:text-base transition-all duration-200 ${
-                selected
-                  ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`
-            }>
-              Matches ({matches.length})
-            </Tab>
+          <TabList className="flex gap-2 mb-6 bg-white p-2 rounded-xl shadow-sm overflow-x-auto">
+            {["Quem me curtiu", "Quem eu curti", "Matches"].map((tab, idx) => (
+              <Tab
+                key={tab}
+                className={({ selected }) =>
+                  `flex-1 min-w-[100px] px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 whitespace-nowrap ${
+                    selected
+                      ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`
+                }
+              >
+                {tab} ({tab === "Quem me curtiu" ? whoLikedMe.length : tab === "Quem eu curti" ? whoILiked.length : matches.length})
+              </Tab>
+            ))}
           </TabList>
           <TabPanels>
             <TabPanel>
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 {whoLikedMe.length === 0 ? (
-                  <div className="text-center py-10 text-gray-600 text-lg font-medium bg-white rounded-xl shadow-sm">
+                  <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Nenhum perfil te curtiu ainda.
                   </div>
                 ) : (
@@ -363,15 +383,16 @@ export default function MatchesPage() {
                       tab="Quem me curtiu"
                       handleLike={handleLike}
                       handleProfileInteraction={handleProfileInteraction}
+                      hasPremiumSubscription={hasPremiumSubscription}
                     />
                   ))
                 )}
               </div>
             </TabPanel>
             <TabPanel>
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 {whoILiked.length === 0 ? (
-                  <div className="text-center py-10 text-gray-600 text-lg font-medium bg-white rounded-xl shadow-sm">
+                  <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Você ainda não curtiu ninguém.
                   </div>
                 ) : (
@@ -383,15 +404,16 @@ export default function MatchesPage() {
                       tab="Quem eu curti"
                       handleLike={handleLike}
                       handleProfileInteraction={handleProfileInteraction}
+                      hasPremiumSubscription={hasPremiumSubscription}
                     />
                   ))
                 )}
               </div>
             </TabPanel>
             <TabPanel>
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 {matches.length === 0 ? (
-                  <div className="text-center py-10 text-gray-600 text-lg font-medium bg-white rounded-xl shadow-sm">
+                  <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Nenhum match por aqui.
                   </div>
                 ) : (
@@ -403,6 +425,7 @@ export default function MatchesPage() {
                       tab="Matches"
                       handleLike={handleLike}
                       handleProfileInteraction={handleProfileInteraction}
+                      hasPremiumSubscription={hasPremiumSubscription}
                     />
                   ))
                 )}
@@ -411,7 +434,7 @@ export default function MatchesPage() {
           </TabPanels>
         </TabGroup>
       </div>
-      <MobileFooterMenu/>
+      <MobileFooterMenu />
     </div>
   );
 }
