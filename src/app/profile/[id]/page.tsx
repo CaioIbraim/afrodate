@@ -65,6 +65,10 @@ type LoggedInUserProfile = ProfileData & {
   message_notifications?: boolean;
   subscription?: boolean;
 };
+type ProfileInterest = {
+  interests_id: string;
+  interests: { name: string };
+};
 
 // Utility Functions
 const handleError = (error: any, title: string, router: any, redirectRoute: string) => {
@@ -162,7 +166,7 @@ const calculateCompatibilityPercentage = (
   return Math.min(Math.round(score), 100);
 };
 
-// LocationCapture Component (Minimalista)
+// LocationCapture Component
 type LocationState = {
   status: "idle" | "requesting" | "granted" | "denied" | "unavailable" | "error";
   latitude: number | null;
@@ -906,7 +910,7 @@ export default function ProfileView() {
         supabase
           .from("profile_interests")
           .select(`interests_id, interests (name)`)
-          .eq("profile_id", profileId),
+          .eq("profile_id", profileId) as unknown as Promise<{ data: ProfileInterest[] | null; error: any }>,
       ];
 
       let dailyCardResponse: { data: { card_name: string } | null; error: any } | undefined;
@@ -934,7 +938,14 @@ export default function ProfileView() {
         { data: likeDataResponse, error: likeError },
         { data: matchDataResponse, error: errorMatch },
         { data: profileInterestsData, error: profileInterestsError },
-      ] = await Promise.all(queries);
+      ] = await Promise.all(queries) as [
+        { data: ProfileData | null; error: any },
+        { data: { storage_path: string; is_primary: boolean }[] | null; error: any },
+        { data: any | null; error: any },
+        { data: any | null; error: any },
+        { data: ProfileInterest[] | null; error: any }
+      ];
+      
 
       if (profileError) throw new Error(`Erro ao carregar perfil: ${profileError.message}`);
       if (photosError) throw new Error(`Erro ao carregar fotos: ${photosError.message}`);
@@ -942,14 +953,19 @@ export default function ProfileView() {
       if (errorMatch && errorMatch.code !== "PGRST116") throw new Error(`Erro ao carregar match: ${errorMatch.message}`);
       if (profileInterestsError) throw new Error(`Erro ao carregar interesses: ${profileInterestsError.message}`);
 
-      // ✅ Correção 1: Garantir que profileInterestsData é array
       const interestsNames = Array.isArray(profileInterestsData)
         ? profileInterestsData
             .map(item => item.interests?.name)
             .filter((name): name is string => typeof name === 'string')
         : [];
 
-      // ✅ Correção 2: Garantir que todos os campos estão presentes
+
+
+        if (!profileDataResponse) {
+          throw new Error("Perfil não encontrado");
+        }
+        
+
       const loadedProfileData: ProfileData = {
         id: profileDataResponse.id,
         name: profileDataResponse.name,
@@ -968,7 +984,6 @@ export default function ProfileView() {
         interests: interestsNames.length > 0 ? interestsNames : [],
       };
 
-      // ✅ Correção 3: Verificar se photosDataResponse é array
       setPhotos(
         Array.isArray(photosDataResponse)
           ? await fetchPhotoUrls(photosDataResponse)
@@ -982,13 +997,19 @@ export default function ProfileView() {
       setMatchAlertShown(false);
       setDailyCard(dailyCardResponse?.data?.card_name || null);
 
-      // ✅ Correção 4: Normalizar avatar_url para null se undefined
       if (profile && loadedProfileData && !isOwnProfile) {
+
+
+       
         const normalizedProfile: LoggedInUserProfile = {
           ...profile,
           avatar_url: profile.avatar_url ?? null,
           interests: Array.isArray(profile.interests) ? profile.interests : [],
+          subscription: !!profile.subscription,
         };
+        
+
+
         const comp = calculateCompatibilityPercentage(normalizedProfile, loadedProfileData);
         setCompatibilityPercentage(comp);
       } else {
