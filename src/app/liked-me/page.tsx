@@ -356,7 +356,7 @@ export default function MatchesPage() {
               <Tab
                 key={tab}
                 className={({ selected }) =>
-                  `flex-1 min-w-[100px] px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 whitespace-nowrap ${
+                  `flex-1 min-w-[100px] px-3 py-2 rounded-lg font-semibold text-[12px] transition-all duration-200 whitespace-nowrap ${
                     selected
                       ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"

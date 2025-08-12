@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { supabase } from "@/lib/supabase"
 import { VivaLogo } from "@/components/viva-logo"
+import Image from "next/image"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -56,12 +57,19 @@ export default function ResetPasswordPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="auth-card max-w-md w-full">
           <div className="flex justify-center mb-6">
-            <VivaLogo className="w-24 h-24" />
+          <Image
+              alt="Logo"
+              src="/logo.png"
+              height={150}
+              width={150}
+              priority
+              className="mb-8"
+            />
           </div>
 
           {!isSubmitted ? (
             <>
-              <h2 className="text-2xl font-bold mb-2 text-center">Recuperar Senha</h2>
+              <h2 className="text-2xl font-bold mb-2 text-center text-oraculo-cyan">Recuperar Senha</h2>
               <p className="text-neutral-600 text-center mb-6">
                 Digite seu email e enviaremos instruções para redefinir sua senha.
               </p>
@@ -85,10 +93,10 @@ export default function ResetPasswordPage() {
 
                 <Button
                   type="submit"
-                  className="auth-button w-full bg-amber-500 hover:bg-amber-600 text-black"
+                  className="w-full bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white hover:opacity-90 focus:ring-2 focus:ring-[#4BE5FF]"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Enviando..." : "Enviar instruções"}
+                  {isLoading ? "Enviando..." : "Enviar"}
                   <Send className="ml-2 h-4 w-4" />
                 </Button>
               </form>
@@ -106,7 +114,7 @@ export default function ResetPasswordPage() {
               <p className="text-sm text-neutral-500 mb-4">
                 Não recebeu o email? Verifique sua pasta de spam ou{" "}
                 <button
-                  className="text-amber-600 hover:text-amber-700 font-semibold"
+                  className="text-oraculo-cyan hover:text-green-700 font-semibold"
                   onClick={() => setIsSubmitted(false)}
                 >
                   tente novamente
@@ -116,8 +124,7 @@ export default function ResetPasswordPage() {
           )}
 
           <div className="mt-8 text-center">
-            <Link href="/login" className="inline-flex items-center text-amber-600 hover:text-amber-700 font-semibold">
-              <ArrowLeft className="mr-2 h-4 w-4" />
+            <Link href="/login" className="text-oraculo-cyan font-semibold focus:ring-2 focus:ring-[#1E1E1E] focus:outline-none">
               Voltar para o login
             </Link>
           </div>

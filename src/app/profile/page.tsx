@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import type React from "react";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PhoneInput from 'react-phone-number-input'
+
 import {
   Card,
   CardHeader,
@@ -28,7 +30,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/hooks/use-user";
-import { Loader2, Star, Trash2, Upload, MapPin, Navigation, CheckCircle2 } from "lucide-react";
+import { Loader2, Star, Trash2, Upload, MapPin, Navigation, CheckCircle2, Check, ChevronsUpDown } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -41,6 +43,11 @@ import { Suspense } from "react";
 
 // Importa os componentes de Tooltip do shadcn/ui, necessários para LocationCapture
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Importa os componentes necessários para o Combobox (autocomplete)
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils"; // Assumindo que você tem uma função cn para classnames condicionais (de shadcn)
 
 // --- Tipos ---
 type Gender = "HOMEM" | "MULHER" | "NAO_BINARIO" | "OUTRO";
@@ -88,6 +95,36 @@ interface DBInterest {
   storage_path: string | null;
   type: string;
 }
+
+// --- Lista de cidades brasileiras (top 50 mais populosas) ---
+const brazilianCities = [
+  "São Paulo", "Rio de Janeiro", "Brasília", "Fortaleza", "Salvador", "Belo Horizonte", "Manaus", "Curitiba", "Recife", "Goiânia",
+  "Porto Alegre", "Belém", "Guarulhos", "Campinas", "São Luís", "Maceió", "Campo Grande", "São Gonçalo", "Teresina", "João Pessoa",
+  "São Bernardo do Campo", "Duque de Caxias", "Nova Iguaçu", "Natal", "Santo André", "Osasco", "Sorocaba", "Uberlândia", "Ribeirão Preto", "São José dos Campos",
+  "Cuiabá", "Jaboatão dos Guararapes", "Contagem", "Joinville", "Feira de Santana", "Aracaju", "Londrina", "Juiz de Fora", "Florianópolis", "Aparecida de Goiânia",
+  "Serra", "Campos dos Goytacazes", "Belford Roxo", "Niterói", "São José do Rio Preto", "Ananindeua", "Vila Velha", "Caxias do Sul", "Porto Velho", "Mogi das Cruzes"
+];
+
+// --- Lista de profissões comuns em português (compilada de fontes) ---
+const commonProfessions = [
+  "Açougueiro", "Administrador", "Advogado", "Agricultor", "Agronomia", "Agrônomo", "Analista", "Antropologia", "Arqueólogo", "Arquiteto", "Arquitetura e Urbanismo",
+  "Arquivologia", "Artes Cênicas", "Artes Plásticas", "Artista", "Assistente Social", "Astronomia", "Astronauta", "Atendente", "Ator", "Atleta", "Auditor",
+  "Babá", "Bancário", "Biblioteconomia", "Biólogo", "Biofísica", "Bioquímica", "Biomedicina", "Biotecnologia", "Bombeiro", "Caçador", "Caminhoneiro", "Cantor",
+  "Carpinteiro", "Cientista", "Ciências Biológicas", "Ciências Contábeis", "Ciências da Computação", "Cinema", "Consultor", "Contador", "Cozinheiro", "Dança",
+  "Dentista", "Deputado", "Desenhista", "Designer", "Designer de Interiores", "Designer Gráfico", "Detetive", "Direito", "Ecologia", "Economia", "Economista",
+  "Educação Física", "Educador", "Eletricista", "Encanador", "Enfermagem", "Enfermeiro", "Engenharia Aeroespacial", "Engenharia Agrícola", "Engenharia Biomédica",
+  "Engenharia Civil", "Engenharia de Alimentos", "Engenharia de Materiais", "Engenharia de Minas", "Engenharia de Pesca", "Engenharia de Produção", "Engenharia de Transportes",
+  "Engenharia Elétrica", "Engenharia Florestal", "Engenharia Mecânica", "Engenharia Metalúrgica", "Engenharia Naval", "Engenharia Nuclear", "Engenharia Oceânica",
+  "Engenharia Química", "Engenharia Sanitária", "Engenheiro", "Escritor", "Estudante", "Estatística", "Executivo", "Farmácia", "Farmacêutico", "Faxineiro", "Ferreiro",
+  "Filósofo", "Filosofia", "Física", "Fisioterapia", "Fisioterapeuta", "Fonoaudiologia", "Fotografia", "Fotógrafo", "Garçom", "Gari", "Geofísica", "Geografia",
+  "Geologia", "Geólogo", "Gerente", "Guarda-floresta", "Guia turístico", "Historiador", "História", "Informático", "Jardineiro", "Jornalismo", "Jornalista", "Juiz",
+  "Letras", "Linguística", "Matemática", "Massagista", "Mecânico", "Medicina", "Medicina Veterinária", "Meteorologia", "Meteorologista", "Modelo", "Moda", "Motorista",
+  "Museologia", "Música", "Músico", "Nutricionista", "Oceanografia", "Odontologia", "Operador", "Operário", "Padeiro", "Pedagogo", "Pescador", "Pintor", "Podólogo",
+  "Poeta", "Policial", "Policial rodoviário federal", "Porteiro", "Professor", "Professor de matemática", "Professor de português", "Profissional de gestão financeira",
+  "Programador", "Psicologia", "Psicólogo", "Psiquiatra", "Publicidade e Propaganda", "Publicitário", "Química", "Químico", "Rádio e TV", "Recepcionista", "Relações Internacionais",
+  "Relações Públicas", "Repórter", "Sacerdote", "Saúde Coletiva", "Secretário", "Serviço Social", "Sociologia", "Sociólogo", "Taxista", "Teatro", "Técnico", "Telefonista",
+  "Teologia", "Terapia Ocupacional", "Terapeuta", "Tradução e Interpretação", "Tradutor", "Turismo", "Vendedor", "Vereador", "Veterinário", "Zootecnia"
+];
 
 // --- Cálculo do Signo do Zodíaco ---
 const getZodiacSign = (birthDate: string): { sign: string; emoji: string } => {
@@ -549,6 +586,24 @@ const ProfileInfo = ({
     },
     [profileData, setProfileData]
   );
+
+  // Estados para o Combobox de cidade
+  const [openCity, setOpenCity] = useState(false);
+  const [citySearch, setCitySearch] = useState("");
+
+  // Estados para o Combobox de profissão
+  const [openProfession, setOpenProfession] = useState(false);
+  const [professionSearch, setProfessionSearch] = useState("");
+
+  // Opções filtradas para cidade
+  const filteredCities = brazilianCities.filter((city) =>
+    city.toLowerCase().includes(citySearch.toLowerCase())
+  ).map((city) => ({ value: city.toLowerCase(), label: city }));
+
+  // Opções filtradas para profissão
+  const filteredProfessions = commonProfessions.filter((prof) =>
+    prof.toLowerCase().includes(professionSearch.toLowerCase())
+  ).map((prof) => ({ value: prof.toLowerCase(), label: prof }));
   
   return (
     <Card className="mb-6">
@@ -721,6 +776,9 @@ const ProfileInfo = ({
                     disabled={saving || uploading}
                     maxLength={20}
                   />
+
+
+
                   {errors.whatsapp_number && (
                     <p className="text-red-500 text-xs mt-1">
                       {errors.whatsapp_number}
@@ -740,19 +798,57 @@ const ProfileInfo = ({
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="city">Cidade</Label>
-                    <Input
-                      id="city"
-                      placeholder="Sua cidade"
-                      value={profileData.city}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, city: e.target.value });
-                        validateField("city", e.target.value);
-                      }}
-                      className={errors.city ? "border-error" : ""}
-                      disabled={saving || uploading}
-                      aria-describedby="city-error"
-                    />
+                    <Label htmlFor="city">Cidade Natal</Label>
+                    <Popover open={openCity} onOpenChange={setOpenCity}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openCity}
+                          className={cn(
+                            "w-full justify-between",
+                            errors.city ? "border-red-500" : "",
+                            !profileData.city && "text-muted-foreground"
+                          )}
+                          disabled={saving || uploading}
+                        >
+                          {profileData.city || "Selecione sua cidade..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Buscar cidade..."
+                            value={citySearch}
+                            onValueChange={setCitySearch}
+                          />
+                          <CommandEmpty>Nenhuma cidade encontrada.</CommandEmpty>
+                          <CommandGroup className="max-h-[200px] overflow-y-auto">
+                            {filteredCities.map((city) => (
+                              <CommandItem
+                                key={city.value}
+                                value={city.value}
+                                onSelect={(currentValue) => {
+                                  const selectedLabel = filteredCities.find((c) => c.value === currentValue)?.label || "";
+                                  setProfileData({ ...profileData, city: selectedLabel });
+                                  validateField("city", selectedLabel);
+                                  setOpenCity(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    profileData.city.toLowerCase() === city.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {city.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     {errors.city && (
                       <p id="city-error" className="text-sm text-red-500">
                         {errors.city}
@@ -761,18 +857,56 @@ const ProfileInfo = ({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="profession">Profissão</Label>
-                    <Input
-                      id="profession"
-                      placeholder="Sua profissão"
-                      value={profileData.profession}
-                      onChange={(e) => {
-                        setProfileData({ ...profileData, profession: e.target.value });
-                        validateField("profession", e.target.value);
-                      }}
-                      className={errors.profession ? "border-red-500" : ""}
-                      disabled={saving || uploading}
-                      aria-describedby="profession-error"
-                    />
+                    <Popover open={openProfession} onOpenChange={setOpenProfession}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openProfession}
+                          className={cn(
+                            "w-full justify-between",
+                            errors.profession ? "border-red-500" : "",
+                            !profileData.profession && "text-muted-foreground"
+                          )}
+                          disabled={saving || uploading}
+                        >
+                          {profileData.profession || "Selecione sua profissão..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Buscar profissão..."
+                            value={professionSearch}
+                            onValueChange={setProfessionSearch}
+                          />
+                          <CommandEmpty>Nenhuma profissão encontrada.</CommandEmpty>
+                          <CommandGroup className="max-h-[200px] overflow-y-auto">
+                            {filteredProfessions.map((prof) => (
+                              <CommandItem
+                                key={prof.value}
+                                value={prof.value}
+                                onSelect={(currentValue) => {
+                                  const selectedLabel = filteredProfessions.find((p) => p.value === currentValue)?.label || "";
+                                  setProfileData({ ...profileData, profession: selectedLabel });
+                                  validateField("profession", selectedLabel);
+                                  setOpenProfession(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    profileData.profession.toLowerCase() === prof.value ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {prof.label}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                     {errors.profession && (
                       <p id="profession-error" className="text-sm text-red-500">
                         {errors.profession}
@@ -782,7 +916,7 @@ const ProfileInfo = ({
                 </div>
                 <LocationCapture
                   profileData={profileData}
-                  setProfileData={setLocationData} // FIX APPLIED HERE
+                  setProfileData={setLocationData}
                   saving={saving}
                   uploading={uploading}
                   onLocationUpdate={onLocationUpdate}
@@ -1161,6 +1295,7 @@ export default function ProfilePage() {
     messageNotifications: true,
   });
   const [debouncedPreferences] = useDebounce(preferences, 1000);
+  const [debouncedProfileData] = useDebounce(profileData, 1000);
 
   const showAlert = useCallback(
     async (type: "success" | "error", title: string, text: string) => {
@@ -1206,6 +1341,42 @@ export default function ProfilePage() {
     };
     savePreferences();
   }, [debouncedPreferences, profileId, isNewProfile, showAlert]);
+
+  // Auto-save profile data
+  useEffect(() => {
+    if (!profileId || isNewProfile || Object.keys(errors).length > 0) return;
+   
+   // saveProfileData();
+  }, [debouncedProfileData, profileId, isNewProfile, errors, photos, showAlert]);
+
+
+  const saveProfileData = async () => {
+    try {
+      const profilePayload = {
+        name: debouncedProfileData.name,
+        birth_date: debouncedProfileData.birth_date,
+        gender: debouncedProfileData.gender,
+        bio: debouncedProfileData.bio,
+        city: debouncedProfileData.city,
+        profession: debouncedProfileData.profession,
+        latitude: debouncedProfileData.latitude,
+        longitude: debouncedProfileData.longitude,
+        whatsapp_number: debouncedProfileData.whatsapp_number || null,
+        share_whatsapp: debouncedProfileData.share_whatsapp ?? false,
+        updated_at: new Date().toISOString(),
+        avatar_url: photos.find((p) => p.isPrimary)?.publicUrl || photos[0]?.publicUrl || null,
+      };
+      const { error } = await supabase
+        .from("profiles")
+        .update(profilePayload)
+        .eq("id", profileId);
+      if (error) throw error;
+    } catch (err) {
+      console.error("[saveProfileData] Error:", (err as Error).message);
+      showAlert("error", "Erro", "Não foi possível salvar seus dados. Tente novamente.");
+    }
+  };
+
 
   const handleLocationUpdate = useCallback(
     async (latitude: number, longitude: number) => {

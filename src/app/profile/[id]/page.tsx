@@ -725,7 +725,7 @@ const ProfileInfo = ({
                   <Button
                     onClick={handleAddInterest}
                     disabled={savingInterests || !newInterest.trim()}
-                    className="w-full gradient-button"
+                    className="w-full bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white"
                     aria-label="Adicionar interesse"
                   >
                     {savingInterests ? (
@@ -1262,7 +1262,7 @@ export default function ProfileView() {
             {!isOwnProfile && !hasLiked && !hasMatch && (
               <Button
                 onClick={handleLike}
-                className="flex-1 mr-2 gradient-button"
+                className="flex-1 mr-2 bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white"
                 disabled={!canLikeToday}
                 aria-label={canLikeToday ? "Curtir perfil" : "Você já curtiu este perfil hoje"}
               >
@@ -1272,7 +1272,7 @@ export default function ProfileView() {
             )}
             <Button
               onClick={() => router.push(ROUTES.DISCOVER)}
-              className="flex-1 ml-2 gradient-button"
+              className="flex-1 ml-2 bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white"
               aria-label="Voltar para descoberta"
             >
               Voltar
@@ -1322,7 +1322,7 @@ export default function ProfileView() {
                 <p className="text-oraculo-muted mb-4">
                   Faça um upgrade para Premium para enviar mensagens e desbloquear mais recursos!
                 </p>
-                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="gradient-button">
+                <Button onClick={() => router.push(ROUTES.SUBSCRIPTION)} className="bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white">
                   Fazer Upgrade para Premium
                 </Button>
               </CardContent>
@@ -1352,7 +1352,8 @@ export default function ProfileView() {
               </CardContent>
             </Card>
           )}
-          {!isOwnProfile && hasMatch && hasPremiumSubscription && (
+          {!isOwnProfile && hasMatch && hasPremiumSubscription && viewedProfileData.share_whatsapp && viewedProfileData.whatsapp_number && (
+
             <Card className="mb-6 border-none shadow-sm bg-gray-50/50 border border-yellow-200">
               <CardContent className="text-center py-4">
                 <div className="flex-1 mr-2">
@@ -1366,7 +1367,7 @@ export default function ProfileView() {
                   />
                   <Button
                     onClick={handleSendMessage}
-                    className="w-full gradient-button"
+                    className="w-full bg-gradient-to-r from-oraculo-cyan to-[#4BE5FF] text-white"
                     disabled={isSending}
                     aria-label="Enviar mensagem via WhatsApp"
                   >
@@ -1385,6 +1386,7 @@ export default function ProfileView() {
                 </div>
               </CardContent>
             </Card>
+
           )}
         </motion.main>
       </div>

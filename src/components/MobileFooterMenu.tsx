@@ -62,7 +62,10 @@ export function MobileFooterMenu() {
                             <Heart className="h-5 w-5" />
                             <span className="text-xs mt-1">Likes</span>
                         </button>
-                        <button
+                       
+                    </>
+                )}
+                 <button
                             className={getNavItemStyles("/discover")}
                             onClick={navigateToDiscover}
                             aria-label="Explorar perfis"
@@ -70,8 +73,6 @@ export function MobileFooterMenu() {
                             <OracleIlluminatedIcon className="h-5 w-5" />
                             <span className="text-xs mt-1">Oráculo</span>
                         </button>
-                    </>
-                )}
                 <button
                     className={getNavItemStyles("/profile")}
                     onClick={navigateToProfile}
