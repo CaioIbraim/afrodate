@@ -2369,6 +2369,25 @@ export default function ProfilePage() {
   );
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --- Componente InterestsPage (Idealmente em arquivo separado) ---
 // Este componente deve estar em um arquivo separado, por exemplo, `app/interests/page.tsx`
 // mantido aqui para completude da solução conforme a solicitação.
