@@ -1,19 +1,31 @@
+// public/sw.js
 
-self.addEventListener("push", (event) => {
-  const data = event.data ? event.data.json() : {};
-  const title = data.title || "oraculo";
+// Evento 'push': disparado quando uma notificação chega do servidor.
+self.addEventListener('push', function(event) {
+  // Os dados enviados pelo backend estão em event.data
+  const data = event.data.json(); // Assumimos que o backend envia JSON
+
+  const title = data.title || "Nova Notificação";
   const options = {
-    body: data.message || "Você recebeu uma nova notificação!",
-    icon: "/icon.png", // Optional: Add an icon in /public
-    badge: "/badge.png", // Optional
+    body: data.body || "Você tem uma nova mensagem.",
+    icon: data.icon || "/images/icon-192x192.png", // Ícone padrão
+    badge: data.badge || "/images/badge-72x72.png",
+    data: {
+      url: data.url || "/", // URL para abrir ao clicar
+    },
   };
 
+  // Exibe a notificação
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
+// Evento 'notificationclick': disparado quando o usuário clica na notificação.
+self.addEventListener('notificationclick', function(event) {
+  // Fecha a notificação
   event.notification.close();
+
+  // Abre a URL especificada ou a página principal
   event.waitUntil(
-    clients.openWindow("/dashboard") // Redirect to your app’s dashboard
+    clients.openWindow(event.notification.data.url)
   );
 });

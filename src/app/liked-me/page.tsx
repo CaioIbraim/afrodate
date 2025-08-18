@@ -356,20 +356,20 @@ export default function MatchesPage() {
               <Tab
                 key={tab}
                 className={({ selected }) =>
-                  `flex-1 min-w-[100px] px-3 py-2 rounded-lg font-semibold text-[12px] transition-all duration-200 whitespace-nowrap ${
+                  `flex-1 min-w-[100px] px-3 py-2 rounded-lg font-semibold text-[10px] transition-all duration-200 whitespace-nowrap ${
                     selected
                       ? "bg-gradient-to-r from-cyan-500 to-teal-400 text-white shadow-md"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`
                 }
               >
-                {tab} ({tab === "Quem me curtiu" ? whoLikedMe.length : tab === "Quem eu curti" ? whoILiked.length : matches.length})
+                {tab}
               </Tab>
             ))}
           </TabList>
           <TabPanels>
             <TabPanel>
-              <div className="grid gap-4">
+              <div className="max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-400 scrollbar-track-gray-200 grid gap-4">
                 {whoLikedMe.length === 0 ? (
                   <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Nenhum perfil te curtiu ainda.
@@ -390,7 +390,7 @@ export default function MatchesPage() {
               </div>
             </TabPanel>
             <TabPanel>
-              <div className="grid gap-4">
+              <div className="max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-400 scrollbar-track-gray-200 grid gap-4">
                 {whoILiked.length === 0 ? (
                   <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Você ainda não curtiu ninguém.
@@ -411,7 +411,7 @@ export default function MatchesPage() {
               </div>
             </TabPanel>
             <TabPanel>
-              <div className="grid gap-4">
+              <div className="max-h-[70vh] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-cyan-400 scrollbar-track-gray-200 grid gap-4">
                 {matches.length === 0 ? (
                   <div className="col-span-full text-center py-8 text-gray-600 text-base font-medium bg-white rounded-xl shadow-sm">
                     Nenhum match por aqui.

@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { FaWhatsapp } from "react-icons/fa";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Label } from "@radix-ui/react-label";
+import { MobileFooterMenu } from "@/components/MobileFooterMenu";
 
 // Constants
 const MySwal = withReactContent(Swal);
@@ -1389,6 +1390,7 @@ export default function ProfileView() {
 
           )}
         </motion.main>
+        <MobileFooterMenu />
       </div>
     </>
   );

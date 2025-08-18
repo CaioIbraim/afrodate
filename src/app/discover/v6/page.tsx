@@ -587,18 +587,18 @@ export default function ProximityPage() {
       }
       return;
     }
-
+  
     setIsLoading(true);
     try {
       const response = await fetch(`/api/nearby-profiles?userId=${profile.id}`);
       const data = await response.json();
-
+  
       if (!response.ok) {
         throw new Error(data.error || "Erro ao carregar perfis próximos.");
       }
-
+  
       const { profiles, preferences: fetchedPreferences } = data;
-
+  
       if (!profile.latitude || !profile.longitude) {
         setNearbyProfiles([]);
         await showAlert(
@@ -609,29 +609,30 @@ export default function ProximityPage() {
         router.push("/profile");
         return;
       }
-
+  
       setPreferences(fetchedPreferences);
-
-      // Fetch rejected profiles
+  
+      // Buscar perfis rejeitados
       const { data: rejectedProfilesData, error: rejectedError } = await supabase
         .from("rejections")
         .select("rejected_profile_id")
         .eq("profile_id", profile.id);
-
+  
       if (rejectedError) {
         console.error("Rejected profiles fetch error:", rejectedError);
         throw new Error(
           "Erro ao carregar perfis rejeitados: " + rejectedError.message
         );
       }
-
+  
       const rejectedProfileIds = new Set(
         rejectedProfilesData?.map((item) => item.rejected_profile_id) || []
       );
-
-      // Process profiles to add distance and ensure avatar URLs
+  
       const viewedMatches = getViewedMatches(profile.id);
-      const processedProfiles = profiles
+  
+      // 1º filtro: com filtro de distância
+      let processedProfiles = profiles
         .map((p: Profile) => ({
           ...p,
           avatar_url: getFullAvatarUrl(p.avatar_url),
@@ -650,9 +651,39 @@ export default function ProximityPage() {
         )
         .sort((a: Profile, b: Profile) => a.distance! - b.distance!)
         .slice(0, 3);
-
+  
+      // 2º fallback: caso nenhum encontrado, ignora filtro de distância
+      if (processedProfiles.length === 0) {
+        processedProfiles = profiles
+          .map((p: Profile) => ({
+            ...p,
+            avatar_url: getFullAvatarUrl(p.avatar_url),
+            distance: calculateDistance(
+              profile.latitude!,
+              profile.longitude!,
+              p.latitude!,
+              p.longitude!
+            ),
+          }))
+          .filter(
+            (p: Profile) =>
+              (!p.isMatch || (p.isMatch && !viewedMatches.has(p.id))) &&
+              !rejectedProfileIds.has(p.id)
+          )
+          .sort((a: Profile, b: Profile) => a.distance! - b.distance!)
+          .slice(0, 3);
+  
+        if (processedProfiles.length > 0) {
+          await showAlert(
+            "info",
+            "Perfis fora do raio",
+            "Nenhum perfil foi encontrado dentro do seu raio definido, mas aqui estão algumas sugestões."
+          );
+        }
+      }
+  
       setNearbyProfiles(processedProfiles);
-
+  
       if (processedProfiles.length === 0) {
         await showAlert(
           "info",
@@ -674,7 +705,7 @@ export default function ProximityPage() {
       setIsLoading(false);
     }
   }, [user, profile, userLoading, router]);
-
+  
   // Handle like action
   const handleLike = async (targetProfileId: string) => {
     if (!user || !profile) {
@@ -1083,7 +1114,7 @@ export default function ProximityPage() {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <h3
-                            className="text-oraculo-dark text-lg sm:text-xl font-bold line-clamp-1"
+                            className="text-oraculo-dark text-lg sm:text-[12px] font-bold line-clamp-1"
                             aria-describedby={`profile-status-${nearbyProfile.id}`}
                           >
                             {nearbyProfile.name}
