@@ -1,9 +1,13 @@
+// /pages/index.tsx
 import styles from '@/styles/Home.module.css';
 import Image from 'next/image';
+import GradientButton from '@/components/GradientButton'; // 1. Importe o novo componente
 
-export default function Home() {
+import type { NextPage } from 'next'; // Boa prática para tipar páginas
+
+const Home: NextPage = () => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#181818]">
       {/* Header with gradient */}
       <div className="bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] h-2" />
 
@@ -21,40 +25,29 @@ export default function Home() {
           </div>
           <div className={styles.videoContent}>
 
-             <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mx-auto mb-8" />
+            <Image alt="Logo" src="/logo.png" height={150} width={150} className=" mx-auto mb-8" />
             
-            <h1 className="text-4xl font-black tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#1E1E1E] animate-gradient">Conheça o Oráculo!</h1>
+            <h1 className="text-4xl text-oraculo-cyan text-2xl tracking-tight sm:text-6xl xl:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-oraculo-cyan to-[#4DBAFE] animate-gradient">Conheça o Oráculo!</h1>
             <h3 className="font-light text-3xl mt-6">
               Um lugar pra se conectar com sua alma gêmea
             </h3>
 
-
-            <div className="rounded-md shadow mt-6  px-6">
-              <a
-                href="/login"
-                className="w-full flex items-center justify-center px-8 py-3 text-base font-medium rounded-md text-white border-2 bg-transparent hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300 border-gradient"
-              >
+            {/* 2. Use o componente para os botões */}
+            <div className="px-6 w-full mx-auto">
+              <GradientButton href="/login">
                 Entrar
-              </a>
-            </div>
+              </GradientButton>
 
-
-            <div className="rounded-md shadow mt-6 px-6">
-              <a
-                href="/signup"
-                className="w-full flex items-center justify-center px-8 py-3 text-base font-medium rounded-lg text-white border-2 bg-transparent hover:opacity-90 md:py-4 md:text-lg md:px-10 transition-all duration-300 border-gradient"
-              >
+              <GradientButton href="/signup">
                 Cadastre-se
-              </a>
+              </GradientButton>
             </div>
-
-
             
           </div>
         </section>
-
       </div>
-
     </div>
   );
 }
+
+export default Home;
