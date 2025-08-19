@@ -846,7 +846,7 @@ export default function ProximityPage() {
 
   if (!user || !profile) {
     if (!userLoading && !user) {
-      router.push("/login");
+      router.push("/signout");
       return null;
     }
     return null;

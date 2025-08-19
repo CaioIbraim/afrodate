@@ -7,29 +7,36 @@ interface MessageInputProps {
   receiverId: string;
 }
 
-export const MessageInput = ({ conversationId, senderId, receiverId }: MessageInputProps) => {
-  const [content, setContent] = useState('');
+export default function MessageInput({ conversationId, senderId, receiverId }: MessageInputProps) {
   const { sendMessage } = useMessages(conversationId);
+  const [content, setContent] = useState('');
 
-  const handleSend = () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (content.trim()) {
-      sendMessage(content, senderId, receiverId);
+      await sendMessage(content, senderId, receiverId);
       setContent('');
     }
   };
 
   return (
-    <div className="p-4 border-t flex">
-      <input
-        type="text"
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center p-3 sm:p-4 bg-white border-t shrink-0"
+    >
+      <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className="flex-1 border rounded-l-lg p-2"
         placeholder="Digite sua mensagem..."
+        className="flex-1 p-2 sm:p-3 text-sm sm:text-base border rounded-lg resize-none h-10 sm:h-12 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
-      <button onClick={handleSend} className="bg-blue-500 text-white px-4 rounded-r-lg">
+      <button
+        type="submit"
+        className="ml-2 sm:ml-3 px-4 sm:px-6 py-2 bg-blue-500 text-white rounded-lg text-sm sm:text-base hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        disabled={!content.trim()}
+      >
         Enviar
       </button>
-    </div>
+    </form>
   );
-};
+}

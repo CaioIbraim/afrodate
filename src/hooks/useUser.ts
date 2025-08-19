@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 interface Profile {
@@ -15,34 +15,35 @@ export const useUser = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        console.log('useUser: auth.getUser', { user, authError });
-        if (authError || !user) {
-          setError('Usuário não autenticado');
-          setLoading(false);
-          return;
-        }
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-        console.log('useUser: profile fetch', { data, error });
-        if (error) {
-          setError('Erro ao buscar perfil: ' + error.message);
-        } else if (!data) {
-          setError('Perfil não encontrado para o usuário');
-        } else {
-          setProfile(data);
-          setError(null);
-        }
-      } catch (err) {
-        console.error('useUser: unexpected error', err);
-        setError('Erro inesperado: ' + (err as Error).message);
+      setLoading(true);
+      console.log('useUser: Fetching user');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        console.error('useUser: User not authenticated', { userError });
+        setError('Usuário não autenticado');
+        setLoading(false);
+        return;
       }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, user_id, name, avatar_url')
+        .eq('user_id', userData.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('useUser: Profile fetch failed', { profileError });
+        setError('Erro ao carregar perfil: ' + profileError.message);
+        setLoading(false);
+        return;
+      }
+
+      console.log('useUser: Profile fetched', { profileData });
+      setProfile(profileData);
+      setError(null);
       setLoading(false);
     };
+
     fetchUser();
   }, []);
 

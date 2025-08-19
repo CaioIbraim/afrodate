@@ -12,6 +12,7 @@ interface Message {
 }
 
 const PAGE_SIZE = 25;
+const POLLING_INTERVAL = 3000; // 3 seconds
 
 export const useMessages = (conversationId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,7 +38,7 @@ export const useMessages = (conversationId: string | null) => {
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: true })
       .range(from, to);
 
     if (error) {
@@ -46,7 +47,10 @@ export const useMessages = (conversationId: string | null) => {
     } else {
       console.log('useMessages: Messages fetched', { data });
       if (loadMore) {
-        setMessages((prev) => [...data.reverse(), ...prev]);
+        setMessages((prev) => {
+          const newMessages = data.reverse().filter((msg) => !prev.some((m) => m.id === msg.id));
+          return [...newMessages, ...prev];
+        });
       } else {
         setMessages(data ? data.reverse() : []);
       }
@@ -65,11 +69,34 @@ export const useMessages = (conversationId: string | null) => {
     }
   }, [conversationId]);
 
+  // Polling effect
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      console.log('useMessages: No conversationId, skipping polling');
+      return;
+    }
 
-    console.log('useMessages: Subscribing to new messages', { conversationId });
-    const sub = supabase
+    console.log('useMessages: Starting polling', { conversationId });
+    const intervalId = setInterval(() => {
+      console.log('useMessages: Polling messages', { conversationId });
+      fetchMessages();
+    }, POLLING_INTERVAL);
+
+    return () => {
+      console.log('useMessages: Stopping polling', { conversationId });
+      clearInterval(intervalId);
+    };
+  }, [conversationId]);
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!conversationId) {
+      console.log('useMessages: No conversationId, skipping subscription');
+      return;
+    }
+
+    console.log('useMessages: Setting up subscription', { conversationId });
+    const channel = supabase
       .channel(`messages_${conversationId}`)
       .on(
         'postgres_changes',
@@ -81,14 +108,27 @@ export const useMessages = (conversationId: string | null) => {
         },
         (payload) => {
           console.log('useMessages: New message received', { payload });
-          setMessages((prev) => [...prev, payload.new as Message]);
+          setMessages((prev) => {
+            if (prev.some((msg) => msg.id === payload.new.id)) {
+              return prev;
+            }
+            return [...prev, payload.new as Message];
+          });
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log('useMessages: Subscription status', { status, err });
+        if (err) {
+          setError('Erro na assinatura de mensagens: ' + err.message);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('useMessages: Subscription active', { conversationId });
+        }
+      });
 
     return () => {
       console.log('useMessages: Unsubscribing from messages', { conversationId });
-      supabase.removeChannel(sub);
+      supabase.removeChannel(channel);
     };
   }, [conversationId]);
 
@@ -119,21 +159,26 @@ export const useMessages = (conversationId: string | null) => {
     setMessages((prev) => [...prev, optimisticMessage]);
 
     console.log('useMessages: Sending message', { optimisticMessage });
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
         sender_id: senderId,
         receiver_id: receiverId,
         content,
-      });
+      })
+      .select()
+      .single();
 
     if (error) {
       console.error('useMessages: Error sending message', { error });
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticMessage.id));
       setError('Erro ao enviar mensagem: ' + error.message);
     } else {
-      console.log('useMessages: Message sent successfully');
+      console.log('useMessages: Message sent successfully', { data });
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === optimisticMessage.id ? (data as Message) : msg))
+      );
     }
   };
 
